@@ -1,0 +1,6 @@
+export enum AuthRoleEnum {
+  CUSTOMER = 'CUSTOMER',
+  SUPER_ADMIN = 'SUPER_ADMIN',
+  COURIER = 'COURIER',
+  SELLER = 'SELLER',
+}
