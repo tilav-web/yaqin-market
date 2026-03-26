@@ -20,6 +20,12 @@ export class Auth {
   @Column({ type: 'enum', enum: AuthRoleEnum, default: AuthRoleEnum.CUSTOMER })
   role: AuthRoleEnum;
 
+  @Column({ type: 'bigint', nullable: true })
+  telegram_id: number;
+
+  @Column({ default: false })
+  is_verified: boolean;
+
   @OneToOne(() => User, (user) => user.auth)
   user: User;
 

@@ -3,17 +3,19 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { RedisModule } from './modules/redis/redis.module';
-import { Auth } from './modules/auth/auth.entity';
-import { Category } from './modules/category/category.entity';
-import { Location } from './modules/location/location.entity';
-import { Product } from './modules/product/product.entity';
-import { Review } from './modules/review/review.entity';
-import { Store } from './modules/store/entities/store.entity';
-import { Telegram } from './modules/telegram/uset-telegram.entity';
-import { Unit } from './modules/unit/unit.entity';
-import { User } from './modules/user/user.entity';
-import { Wallet } from './modules/wallet/entities/wallet.entity';
-import { WalletTransaction } from './modules/wallet/entities/wallet-transaction.entity';
+import { ImageModule } from './modules/image/image.module';
+import { TelegramModule } from './modules/telegram/telegram.module';
+import { CategoryModule } from './modules/category/category.module';
+import { StoreModule } from './modules/store/store.module';
+import { StoreProductModule } from './modules/store-product/store-product.module';
+import { OrderModule } from './modules/order/order.module';
+import { UserModule } from './modules/user/user.module';
+import { ProductModule } from './modules/product/product.module';
+import { UnitModule } from './modules/unit/unit.module';
+import { LocationModule } from './modules/location/location.module';
+import { ReviewModule } from './modules/review/review.module';
+import { WalletModule } from './modules/wallet/wallet.module';
+import { PaymentModule } from './modules/payment/payment.module';
 
 @Module({
   imports: [
@@ -32,25 +34,23 @@ import { WalletTransaction } from './modules/wallet/entities/wallet-transaction.
         autoLoadEntities: true,
         synchronize: config.get('NODE_ENV') === 'development',
         logging: config.get('NODE_ENV') === 'development',
-        migrations: ['dist/migrations/*.js'],
-        migrationsRun: config.get('NODE_ENV') === 'production',
       }),
     }),
-    TypeOrmModule.forFeature([
-      Auth,
-      Category,
-      Location,
-      Product,
-      Review,
-      Store,
-      Telegram,
-      Unit,
-      User,
-      Wallet,
-      WalletTransaction,
-    ]),
     RedisModule,
+    ImageModule,
+    TelegramModule,
     AuthModule,
+    UserModule,
+    CategoryModule,
+    ProductModule,
+    UnitModule,
+    LocationModule,
+    StoreModule,
+    StoreProductModule,
+    OrderModule,
+    ReviewModule,
+    WalletModule,
+    PaymentModule,
   ],
 })
 export class AppModule {}

@@ -1,16 +1,28 @@
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter, Navigate } from "react-router-dom";
 import RootLayout from "../layouts/root-layout";
-import { authRouter } from "./auth-router";
-import Home from "../pages/home";
+import { adminRouter } from "./admin-router";
+import { customerRouter } from "./customer-router";
+import { sellerRouter } from "./seller-router";
+import { courierRouter } from "./courier-router";
+import Auth from "../pages/auth/auth";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <RootLayout />,
-    loader: () => {},
     children: [
-      { index: true, element: <Home /> },
-      ...authRouter,
+      ...customerRouter,
+      ...sellerRouter,
+      ...courierRouter,
+      ...adminRouter,
+      {
+        path: "/login",
+        element: <Auth />,
+      },
+      {
+        path: "*",
+        element: <Navigate to="/" replace />,
+      },
     ],
   },
 ]);

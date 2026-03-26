@@ -11,26 +11,45 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar";
 import {
-  BarChart3Icon,
   BoxesIcon,
   LayoutGridIcon,
-  SettingsIcon,
-  ShieldCheckIcon,
-  ShoppingBagIcon,
-  UsersIcon,
+  StoreIcon,
 } from "lucide-react";
-import { NavLink } from "react-router-dom";
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import { NavLink, Link } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
 
-const primaryLinks = [
-  { label: "Dashboard", to: "/", icon: LayoutGridIcon },
-  { label: "Buyurtmalar", to: "/orders", icon: ShoppingBagIcon },
-  { label: "Mahsulotlar", to: "/products", icon: BoxesIcon },
-  { label: "Mijozlar", to: "/customers", icon: UsersIcon },
+export type SidebarLink = {
+  label: string;
+  to: string;
+  icon: LucideIcon;
+};
+
+export type SidebarSection = {
+  label: string;
+  items: SidebarLink[];
+};
+
+const defaultSections: SidebarSection[] = [
+  {
+    label: "Boshqaruv",
+    items: [
+      { label: "Dashboard", to: "/admin", icon: LayoutGridIcon },
+      { label: "Mahsulotlar", to: "/admin/products", icon: BoxesIcon },
+      { label: "Kategoriyalar", to: "/admin/categories", icon: BoxesIcon },
+      { label: "Do'konlar", to: "/admin/stores", icon: StoreIcon },
+    ],
+  },
 ];
 
-export default function AppSidebar() {
+export default function AppSidebar({
+  sections = defaultSections,
+  footer,
+}: {
+  sections?: SidebarSection[];
+  footer?: ReactNode;
+}) {
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader>
@@ -48,75 +67,48 @@ export default function AppSidebar() {
         </Link>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Admin bo'limlar</SidebarGroupLabel>
-          <SidebarMenu>
-            {primaryLinks.map((item) => (
-              <SidebarMenuItem key={item.to}>
-                <SidebarMenuButton
-                  render={
-                    <NavLink
-                      to={item.to}
-                      className={({ isActive }) =>
-                        cn(
-                          "flex w-full items-center gap-2",
-                          isActive && "text-primary",
-                        )
+        {sections.map((section, index) => (
+          <div key={section.label}>
+            <SidebarGroup>
+              <SidebarGroupLabel>{section.label}</SidebarGroupLabel>
+              <SidebarMenu>
+                {section.items.map((item) => (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton
+                      render={
+                        <NavLink
+                          to={item.to}
+                          className={({ isActive }) =>
+                            cn(
+                              "flex w-full items-center gap-2",
+                              isActive && "text-primary",
+                            )
+                          }
+                        >
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </NavLink>
                       }
-                    >
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </NavLink>
-                  }
-                />
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
-
-        <SidebarSeparator />
-
-        <SidebarGroup>
-          <SidebarGroupLabel>Analitika</SidebarGroupLabel>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <div className="flex items-center gap-2">
-                    <BarChart3Icon className="size-4" />
-                    <span>Hisobotlar</span>
-                  </div>
-                }
-              />
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <div className="flex items-center gap-2">
-                    <ShieldCheckIcon className="size-4" />
-                    <span>Moderatsiya</span>
-                  </div>
-                }
-              />
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-              <SidebarMenuButton
-                render={
-                  <div className="flex items-center gap-2">
-                    <SettingsIcon className="size-4" />
-                    <span>Sozlamalar</span>
-                  </div>
-                }
-              />
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarGroup>
+                    />
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroup>
+            {index < sections.length - 1 ? <SidebarSeparator /> : null}
+          </div>
+        ))}
       </SidebarContent>
 
       <SidebarFooter>
-        <div className="rounded-lg bg-sidebar-accent p-3 text-xs text-sidebar-foreground">
-          footer
-        </div>
+        {footer ? (
+          <div className="rounded-lg bg-sidebar-accent p-3 text-xs text-sidebar-foreground">
+            {footer}
+          </div>
+        ) : (
+          <div className="rounded-lg bg-sidebar-accent p-3 text-xs text-sidebar-foreground">
+            Yaqin Market • 2026
+          </div>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

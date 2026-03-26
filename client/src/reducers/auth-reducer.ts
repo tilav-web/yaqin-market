@@ -1,4 +1,4 @@
-import type { AuthState, AuthStatus } from "@/types/auth.type";
+import type { AuthState } from "@/types/auth.type";
 
 export type AuthAction =
   | { type: "PHONE_CHANGE"; payload: { phone: string } }

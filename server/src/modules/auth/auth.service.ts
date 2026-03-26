@@ -35,6 +35,23 @@ export class AuthService {
     return auth;
   }
 
+  async findAuthWithUser(id: string) {
+    const auth = await this.repository.findOne({
+      where: { id },
+      relations: {
+        user: {
+          stores: true,
+        },
+      },
+    });
+
+    if (!auth) {
+      throw new NotFoundException('User not found!');
+    }
+
+    return auth;
+  }
+
   async findMe(id: string) {
     return this.repository.findOne({
       where: {

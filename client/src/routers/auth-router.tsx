@@ -1,16 +1,13 @@
-import type { RouteObject } from "react-router-dom";
-import AuthLayout from "../layouts/auth-layout";
+import { Navigate } from "react-router-dom";
 import Auth from "../pages/auth/auth";
 
-export const authRouter: RouteObject[] = [
+export const authRouter = [
   {
     path: "/login",
-    element: <AuthLayout />,
-    children: [
-      {
-        index: true,
-        element: <Auth />,
-      },
-    ],
+    element: <Auth />,
+  },
+  {
+    path: "/auth",
+    element: <Navigate to="/login" replace />,
   },
 ];
