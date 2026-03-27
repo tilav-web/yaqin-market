@@ -51,7 +51,7 @@ const PROMO_THEME: Record<
 > = {
   prime: {
     border:
-      "border-orange-200 bg-[linear-gradient(135deg,rgba(255,150,92,0.95),rgba(255,113,52,0.9))]",
+      "border-red-200 bg-[linear-gradient(135deg,rgba(220,38,38,0.95),rgba(239,68,68,0.9))]",
     badge: "bg-white/18 text-white",
     panel: "bg-white/14",
   },
@@ -297,7 +297,7 @@ export default function CustomerHome() {
   return (
     <div className="min-h-screen pb-32">
       <div className="space-y-5 px-4 pb-10 pt-4">
-        <header className="rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top,rgba(255,124,61,0.16),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,246,238,0.98))] p-4 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.35)]">
+        <header className="rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.14),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,244,245,0.98))] p-4 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.35)]">
           <div className="flex items-center justify-between gap-3">
             <img
               src="/logo-web.png"
@@ -338,12 +338,12 @@ export default function CustomerHome() {
           </div>
 
           <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-            <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-xs font-semibold text-orange-700">
+            <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
               <MapPinIcon className="h-3.5 w-3.5" />
               {location ? "Joylashuv tayyor" : "Joylashuv olinmoqda"}
             </div>
             <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
-              <CrownIcon className="h-3.5 w-3.5 text-orange-500" />
+              <CrownIcon className="h-3.5 w-3.5 text-primary" />
               {primeStores.length} prime
             </div>
             <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
@@ -366,7 +366,7 @@ export default function CustomerHome() {
                   key={category.id}
                   type="button"
                   onClick={() => setSearch(category.name)}
-                  className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-orange-200 hover:text-orange-700"
+                  className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary/15 hover:text-primary"
                 >
                   {category.name}
                 </button>
@@ -484,7 +484,7 @@ export default function CustomerHome() {
                     onClick={() => setActiveProduct(product)}
                     className="group rounded-[1.5rem] border border-white/70 bg-white/92 p-3 text-left shadow-[0_18px_48px_-40px_rgba(15,23,42,0.26)] transition hover:-translate-y-0.5"
                   >
-                    <div className="relative aspect-[0.92] overflow-hidden rounded-[1.25rem] bg-[linear-gradient(135deg,#fff1e8,#f8fbff)]">
+                    <div className="relative aspect-[0.92] overflow-hidden rounded-[1.25rem] bg-[linear-gradient(135deg,#fff1f1,#f8fbff)]">
                       {product.images?.[0]?.url ? (
                         <img
                           src={product.images[0].url}
@@ -517,7 +517,7 @@ export default function CustomerHome() {
                       <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
                         {product.description ?? product.category?.name ?? "Mahsulot tafsiloti"}
                       </p>
-                      <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-orange-700">
+                      <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
                         {childCount > 0 ? "Variant tanlash" : "Savatga qo'shish"}
                         <ChevronRightIcon className="h-3.5 w-3.5" />
                       </div>

@@ -46,7 +46,7 @@ export default function LandingPage() {
   const primaryLabel = hasSession ? "Platformaga kirish" : "Telefon bilan kirish";
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,124,61,0.18),transparent_35%),linear-gradient(180deg,#fff9f5_0%,#f8fbff_45%,#ffffff_100%)]">
+    <div className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.18),transparent_34%),linear-gradient(180deg,#fff8f8_0%,#fff4f5_45%,#ffffff_100%)]">
       <section className="relative mx-auto flex max-w-7xl flex-col gap-14 px-6 pb-18 pt-8 lg:px-10">
         <div className="flex items-center justify-between">
           <div className="rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm font-semibold text-slate-800 shadow-sm backdrop-blur">
@@ -61,7 +61,7 @@ export default function LandingPage() {
 
         <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <div>
-            <div className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-orange-700">
+            <div className="inline-flex rounded-full border border-primary/15 bg-primary/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
               Eng yaqin do'konlardan tez buyurtma
             </div>
             <h1 className="mt-6 max-w-3xl text-5xl font-semibold tracking-tight text-slate-950 sm:text-6xl">
@@ -130,9 +130,9 @@ export default function LandingPage() {
             {highlights.map((item) => (
               <article
                 key={item.title}
-                className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fff7f1_100%)] p-5"
+                className="rounded-[1.75rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#fff5f6_100%)] p-5"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-100 text-orange-700">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <item.icon className="h-5 w-5" />
                 </div>
                 <h3 className="mt-5 text-lg font-semibold text-slate-950">{item.title}</h3>

@@ -171,10 +171,10 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,124,61,0.18),transparent_35%),linear-gradient(180deg,#fff9f5_0%,#f8fbff_55%,#ffffff_100%)]">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.18),transparent_35%),linear-gradient(180deg,#fff8f8_0%,#fff4f5_55%,#ffffff_100%)]">
       <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-12 lg:grid-cols-[1fr_460px] lg:px-10">
         <section className="hidden lg:block">
-          <div className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-orange-700">
+          <div className="inline-flex rounded-full border border-primary/15 bg-primary/8 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-primary">
             Yaqin Market platformasi
           </div>
           <h1 className="mt-6 text-5xl font-semibold tracking-tight text-slate-950">

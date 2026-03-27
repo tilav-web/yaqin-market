@@ -84,7 +84,7 @@ export default function BroadcastCartSheet({
       >
         <SheetHeader className="border-b border-slate-200 px-4 pb-4">
           <SheetTitle className="flex items-center gap-2 text-lg font-semibold text-slate-950">
-            <ShoppingBagIcon className="h-5 w-5 text-orange-500" />
+            <ShoppingBagIcon className="h-5 w-5 text-primary" />
             Umumiy savat
           </SheetTitle>
           <SheetDescription className="text-sm text-slate-500">
@@ -101,7 +101,7 @@ export default function BroadcastCartSheet({
             items.map((item) => (
               <article
                 key={item.productId}
-                className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff8f3)] p-3"
+                className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff5f6)] p-3"
               >
                 <div className="flex gap-3">
                   <div className="h-18 w-18 shrink-0 overflow-hidden rounded-[1.1rem] bg-slate-100">
@@ -139,7 +139,7 @@ export default function BroadcastCartSheet({
                       <button
                         type="button"
                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                        className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-500 text-white"
+                        className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground"
                       >
                         <PlusIcon className="h-4 w-4" />
                       </button>

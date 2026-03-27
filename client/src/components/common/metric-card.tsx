@@ -20,7 +20,7 @@ export default function MetricCard({
         ? "from-emerald-500/10 via-emerald-500/5 to-white"
         : tone === "slate"
           ? "from-slate-500/10 via-slate-500/5 to-white"
-          : "from-orange-500/15 via-amber-500/5 to-white";
+          : "from-red-500/14 via-rose-500/6 to-white";
 
   return (
     <div

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { Link, useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { toast } from "sonner";
@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import LocationPickerMap from "@/components/maps/location-picker-map";
 import { useDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
 import { extractErrorMessage, formatMoney } from "@/lib/market";
-import type { StoreProduct, StoreSummary } from "@/interfaces/market.interface";
+import type {
+  SavedLocation,
+  StoreProduct,
+  StoreSummary,
+} from "@/interfaces/market.interface";
 
 export default function StoreDetail() {
   const { id } = useParams();
@@ -17,12 +21,25 @@ export default function StoreDetail() {
     useDiscoveryPreferences();
   const [cart, setCart] = useState<Record<string, number>>({});
   const [orderError, setOrderError] = useState("");
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+
+  const { data: savedLocations = [], isFetched: isLocationsFetched } = useQuery({
+    queryKey: ["locations", "my"],
+    queryFn: async () => (await api.get<SavedLocation[]>("/locations/my")).data,
+    staleTime: 60000,
+  });
 
   useEffect(() => {
-    if (!location) {
+    if (!location && !selectedLocationId && isLocationsFetched && savedLocations.length === 0) {
       requestCurrentLocation().catch(() => undefined);
     }
-  }, [location, requestCurrentLocation]);
+  }, [
+    isLocationsFetched,
+    location,
+    requestCurrentLocation,
+    savedLocations.length,
+    selectedLocationId,
+  ]);
 
   const { data: store } = useQuery({
     queryKey: ["store", id],
@@ -38,6 +55,32 @@ export default function StoreDetail() {
     enabled: !!id,
     staleTime: 60000,
   });
+
+  useEffect(() => {
+    if (selectedLocationId || location || !savedLocations.length) {
+      return;
+    }
+
+    const preferredLocation =
+      savedLocations.find((item) => item.is_default) ?? savedLocations[0];
+
+    if (!preferredLocation) {
+      return;
+    }
+
+    setSelectedLocationId(preferredLocation.id);
+    setLocation({
+      lat: Number(preferredLocation.lat),
+      lng: Number(preferredLocation.lng),
+    });
+    setAddress(preferredLocation.address_line);
+  }, [
+    location,
+    savedLocations,
+    selectedLocationId,
+    setAddress,
+    setLocation,
+  ]);
 
   const deliverySettings = store?.deliverySettings?.[0];
   const minOrder = deliverySettings?.min_order_amount ?? 0;
@@ -112,7 +155,7 @@ export default function StoreDetail() {
   return (
     <div className="space-y-5 px-4 pb-32 pt-4">
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.35)]">
-        <div className="relative h-52 bg-[linear-gradient(135deg,#fff1e8,#f8fbff)]">
+        <div className="relative h-52 bg-[linear-gradient(135deg,#fff1f2,#f8fbff)]">
           {store?.banner ? (
             <img src={store.banner} alt={store.name} className="h-full w-full object-cover" />
           ) : (
@@ -166,6 +209,73 @@ export default function StoreDetail() {
                 </Button>
               </div>
               <div className="mt-4">
+                <div className="mb-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-semibold text-slate-900">
+                      Saqlangan manzillar
+                    </p>
+                    <Link
+                      to="/mobile/locations"
+                      className="text-xs font-semibold text-primary"
+                    >
+                      Boshqarish
+                    </Link>
+                  </div>
+
+                  {savedLocations.length > 0 ? (
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {savedLocations.map((savedLocation) => {
+                        const isSelected = savedLocation.id === selectedLocationId;
+
+                        return (
+                          <button
+                            key={savedLocation.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedLocationId(savedLocation.id);
+                              setLocation({
+                                lat: Number(savedLocation.lat),
+                                lng: Number(savedLocation.lng),
+                              });
+                              setAddress(savedLocation.address_line);
+                            }}
+                            className={cn(
+                              "rounded-[1.15rem] border px-4 py-3 text-left transition",
+                              isSelected
+                                ? "border-primary/15 bg-primary/10"
+                                : "border-slate-200 bg-white",
+                            )}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="font-medium text-slate-900">
+                                {savedLocation.label}
+                              </p>
+                              {savedLocation.is_default ? (
+                                <span className="rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                                  Asosiy
+                                </span>
+                              ) : null}
+                            </div>
+                            <p className="mt-2 text-xs leading-5 text-slate-500">
+                              {savedLocation.address_line}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="rounded-[1.15rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                      Saqlangan manzil yo'q. Direct order uchun
+                      {" "}
+                      <Link to="/mobile/locations" className="font-semibold text-primary">
+                        locations sahifasida
+                      </Link>
+                      {" "}
+                      manzil qo'shing.
+                    </div>
+                  )}
+                </div>
+
                 <LocationPickerMap
                   center={location}
                   markers={[
@@ -196,7 +306,10 @@ export default function StoreDetail() {
                   ]}
                   radiusKm={radiusKmFromMeters(Number(deliverySettings?.max_delivery_radius ?? 5000))}
                   interactive
-                  onLocationSelect={setLocation}
+                  onLocationSelect={(nextLocation) => {
+                    setSelectedLocationId(null);
+                    setLocation(nextLocation);
+                  }}
                   className="h-full"
                 />
               </div>
@@ -209,10 +322,10 @@ export default function StoreDetail() {
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff7f1)] p-4">
+          <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff5f6)] p-4">
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-semibold text-slate-950">Buyurtma xulosasi</h2>
-              <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                 {cartItems.length} tur
               </span>
             </div>
@@ -305,7 +418,7 @@ export default function StoreDetail() {
               <p className="font-medium text-sm mb-1 text-foreground">{item.product.name}</p>
               <p className="text-amber-600 font-bold">{formatMoney(item.price)}</p>
               {item.stock <= 5 && item.stock > 0 && (
-                <p className="text-xs text-orange-500">Omborda {item.stock} ta</p>
+                <p className="text-xs text-primary/80">Omborda {item.stock} ta</p>
               )}
               {item.stock === 0 && (
                 <p className="text-xs text-red-500 font-medium">Tugagan</p>

@@ -136,7 +136,7 @@ export default function ProductOffersPage() {
                     {Math.round(Number(offer.service_radius_meters ?? 0) / 1000)} km
                   </p>
                 </div>
-                <div className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                <div className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   {offer.store?.is_prime ? "Prime" : "Store"}
                 </div>
               </div>

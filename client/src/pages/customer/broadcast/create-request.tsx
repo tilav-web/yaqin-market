@@ -125,7 +125,7 @@ export default function CreateBroadcastRequestPage() {
                 max={15}
                 value={radiusKm}
                 onChange={(event) => setRadiusKm(Number(event.target.value))}
-                className="mt-3 w-full accent-orange-500"
+                className="mt-3 w-full accent-primary"
               />
               <div className="mt-4">
                 <LocationPickerMap
@@ -158,7 +158,7 @@ export default function CreateBroadcastRequestPage() {
             </div>
           </div>
 
-          <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff7f1)] p-4">
+            <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff5f6)] p-4">
             <p className="text-sm font-semibold text-slate-900">Tanlangan savat</p>
             <div className="mt-4 space-y-3">
               {selectedProducts.length === 0 ? (
@@ -190,7 +190,7 @@ export default function CreateBroadcastRequestPage() {
                         </span>
                         <button
                           onClick={() => changeQuantity(product.id, 1)}
-                          className="h-8 w-8 rounded-full bg-orange-500 text-white"
+                          className="h-8 w-8 rounded-full bg-primary text-primary-foreground"
                         >
                           +
                         </button>
@@ -256,7 +256,7 @@ export default function CreateBroadcastRequestPage() {
                 </span>
                 <button
                   onClick={() => changeQuantity(product.id, 1)}
-                  className="h-8 w-8 rounded-full bg-orange-500 text-white"
+                  className="h-8 w-8 rounded-full bg-primary text-primary-foreground"
                 >
                   +
                 </button>

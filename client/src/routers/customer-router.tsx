@@ -6,6 +6,8 @@ import StoreDetail from "../pages/customer/stores/store-detail";
 import CustomerOrders from "../pages/customer/orders/orders";
 import CustomerOrderDetailPage from "../pages/customer/orders/order-detail";
 import CustomerProfile from "../pages/customer/profile/profile";
+import CustomerLocationsPage from "../pages/customer/locations/locations";
+import CustomerWalletPage from "../pages/customer/wallet/wallet";
 import ProductOffersPage from "../pages/customer/products/product-offers";
 import CreateBroadcastRequestPage from "../pages/customer/broadcast/create-request";
 import CustomerRequestsPage from "../pages/customer/requests/requests";
@@ -55,6 +57,14 @@ export const customerRouter: RouteObject[] = [
       {
         path: "profile",
         element: <CustomerProfile />,
+      },
+      {
+        path: "locations",
+        element: <CustomerLocationsPage />,
+      },
+      {
+        path: "wallet",
+        element: <CustomerWalletPage />,
       },
     ],
   },

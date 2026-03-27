@@ -46,6 +46,16 @@ export interface ProductImage {
   is_main: boolean;
 }
 
+export interface SavedLocation {
+  id: string;
+  label: string;
+  address_line: string;
+  landmark?: string | null;
+  lat: number;
+  lng: number;
+  is_default: boolean;
+}
+
 export interface ProductCatalogItem {
   id: number;
   name: string;

@@ -63,7 +63,7 @@ export default function ProductDrawer({
             return (
               <article
                 key={variant.id}
-                className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff8f3)] p-3"
+                className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff5f6)] p-3"
               >
                 <div className="flex gap-3">
                   <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[1.15rem] bg-slate-100">
@@ -114,7 +114,7 @@ export default function ProductDrawer({
                         <button
                           type="button"
                           onClick={() => addProduct(variant, product)}
-                          className="flex h-9 w-9 items-center justify-center rounded-full bg-orange-500 text-white"
+                          className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground"
                         >
                           <PlusIcon className="h-4 w-4" />
                         </button>
@@ -122,7 +122,7 @@ export default function ProductDrawer({
 
                       <Link
                         to={`/mobile/products/${compareProductId}`}
-                        className="text-xs font-semibold text-orange-700"
+                        className="text-xs font-semibold text-primary"
                         onClick={() => onOpenChange(false)}
                       >
                         Narxlarni ko'rish
