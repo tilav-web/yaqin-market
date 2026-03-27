@@ -5,12 +5,14 @@ import SellerDashboard from "../pages/seller/dashboard/dashboard";
 import SellerStore from "../pages/seller/store/store";
 import SellerProducts from "../pages/seller/products/products";
 import SellerOrders from "../pages/seller/orders/orders";
+import SellerRequestsPage from "../pages/seller/requests/requests";
+import SellerSettings from "../pages/seller/settings/settings";
 
 export const sellerRouter: RouteObject[] = [
   {
     path: "/seller",
     element: (
-      <PrivateRoute>
+      <PrivateRoute roles={["SELLER"]}>
         <SellerLayout />
       </PrivateRoute>
     ),
@@ -30,6 +32,14 @@ export const sellerRouter: RouteObject[] = [
       {
         path: "orders",
         element: <SellerOrders />,
+      },
+      {
+        path: "requests",
+        element: <SellerRequestsPage />,
+      },
+      {
+        path: "settings",
+        element: <SellerSettings />,
       },
     ],
   },

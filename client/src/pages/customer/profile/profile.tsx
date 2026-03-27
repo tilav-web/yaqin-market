@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/api/api";
 import { Button } from "@/components/ui/button";
@@ -51,37 +51,37 @@ export default function CustomerProfile() {
     is_default: true,
   });
 
-  const { data: meRes } = useQuery({
+  const { data: me } = useQuery({
     queryKey: ["me"],
-    queryFn: () => api.get("/users/me"),
-    onSuccess: (res) => {
-      const data = res.data as MeResponse;
-      setProfile({
-        first_name: data.first_name ?? "",
-        last_name: data.last_name ?? "",
-      });
-    },
+    queryFn: async () => (await api.get<MeResponse>("/users/me")).data,
   });
 
-  const { data: locationsRes } = useQuery({
+  useEffect(() => {
+    if (!me) return;
+    setProfile({
+      first_name: me.first_name ?? "",
+      last_name: me.last_name ?? "",
+    });
+  }, [me]);
+
+  const { data: locations = [] } = useQuery({
     queryKey: ["locations", "my"],
-    queryFn: () => api.get("/locations/my"),
+    queryFn: async () => (await api.get<Location[]>("/locations/my")).data,
   });
 
-  const { data: walletRes } = useQuery({
+  const { data: wallet } = useQuery({
     queryKey: ["wallet", "balance"],
-    queryFn: () => api.get("/wallet/balance"),
+    queryFn: async () => (await api.get<WalletBalance>("/wallet/balance")).data,
   });
 
   const { data: walletTxRes } = useQuery({
     queryKey: ["wallet", "transactions"],
-    queryFn: () => api.get("/wallet/transactions?page=1&limit=5"),
+    queryFn: async () =>
+      (
+        await api.get<{ data: WalletTransaction[] }>("/wallet/transactions?page=1&limit=5")
+      ).data,
   });
-
-  const me = meRes?.data as MeResponse | undefined;
-  const locations: Location[] = locationsRes?.data ?? [];
-  const wallet = walletRes?.data as WalletBalance | undefined;
-  const transactions: WalletTransaction[] = walletTxRes?.data?.data ?? [];
+  const transactions: WalletTransaction[] = walletTxRes?.data ?? [];
 
   const saveProfile = useMutation({
     mutationFn: (data: { first_name?: string; last_name?: string }) =>

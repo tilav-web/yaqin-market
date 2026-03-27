@@ -23,6 +23,11 @@ export class UpdateStoreProductDto {
   price?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  stock?: number;
+
+  @IsOptional()
   @IsBoolean()
   is_prime?: boolean;
 

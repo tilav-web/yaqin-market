@@ -1,9 +1,12 @@
 import {
   BoxesIcon,
   LayoutGridIcon,
+  SendIcon,
+  Settings2Icon,
   ShoppingBagIcon,
   StoreIcon,
   TruckIcon,
+  Users2Icon,
 } from "lucide-react";
 import type { SidebarSection } from "./app-sidebar";
 
@@ -15,6 +18,7 @@ export const adminSections: SidebarSection[] = [
       { label: "Mahsulotlar", to: "/admin/products", icon: BoxesIcon },
       { label: "Kategoriyalar", to: "/admin/categories", icon: BoxesIcon },
       { label: "Do'konlar", to: "/admin/stores", icon: StoreIcon },
+      { label: "Foydalanuvchilar", to: "/admin/users", icon: Users2Icon },
     ],
   },
 ];
@@ -27,6 +31,8 @@ export const sellerSections: SidebarSection[] = [
       { label: "Do'konim", to: "/seller/store", icon: StoreIcon },
       { label: "Mahsulotlar", to: "/seller/products", icon: BoxesIcon },
       { label: "Buyurtmalar", to: "/seller/orders", icon: ShoppingBagIcon },
+      { label: "So'rovlar", to: "/seller/requests", icon: SendIcon },
+      { label: "Sozlamalar", to: "/seller/settings", icon: Settings2Icon },
     ],
   },
 ];

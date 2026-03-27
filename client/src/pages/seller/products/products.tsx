@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "../../../api/api";
-import { Button } from "../../../components/ui/button";
-import { Input } from "../../../components/ui/input";
+import { api } from "@/api/api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
 interface Product {
@@ -17,20 +17,27 @@ interface StoreProduct {
   product_id: number;
   product: Product;
   price: number;
+  stock: number;
   status: string;
+}
+
+interface SellerStoreOption {
+  id: string;
+  name: string;
 }
 
 export default function SellerProducts() {
   const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
   const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("20");
 
   const { data: storesRes } = useQuery({
     queryKey: ["seller", "stores"],
-    queryFn: () => api.get("/stores/my"),
+    queryFn: () => api.get<SellerStoreOption[]>("/stores/my"),
   });
 
-  const stores: any[] = storesRes?.data || [];
+  const stores = storesRes?.data ?? [];
   const store = stores[0];
 
   const { data: myProductsRes, isLoading: myProductsLoading } = useQuery({
@@ -49,12 +56,13 @@ export default function SellerProducts() {
   const allProducts: Product[] = allProductsRes?.data || [];
 
   const addProduct = useMutation({
-    mutationFn: (data: { product_id: number; price: number }) =>
+    mutationFn: (data: { product_id: number; price: number; stock: number }) =>
       api.post(`/store-products?store_id=${store?.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store-products", store?.id] });
       setSelectedProduct(null);
       setPrice("");
+      setStock("20");
       toast.success("Mahsulot do'konga qo'shildi");
     },
     onError: (error) => {
@@ -110,12 +118,19 @@ export default function SellerProducts() {
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
               />
+              <Input
+                placeholder="Stock"
+                type="number"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
+              />
               <Button
-                disabled={!selectedProduct || !price || addProduct.isPending}
+                disabled={!selectedProduct || !price || !stock || addProduct.isPending}
                 onClick={() =>
                   addProduct.mutate({
                     product_id: selectedProduct!,
                     price: Number(price),
+                    stock: Number(stock),
                   })
                 }
               >
@@ -160,7 +175,7 @@ export default function SellerProducts() {
                       {item.product.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {Number(item.price).toLocaleString()} so'm
+                      {Number(item.price).toLocaleString()} so'm · omborda {item.stock} ta
                     </p>
                   </div>
                 </div>

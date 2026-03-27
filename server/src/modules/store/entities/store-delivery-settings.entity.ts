@@ -32,13 +32,13 @@ export class StoreDeliverySettings {
   @Column({ type: 'int', default: 15 })
   preparation_time: number;
 
-  @Column({ type: 'decimal', precision: 6, scale: 2, default: 0 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
   free_delivery_radius: number;
 
-  @Column({ type: 'decimal', precision: 6, scale: 2, default: 2000 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 2000 })
   delivery_price_per_km: number;
 
-  @Column({ type: 'decimal', precision: 6, scale: 2, default: 10000 })
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 10000 })
   max_delivery_radius: number;
 
   @Column({ default: true })

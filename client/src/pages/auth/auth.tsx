@@ -15,6 +15,9 @@ import {
   initialAuthState,
 } from "@/reducers/auth-reducer";
 import { authService } from "@/services/auth.service";
+import { getRoleHomePath } from "@/lib/market";
+import { useAuthStore } from "@/stores/auth.store";
+import { persistDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
 
 const DEFAULT_OTP_LENGTH = 6;
 
@@ -22,8 +25,32 @@ function sanitizeDigits(value: string) {
   return value.replace(/\D/g, "");
 }
 
+function captureDiscoveryLocation() {
+  return new Promise<void>((resolve) => {
+    if (!navigator.geolocation) {
+      resolve();
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        persistDiscoveryPreferences({
+          location: {
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          },
+        });
+        resolve();
+      },
+      () => resolve(),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  });
+}
+
 export default function Auth() {
   const navigate = useNavigate();
+  const setMe = useAuthStore((state) => state.setMe);
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const lastSubmittedOtp = useRef<string | null>(null);
@@ -65,8 +92,11 @@ export default function Auth() {
 
     dispatch(authActions.submitStart());
     try {
-      await authService.sendOtp(phoneDigits);
+      const result = await authService.sendOtp(phoneDigits);
       dispatch(authActions.submitSuccess(DEFAULT_OTP_LENGTH));
+      if (result.otp_preview) {
+        toast.info(`Test OTP: ${result.otp_preview}`);
+      }
     } catch (error) {
       const message =
         error instanceof Error
@@ -87,8 +117,13 @@ export default function Auth() {
     lastSubmittedOtp.current = otpValue;
     try {
       await authService.verifyOtp(phoneDigits, otpValue);
+      const me = await authService.findMe();
+      setMe(me);
+      if (me.role === "CUSTOMER") {
+        await captureDiscoveryLocation();
+      }
       toast.success("Tizimga muvaffaqiyatli kirdingiz");
-      navigate("/");
+      navigate(getRoleHomePath(me.role), { replace: true });
     } catch (error) {
       const message =
         error instanceof Error
@@ -136,18 +171,43 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,var(--primary)/12%,transparent_45%),linear-gradient(180deg,white,#fff7f7)]">
-      <div className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
-        <div className="rounded-3xl border border-border bg-card/80 p-8 shadow-[0_20px_60px_-40px_rgba(239,68,68,0.6)] backdrop-blur">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(255,124,61,0.18),transparent_35%),linear-gradient(180deg,#fff9f5_0%,#f8fbff_55%,#ffffff_100%)]">
+      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-10 px-6 py-12 lg:grid-cols-[1fr_460px] lg:px-10">
+        <section className="hidden lg:block">
+          <div className="inline-flex rounded-full border border-orange-200 bg-orange-50 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-orange-700">
+            Yaqin Market platformasi
+          </div>
+          <h1 className="mt-6 text-5xl font-semibold tracking-tight text-slate-950">
+            Eng yaqin do'konlardan order qiling yoki sellerlardan taklif oling.
+          </h1>
+          <p className="mt-5 max-w-xl text-lg leading-8 text-slate-600">
+            Telefon raqamingiz bilan kirib, map orqali yaqin do'konlarni ko'ring,
+            mahsulotlarni solishtiring va topa olmagan savatingizni broadcast qiling.
+          </p>
+          <div className="mt-10 grid max-w-xl gap-4 sm:grid-cols-2">
+            {[
+              "Joylashuv bo'yicha discovery",
+              "Store va product compare",
+              "Broadcast so'rovlar",
+              "Seller, courier va admin panellar",
+            ].map((item) => (
+              <div
+                key={item}
+                className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 text-sm text-slate-700 shadow-sm"
+              >
+                {item}
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <div className="rounded-[2rem] border border-white/70 bg-white/85 p-8 shadow-[0_28px_90px_-56px_rgba(15,23,42,0.4)] backdrop-blur">
           <div className="flex flex-col items-center gap-4 text-center">
-            <img
-              src="/logo-web.png"
-              alt="Yaqin Market"
-              className="h-24 w-auto"
-            />
+            <img src="/logo-web.png" alt="Yaqin Market" className="h-24 w-auto" />
             <div>
-              <p className="text-sm text-muted-foreground">
-                Telefon raqamingizni kiriting, kodni yuboramiz
+              <h2 className="text-2xl font-semibold text-slate-950">Kirish</h2>
+              <p className="mt-2 text-sm text-slate-500">
+                Telefon raqamingizni kiriting, tasdiqlash kodini yuboramiz
               </p>
             </div>
           </div>
@@ -210,7 +270,7 @@ export default function Auth() {
 
             {!showOtp ? (
               <Button
-                className="h-11 w-full rounded-xl text-sm font-semibold"
+                className="h-12 w-full rounded-2xl text-sm font-semibold"
                 onClick={handleSubmit}
                 disabled={state.status === "loading"}
               >
@@ -220,7 +280,7 @@ export default function Auth() {
               </Button>
             ) : (
               <Button
-                className="h-11 w-full rounded-xl text-sm font-semibold"
+                className="h-12 w-full rounded-2xl text-sm font-semibold"
                 onClick={handleVerify}
                 disabled={state.status === "loading"}
               >

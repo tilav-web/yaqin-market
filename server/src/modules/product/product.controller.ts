@@ -12,6 +12,9 @@ import {
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 
 @Controller('products')
 export class ProductController {
@@ -28,13 +31,15 @@ export class ProductController {
   }
 
   @Post()
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
   async create(@Body() dto: CreateProductDto) {
     return this.productService.create(dto);
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: Partial<CreateProductDto>,

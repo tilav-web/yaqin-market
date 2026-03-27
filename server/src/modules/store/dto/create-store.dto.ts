@@ -4,8 +4,9 @@ export class CreateStoreDto {
   @IsString()
   name: string;
 
+  @IsOptional()
   @IsString()
-  slug: string;
+  slug?: string;
 
   @IsOptional()
   @IsString()
@@ -49,4 +50,8 @@ export class CreateStoreDto {
   @IsOptional()
   @IsNumber()
   max_delivery_radius?: number;
+
+  @IsOptional()
+  @IsString()
+  owner_id?: string;
 }

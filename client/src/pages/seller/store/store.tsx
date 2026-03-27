@@ -132,7 +132,7 @@ export default function SellerStore() {
   });
 
   const updateSettings = useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data: StoreDeliverySettings) =>
       api.put(`/stores/${store?.id}/delivery-settings`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["seller", "stores"] });

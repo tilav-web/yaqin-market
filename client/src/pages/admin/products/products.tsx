@@ -1,6 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
 import CategoryList from "./_components/category-list";
 import { api } from "@/api/api";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { extractErrorMessage } from "@/lib/market";
 
 type Product = {
   id: number;
@@ -13,12 +18,50 @@ type Product = {
 };
 
 export default function Products() {
-  const { data: productsRes, isLoading } = useQuery({
-    queryKey: ["products", "admin"],
-    queryFn: () => api.get("/products"),
+  const queryClient = useQueryClient();
+  const [form, setForm] = useState({
+    name: "",
+    slug: "",
+    description: "",
+    category_id: "",
+    unit_id: "",
   });
 
-  const products: Product[] = productsRes?.data ?? [];
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["products", "admin"],
+    queryFn: async () => (await api.get<Product[]>("/products")).data,
+  });
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories", "admin", "all"],
+    queryFn: async () => (await api.get<{ id: string; name: string }[]>("/categories")).data,
+  });
+
+  const { data: units = [] } = useQuery({
+    queryKey: ["units", "admin", "all"],
+    queryFn: async () => (await api.get<{ id: number; name: string }[]>("/units")).data,
+  });
+
+  const createProduct = useMutation({
+    mutationFn: async () =>
+      (
+        await api.post("/products", {
+          name: form.name,
+          slug: form.slug || undefined,
+          description: form.description || undefined,
+          category_id: form.category_id ? Number(form.category_id) : undefined,
+          unit_id: form.unit_id ? Number(form.unit_id) : undefined,
+        })
+      ).data,
+    onSuccess: () => {
+      toast.success("Mahsulot yaratildi");
+      setForm({ name: "", slug: "", description: "", category_id: "", unit_id: "" });
+      queryClient.invalidateQueries({ queryKey: ["products", "admin"] });
+    },
+    onError: (error) => {
+      toast.error(extractErrorMessage(error));
+    },
+  });
 
   return (
     <div className="space-y-6">
@@ -30,6 +73,60 @@ export default function Products() {
       </div>
 
       <CategoryList />
+
+      <section className="rounded-3xl border border-border bg-card/80 p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.55)] backdrop-blur">
+        <h3 className="text-base font-semibold text-foreground">Yangi mahsulot yaratish</h3>
+        <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <Input
+            placeholder="Nomi"
+            value={form.name}
+            onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))}
+          />
+          <Input
+            placeholder="Slug"
+            value={form.slug}
+            onChange={(event) => setForm((current) => ({ ...current, slug: event.target.value }))}
+          />
+          <Input
+            placeholder="Tavsif"
+            value={form.description}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, description: event.target.value }))
+            }
+          />
+          <select
+            value={form.category_id}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, category_id: event.target.value }))
+            }
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+          >
+            <option value="">Kategoriya</option>
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <select
+            value={form.unit_id}
+            onChange={(event) =>
+              setForm((current) => ({ ...current, unit_id: event.target.value }))
+            }
+            className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm"
+          >
+            <option value="">Birlik</option>
+            {units.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.name}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Button className="mt-4" onClick={() => createProduct.mutate()} disabled={!form.name || createProduct.isPending}>
+          Mahsulot yaratish
+        </Button>
+      </section>
 
       <section className="rounded-3xl border border-border bg-card/80 p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.55)] backdrop-blur">
         <div className="mb-4 flex items-center justify-between">

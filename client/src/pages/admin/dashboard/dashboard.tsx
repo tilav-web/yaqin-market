@@ -1,24 +1,35 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/api/api";
+import MetricCard from "@/components/common/metric-card";
+
+type CountItem = {
+  id: string | number;
+};
+
+type DashboardUser = {
+  id: string;
+  auth?: {
+    role?: string;
+  } | null;
+};
 
 export default function Dashboard() {
-  const { data: storesRes } = useQuery({
+  const { data: stores = [] } = useQuery({
     queryKey: ["admin", "stores", "count"],
-    queryFn: () => api.get("/stores"),
+    queryFn: async () => (await api.get<CountItem[]>("/stores")).data,
   });
-  const { data: categoriesRes } = useQuery({
+  const { data: categories = [] } = useQuery({
     queryKey: ["admin", "categories", "count"],
-    queryFn: () => api.get("/categories"),
+    queryFn: async () => (await api.get<CountItem[]>("/categories")).data,
   });
-  const { data: productsRes } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ["admin", "products", "count"],
-    queryFn: () => api.get("/products"),
+    queryFn: async () => (await api.get<CountItem[]>("/products")).data,
   });
-
-  const storesCount = storesRes?.data?.length ?? 0;
-  const categoriesCount = categoriesRes?.data?.length ?? 0;
-  const productsCount = productsRes?.data?.length ?? 0;
-
+  const { data: users = [] } = useQuery({
+    queryKey: ["admin", "users", "count"],
+    queryFn: async () => (await api.get<DashboardUser[]>("/users")).data,
+  });
   return (
     <div className="space-y-6">
       <div>
@@ -28,24 +39,15 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        {[
-          { label: "Do'konlar", value: storesCount },
-          { label: "Kategoriyalar", value: categoriesCount },
-          { label: "Mahsulotlar", value: productsCount },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className="rounded-3xl border border-border bg-card/80 p-5 shadow-[0_18px_50px_-45px_rgba(15,23,42,0.55)]"
-          >
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
-              {stat.label}
-            </p>
-            <p className="mt-2 text-3xl font-semibold text-foreground">
-              {stat.value}
-            </p>
-          </div>
-        ))}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <MetricCard label="Do'konlar" value={stores.length} />
+        <MetricCard label="Kategoriyalar" value={categories.length} tone="blue" />
+        <MetricCard label="Mahsulotlar" value={products.length} tone="green" />
+        <MetricCard label="Foydalanuvchilar" value={users.length} tone="slate" />
+        <MetricCard
+          label="Sellerlar"
+          value={users.filter((user) => user.auth?.role === "SELLER").length}
+        />
       </div>
     </div>
   );

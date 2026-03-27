@@ -32,7 +32,7 @@ function getErrorMessage(error: unknown) {
   return "Noma'lum xatolik yuz berdi";
 }
 
-function createFormData(payload: Record<string, any>): FormData {
+function createFormData(payload: Record<string, unknown>): FormData {
   const formData = new FormData();
   Object.entries(payload).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {

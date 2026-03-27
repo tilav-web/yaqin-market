@@ -58,7 +58,9 @@ export class AuthService {
         id,
       },
       relations: {
-        user: true,
+        user: {
+          stores: true,
+        },
       },
     });
   }
@@ -74,14 +76,21 @@ export class AuthService {
   async sendOtp({ phone, ip }: { phone: string; ip: string }) {
     const normalizedPhone = this.normalizePhone(phone);
     const existingOtp = await this.authRedisService.getOtp(normalizedPhone, ip);
+    let previewOtp: string | undefined;
+
     if (!existingOtp) {
       const otp = generateOtp(6);
       await this.authRedisService.saveOtp(normalizedPhone, ip, otp);
+      previewOtp = otp;
+    } else if (process.env.NODE_ENV !== 'production') {
+      previewOtp = existingOtp;
     }
 
     return {
       success: true,
       message: 'OTP sent successfully',
+      otp_length: 6 as const,
+      otp_preview: process.env.NODE_ENV !== 'production' ? previewOtp : undefined,
     };
   }
 

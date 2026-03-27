@@ -4,17 +4,22 @@ import {
   Put,
   Body,
   UseGuards,
+  Param,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { UserDecorator } from '../auth/decorators/user.decorator';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
   async findAll() {
     return this.userService.findAll();
   }
@@ -32,5 +37,15 @@ export class UserController {
     @Body() data: { first_name?: string; last_name?: string },
   ) {
     return this.userService.updateProfile(user.id, data);
+  }
+
+  @Put(':id/role')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
+  async updateRole(
+    @Param('id') id: string,
+    @Body('role') role: AuthRoleEnum,
+  ) {
+    return this.userService.updateRole(id, role);
   }
 }

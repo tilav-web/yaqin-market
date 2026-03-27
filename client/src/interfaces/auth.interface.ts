@@ -5,6 +5,7 @@ export interface SendOtpResponse {
   success: boolean;
   message?: string;
   otp_length?: 4 | 6;
+  otp_preview?: string;
 }
 
 export interface VerifyOtpResponse {

@@ -5,12 +5,13 @@ import AdminDashboard from "../pages/admin/dashboard/dashboard";
 import AdminProducts from "../pages/admin/products/products";
 import AdminCategories from "../pages/admin/categories/categories";
 import AdminStores from "../pages/admin/stores/stores";
+import AdminUsersPage from "../pages/admin/users/users";
 
 export const adminRouter: RouteObject[] = [
   {
     path: "/admin",
     element: (
-      <PrivateRoute>
+      <PrivateRoute roles={["SUPER_ADMIN"]}>
         <AdminLayout />
       </PrivateRoute>
     ),
@@ -30,6 +31,10 @@ export const adminRouter: RouteObject[] = [
       {
         path: "stores",
         element: <AdminStores />,
+      },
+      {
+        path: "users",
+        element: <AdminUsersPage />,
       },
     ],
   },

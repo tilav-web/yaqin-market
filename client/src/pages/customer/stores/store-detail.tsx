@@ -1,55 +1,44 @@
 import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../../api/api";
+import { api } from "@/api/api";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-interface StoreProduct {
-  id: string;
-  product: {
-    id: number;
-    name: string;
-    images: { url: string; is_main: boolean }[];
-  };
-  price: number;
-  stock: number;
-  status: string;
-}
+import { Button } from "@/components/ui/button";
+import LocationPickerMap from "@/components/maps/location-picker-map";
+import { useDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
+import { extractErrorMessage, formatMoney } from "@/lib/market";
+import type { StoreProduct, StoreSummary } from "@/interfaces/market.interface";
 
 export default function StoreDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { location, setLocation, address, setAddress, requestCurrentLocation } =
+    useDiscoveryPreferences();
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [location, setLocation] = useState<{ lat: number; lng: number } | null>(null);
-  const [address, setAddress] = useState("");
   const [orderError, setOrderError] = useState("");
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        () => {},
-      );
+    if (!location) {
+      requestCurrentLocation().catch(() => undefined);
     }
-  }, []);
+  }, [location, requestCurrentLocation]);
 
-  const { data: storeRes } = useQuery({
+  const { data: store } = useQuery({
     queryKey: ["store", id],
-    queryFn: () => api.get(`/stores/${id}`),
+    queryFn: async () => (await api.get<StoreSummary>(`/stores/${id}`)).data,
     enabled: !!id,
     staleTime: 60000,
   });
 
-  const { data: productsRes } = useQuery({
+  const { data: products = [] } = useQuery({
     queryKey: ["store-products", id],
-    queryFn: () => api.get(`/store-products?store_id=${id}`),
+    queryFn: async () =>
+      (await api.get<StoreProduct[]>(`/store-products?store_id=${id}`)).data,
     enabled: !!id,
     staleTime: 60000,
   });
 
-  const store = storeRes?.data;
-  const products: StoreProduct[] = productsRes?.data ?? [];
   const deliverySettings = store?.deliverySettings?.[0];
   const minOrder = deliverySettings?.min_order_amount ?? 0;
 
@@ -115,54 +104,193 @@ export default function StoreDetail() {
       toast.success("Buyurtma muvaffaqiyatli yuborildi!");
       setCart({});
       navigate("/mobile/orders");
-    } catch (err: any) {
-      setOrderError(err?.response?.data?.message || "Xatolik yuz berdi");
+    } catch (error) {
+      setOrderError(extractErrorMessage(error));
     }
   };
 
   return (
-    <div className="min-h-screen pb-28">
-      <div className="relative h-48 overflow-hidden rounded-b-3xl bg-muted">
-        {store?.banner && (
-          <img src={store.banner} alt={store.name} className="w-full h-full object-cover" />
-        )}
-        <div className="absolute bottom-4 left-4 flex items-end gap-3">
-          <div className="h-16 w-16 overflow-hidden rounded-2xl border border-border bg-white shadow">
-            {store?.logo ? (
-              <img src={store.logo} alt={store.name} className="h-full w-full object-cover" />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-2xl">🏪</span>
-            )}
-          </div>
-          <div className="text-white">
-            <h1 className="text-xl font-semibold drop-shadow">{store?.name}</h1>
-            <p className="text-xs opacity-90">⭐ {store?.rating} • {store?.is_open ? "Ochiq" : "Yopiq"}</p>
-          </div>
-        </div>
-      </div>
-
-      <div className="px-4 pt-4">
-        <input
-          type="text"
-          placeholder="Yetkazib berish manzili (ixtiyoriy)"
-          value={address}
-          onChange={(e) => setAddress(e.target.value)}
-          className="w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none"
-        />
-      </div>
-
-      <div className="p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">Mahsulotlar</h2>
-          {minOrder > 0 && (
-            <span className="text-xs text-muted-foreground">
-              Minimal buyurtma: {Number(minOrder).toLocaleString()} so'm
-            </span>
+    <div className="space-y-5 px-4 pb-32 pt-4">
+      <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.35)]">
+        <div className="relative h-52 bg-[linear-gradient(135deg,#fff1e8,#f8fbff)]">
+          {store?.banner ? (
+            <img src={store.banner} alt={store.name} className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full items-center justify-center text-5xl">🏪</div>
           )}
+          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 to-transparent px-5 py-5 text-white">
+            <div className="flex items-end gap-4">
+              <div className="h-18 w-18 overflow-hidden rounded-[1.35rem] border border-white/40 bg-white shadow-lg">
+                {store?.logo ? (
+                  <img src={store.logo} alt={store.name} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center text-3xl text-slate-900">
+                    🏪
+                  </span>
+                )}
+              </div>
+              <div>
+                <h1 className="text-2xl font-semibold">{store?.name}</h1>
+                <p className="mt-1 text-sm text-white/80">
+                  ⭐ {Number(store?.rating ?? 0).toFixed(1)} ·{" "}
+                  {store?.is_open ? "Hozir ochiq" : "Hozir yopiq"}
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+
+        <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="space-y-4">
+            <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <p className="font-semibold text-slate-900">{store?.address ?? "Manzil yo'q"}</p>
+              <p className="mt-1">
+                Minimal buyurtma: {formatMoney(minOrder)} · Delivery:{" "}
+                {formatMoney(deliverySettings?.delivery_fee ?? 0)}
+              </p>
+            </div>
+
+            <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-950">Yetkazib berish nuqtasi</h2>
+                  <p className="text-sm text-slate-500">
+                    Xarita ustiga bosib manzilni yangilashingiz mumkin
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  onClick={() => requestCurrentLocation().catch(() => undefined)}
+                >
+                  GPS olish
+                </Button>
+              </div>
+              <div className="mt-4">
+                <LocationPickerMap
+                  center={location}
+                  markers={[
+                    ...(store?.lat && store?.lng
+                      ? [
+                          {
+                            id: store.id,
+                            lat: Number(store.lat),
+                            lng: Number(store.lng),
+                            label: store.name,
+                            meta: "Do'kon joylashuvi",
+                            tone: "store" as const,
+                          },
+                        ]
+                      : []),
+                    ...(location
+                      ? [
+                          {
+                            id: "me",
+                            lat: location.lat,
+                            lng: location.lng,
+                            label: "Mening manzilim",
+                            meta: address || "Tanlangan delivery nuqtasi",
+                            tone: "accent" as const,
+                          },
+                        ]
+                      : []),
+                  ]}
+                  radiusKm={radiusKmFromMeters(Number(deliverySettings?.max_delivery_radius ?? 5000))}
+                  interactive
+                  onLocationSelect={setLocation}
+                  className="h-full"
+                />
+              </div>
+              <textarea
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                placeholder="Aniq yetkazib berish manzilini yozing"
+                className="mt-4 h-24 w-full rounded-[1.25rem] border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff7f1)] p-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-950">Buyurtma xulosasi</h2>
+              <span className="rounded-full bg-orange-50 px-3 py-1 text-xs font-semibold text-orange-700">
+                {cartItems.length} tur
+              </span>
+            </div>
+            <div className="mt-4 space-y-3">
+              {cartItems.length === 0 ? (
+                <p className="rounded-[1.25rem] border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-500">
+                  Savat bo'sh. Mahsulotlarni pastdagi ro'yxatdan qo'shing.
+                </p>
+              ) : (
+                cartItems.map(([itemId, qty]) => {
+                  const product = products.find((candidate) => candidate.id === itemId);
+                  if (!product) return null;
+
+                  return (
+                    <div
+                      key={itemId}
+                      className="flex items-center justify-between rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3"
+                    >
+                      <div>
+                        <p className="font-medium text-slate-900">{product.product.name}</p>
+                        <p className="text-sm text-slate-500">
+                          {qty} x {formatMoney(product.price)}
+                        </p>
+                      </div>
+                      <span className="font-semibold text-slate-950">
+                        {formatMoney(Number(product.price) * qty)}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {isBelowMinOrder ? (
+              <p className="mt-4 rounded-[1.25rem] bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                Minimal buyurtma uchun yana {formatMoney(Number(minOrder) - totalPrice)} qo'shing.
+              </p>
+            ) : null}
+
+            {orderError ? (
+              <p className="mt-4 rounded-[1.25rem] bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                {orderError}
+              </p>
+            ) : null}
+
+            <div className="mt-5 flex items-center justify-between text-sm text-slate-500">
+              <span>Umumiy summa</span>
+              <span className="text-2xl font-semibold text-slate-950">
+                {formatMoney(totalPrice)}
+              </span>
+            </div>
+            <Button
+              className="mt-4 h-12 w-full rounded-[1.25rem] text-sm font-semibold"
+              onClick={handleOrder}
+              disabled={!cartItems.length || isBelowMinOrder}
+            >
+              Buyurtma berish
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold text-slate-950">Do'kondagi mahsulotlar</h2>
+            <p className="text-sm text-slate-500">
+              Narxlar do'kon tomonidan oldindan belgilangan
+            </p>
+          </div>
+          {minOrder > 0 ? (
+            <span className="text-sm text-slate-400">Min. {formatMoney(minOrder)}</span>
+          ) : null}
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {products.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-border bg-background p-3">
+            <div key={item.id} className="rounded-[1.6rem] border border-white/70 bg-white/90 p-4 shadow-sm">
               <div className="h-24 rounded-xl bg-muted mb-2 flex items-center justify-center overflow-hidden">
                 {item.product.images?.[0]?.url ? (
                   <img
@@ -175,9 +303,7 @@ export default function StoreDetail() {
                 )}
               </div>
               <p className="font-medium text-sm mb-1 text-foreground">{item.product.name}</p>
-              <p className="text-amber-600 font-bold">
-                {Number(item.price).toLocaleString()} so'm
-              </p>
+              <p className="text-amber-600 font-bold">{formatMoney(item.price)}</p>
               {item.stock <= 5 && item.stock > 0 && (
                 <p className="text-xs text-orange-500">Omborda {item.stock} ta</p>
               )}
@@ -211,32 +337,11 @@ export default function StoreDetail() {
             </div>
           ))}
         </div>
-      </div>
-
-      {cartItems.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 border-t border-border bg-background/95 p-4 shadow-lg backdrop-blur">
-          {isBelowMinOrder && (
-            <p className="text-xs text-orange-600 mb-2">
-              Minimal buyurtma: {Number(minOrder).toLocaleString()} so'm (yana{" "}
-              {(Number(minOrder) - totalPrice).toLocaleString()} so'm qo'shing)
-            </p>
-          )}
-          {orderError && (
-            <p className="text-xs text-red-600 mb-2">{orderError}</p>
-          )}
-          <div className="flex justify-between items-center mb-2">
-            <span className="text-sm text-muted-foreground">{cartItems.length} ta mahsulot</span>
-            <span className="text-xl font-semibold text-foreground">{totalPrice.toLocaleString()} so'm</span>
-          </div>
-          <button
-            onClick={handleOrder}
-            disabled={isBelowMinOrder}
-            className="w-full rounded-2xl bg-primary py-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
-          >
-            Buyurtma berish
-          </button>
-        </div>
-      )}
+      </section>
     </div>
   );
+}
+
+function radiusKmFromMeters(value: number) {
+  return Math.max(1, Math.round(value / 1000));
 }

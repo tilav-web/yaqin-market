@@ -5,6 +5,9 @@ import { Store } from './entities/store.entity';
 import { StoreDeliverySettings } from './entities/store-delivery-settings.entity';
 import { StoreWorkingHour, DayOfWeek } from './entities/store-working-hour.entity';
 import { UpdateDeliverySettingsDto } from './dto/update-delivery-settings.dto';
+import { Auth } from '../auth/auth.entity';
+import { AuthRoleEnum } from 'src/enums/auth-role.enum';
+import { CreateStoreDto } from './dto/create-store.dto';
 
 function calculateDistance(
   lat1: number,
@@ -46,7 +49,7 @@ export class StoreService {
     private readonly workingHourRepo: Repository<StoreWorkingHour>,
   ) {}
 
-  async create(ownerId: string, data: Partial<Store>) {
+  async create(auth: Auth, data: CreateStoreDto) {
     const deliverySettings = this.deliverySettingsRepo.create({
       min_order_amount: 0,
       delivery_fee: 0,
@@ -57,8 +60,18 @@ export class StoreService {
       is_delivery_enabled: true,
     });
 
+    const ownerId =
+      auth.role === AuthRoleEnum.SUPER_ADMIN && data.owner_id
+        ? data.owner_id
+        : auth.user?.id;
+
+    if (!ownerId) {
+      throw new NotFoundException('Store owner not found');
+    }
+
     const store = this.storeRepo.create({
       ...data,
+      slug: data.slug?.trim() || this.slugify(data.name),
       owner_id: ownerId,
     });
 
@@ -103,31 +116,22 @@ export class StoreService {
     return stores.map((store) => this.addStoreStatus(store));
   }
 
-  async update(id: string, ownerId: string, data: Partial<Store>) {
-    const store = await this.storeRepo.findOne({
-      where: { id, owner_id: ownerId },
-    });
-
-    if (!store) {
-      throw new NotFoundException('Store not found');
-    }
+  async update(id: string, auth: Auth, data: Partial<Store>) {
+    const store = await this.findManagedStore(id, auth);
 
     Object.assign(store, data);
+    if (data.name && !data.slug) {
+      store.slug = this.slugify(data.name);
+    }
     return this.storeRepo.save(store);
   }
 
   async updateDeliverySettings(
     storeId: string,
-    ownerId: string,
+    auth: Auth,
     data: UpdateDeliverySettingsDto,
   ) {
-    const store = await this.storeRepo.findOne({
-      where: { id: storeId, owner_id: ownerId },
-    });
-
-    if (!store) {
-      throw new NotFoundException('Store not found');
-    }
+    await this.findManagedStore(storeId, auth);
 
     const settings = await this.deliverySettingsRepo.findOne({
       where: { store_id: storeId },
@@ -147,16 +151,10 @@ export class StoreService {
 
   async updateWorkingHours(
     storeId: string,
-    ownerId: string,
+    auth: Auth,
     hours: { day_of_week: DayOfWeek; open_time: string; close_time: string; is_open: boolean }[],
   ) {
-    const store = await this.storeRepo.findOne({
-      where: { id: storeId, owner_id: ownerId },
-    });
-
-    if (!store) {
-      throw new NotFoundException('Store not found');
-    }
+    await this.findManagedStore(storeId, auth);
 
     await this.workingHourRepo.delete({ store_id: storeId });
 
@@ -170,7 +168,7 @@ export class StoreService {
     return this.workingHourRepo.save(entities);
   }
 
-  async findNearby(lat: number, lng: number, radiusKm: number = 5) {
+  async findNearby(lat: number, lng: number, radiusKm?: number) {
     const stores = await this.storeRepo.find({
       where: { is_active: true },
       relations: ['deliverySettings', 'workingHours'],
@@ -180,12 +178,28 @@ export class StoreService {
       .filter((store) => {
         if (!store.lat || !store.lng) return false;
         const distance = calculateDistance(lat, lng, store.lat, store.lng);
-        return distance <= radiusKm * 1000;
+        const serviceRadiusMeters = this.getStoreServiceRadiusMeters(store);
+        const withinStoreRadius = distance <= serviceRadiusMeters;
+        const withinQueryRadius =
+          typeof radiusKm === 'number' && radiusKm > 0
+            ? distance <= radiusKm * 1000
+            : true;
+
+        return withinStoreRadius && withinQueryRadius;
       })
-      .map((store) => this.addStoreStatus(store));
+      .map((store) =>
+        this.addStoreStatus(
+          store,
+          calculateDistance(lat, lng, Number(store.lat), Number(store.lng)),
+        ),
+      )
+      .sort(
+        (left, right) =>
+          Number(left.distance_meters ?? 0) - Number(right.distance_meters ?? 0),
+      );
   }
 
-  async findPrime(lat: number, lng: number, radiusKm: number = 5) {
+  async findPrime(lat: number, lng: number, radiusKm?: number) {
     const stores = await this.storeRepo.find({
       where: { is_active: true, is_prime: true },
       relations: ['deliverySettings', 'workingHours'],
@@ -195,32 +209,36 @@ export class StoreService {
       .filter((store) => {
         if (!store.lat || !store.lng) return false;
         const distance = calculateDistance(lat, lng, store.lat, store.lng);
-        return distance <= radiusKm * 1000;
+        const serviceRadiusMeters = this.getStoreServiceRadiusMeters(store);
+        const withinStoreRadius = distance <= serviceRadiusMeters;
+        const withinQueryRadius =
+          typeof radiusKm === 'number' && radiusKm > 0
+            ? distance <= radiusKm * 1000
+            : true;
+
+        return withinStoreRadius && withinQueryRadius;
       })
-      .map((store) => this.addStoreStatus(store));
+      .map((store) =>
+        this.addStoreStatus(
+          store,
+          calculateDistance(lat, lng, Number(store.lat), Number(store.lng)),
+        ),
+      )
+      .sort(
+        (left, right) =>
+          Number(left.distance_meters ?? 0) - Number(right.distance_meters ?? 0),
+      );
   }
 
-  async setActive(id: string, ownerId: string, isActive: boolean) {
-    const store = await this.storeRepo.findOne({
-      where: { id, owner_id: ownerId },
-    });
-
-    if (!store) {
-      throw new NotFoundException('Store not found');
-    }
+  async setActive(id: string, auth: Auth, isActive: boolean) {
+    const store = await this.findManagedStore(id, auth);
 
     store.is_active = isActive;
     return this.storeRepo.save(store);
   }
 
-  async setPrime(id: string, ownerId: string, isPrime: boolean) {
-    const store = await this.storeRepo.findOne({
-      where: { id, owner_id: ownerId },
-    });
-
-    if (!store) {
-      throw new NotFoundException('Store not found');
-    }
+  async setPrime(id: string, auth: Auth, isPrime: boolean) {
+    const store = await this.findManagedStore(id, auth);
 
     store.is_prime = isPrime;
     return this.storeRepo.save(store);
@@ -235,7 +253,7 @@ export class StoreService {
     return stores.map((store) => this.addStoreStatus(store));
   }
 
-  private addStoreStatus(store: Store) {
+  private addStoreStatus(store: Store, distanceMeters?: number) {
     const now = new Date();
     const currentDay = DAY_MAP[now.getDay()];
     const currentTime = now.toTimeString().slice(0, 5);
@@ -253,8 +271,44 @@ export class StoreService {
 
     return {
       ...store,
+      distance_meters: distanceMeters,
+      service_radius_meters: this.getStoreServiceRadiusMeters(store),
       is_open,
       today_hours: todayHours || null,
     };
+  }
+
+  private getStoreServiceRadiusMeters(store: Store) {
+    const settings = store.deliverySettings?.[0];
+
+    if (!settings?.is_delivery_enabled) {
+      return 0;
+    }
+
+    return Number(settings?.max_delivery_radius ?? 5000);
+  }
+
+  private async findManagedStore(id: string, auth: Auth) {
+    const where =
+      auth.role === AuthRoleEnum.SUPER_ADMIN
+        ? { id }
+        : { id, owner_id: auth.user?.id };
+
+    const store = await this.storeRepo.findOne({ where });
+
+    if (!store) {
+      throw new NotFoundException('Store not found');
+    }
+
+    return store;
+  }
+
+  private slugify(value: string) {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
   }
 }

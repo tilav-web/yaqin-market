@@ -14,8 +14,8 @@ export class Auth {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', unique: true, length: 9 })
-  phone: string;
+  @Column({ type: 'varchar', unique: true, length: 9, nullable: true })
+  phone: string | null;
 
   @Column({ type: 'enum', enum: AuthRoleEnum, default: AuthRoleEnum.CUSTOMER })
   role: AuthRoleEnum;

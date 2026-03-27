@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import { Auth } from '../auth/auth.entity';
+import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 
 @Injectable()
 export class UserService {
@@ -15,7 +16,7 @@ export class UserService {
 
   async findAll() {
     return this.userRepo.find({
-      relations: ['auth'],
+      relations: ['auth', 'stores'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -48,5 +49,21 @@ export class UserService {
 
     Object.assign(user, data);
     return this.userRepo.save(user);
+  }
+
+  async updateRole(userId: string, role: AuthRoleEnum) {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['auth'],
+    });
+
+    if (!user?.auth) {
+      throw new NotFoundException('User auth not found');
+    }
+
+    user.auth.role = role;
+    await this.authRepo.save(user.auth);
+
+    return this.getCurrentUser(userId);
   }
 }

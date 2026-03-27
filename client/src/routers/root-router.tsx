@@ -5,23 +5,42 @@ import { customerRouter } from "./customer-router";
 import { sellerRouter } from "./seller-router";
 import { courierRouter } from "./courier-router";
 import Auth from "../pages/auth/auth";
+import LandingPage from "../pages/landing";
+import NotFoundPage from "../pages/not-found";
+import PublicRoute from "./public-route";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     element: <RootLayout />,
     children: [
+      {
+        index: true,
+        element: (
+          <PublicRoute>
+            <LandingPage />
+          </PublicRoute>
+        ),
+      },
       ...customerRouter,
       ...sellerRouter,
       ...courierRouter,
       ...adminRouter,
       {
         path: "/login",
-        element: <Auth />,
+        element: (
+          <PublicRoute>
+            <Auth />
+          </PublicRoute>
+        ),
+      },
+      {
+        path: "/auth",
+        element: <Navigate to="/login" replace />,
       },
       {
         path: "*",
-        element: <Navigate to="/" replace />,
+        element: <NotFoundPage />,
       },
     ],
   },

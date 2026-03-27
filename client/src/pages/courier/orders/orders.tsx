@@ -63,8 +63,7 @@ export default function CourierOrders() {
   const orders: Order[] = ordersRes?.data || [];
 
   const assignCourier = useMutation({
-    mutationFn: (id: string) =>
-      api.post(`/orders/${id}/assign-courier`, { courier_id: courierId }),
+    mutationFn: (id: string) => api.post(`/orders/${id}/assign-courier`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["courier", "orders"] });
       queryClient.invalidateQueries({ queryKey: ["courier", "nearby"] });

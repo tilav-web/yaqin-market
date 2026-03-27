@@ -39,7 +39,7 @@ export class ProductService {
 
   async create(dto: CreateProductDto) {
     const product = this.productRepo.create({
-      slug: dto.slug,
+      slug: dto.slug?.trim() || this.slugify(dto.name),
       name: dto.name,
       description: dto.description,
       images: dto.images || [],
@@ -68,6 +68,10 @@ export class ProductService {
 
     Object.assign(product, data);
 
+    if (data.name && !data.slug) {
+      product.slug = this.slugify(data.name);
+    }
+
     if (data.unit_id !== undefined) {
       product.unit = data.unit_id ? ({ id: data.unit_id } as any) : null;
     }
@@ -79,5 +83,14 @@ export class ProductService {
     }
 
     return this.productRepo.save(product);
+  }
+
+  private slugify(value: string) {
+    return value
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
   }
 }

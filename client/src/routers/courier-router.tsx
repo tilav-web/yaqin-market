@@ -8,7 +8,7 @@ export const courierRouter: RouteObject[] = [
   {
     path: "/courier",
     element: (
-      <PrivateRoute>
+      <PrivateRoute roles={["COURIER"]}>
         <CourierLayout />
       </PrivateRoute>
     ),

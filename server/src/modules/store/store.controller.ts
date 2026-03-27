@@ -9,23 +9,30 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { StoreService } from './store.service';
+import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateDeliverySettingsDto } from './dto/update-delivery-settings.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { UserDecorator } from '../auth/decorators/user.decorator';
+import { AuthDec } from '../auth/decorators/user.decorator';
 import { DayOfWeek } from './entities/store-working-hour.entity';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 
 @Controller('stores')
 export class StoreServiceController {
   constructor(private readonly service: StoreService) {}
 
   @Post()
-  @UseGuards(AuthGuard)
-  async create(@Body() data: any, @UserDecorator() user: any) {
-    return this.service.create(user.id, data);
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
+  async create(@Body() data: CreateStoreDto, @AuthDec() auth: any) {
+    return this.service.create(auth, data);
   }
 
   @Get('my')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async getMyStores(@UserDecorator() user: any) {
     return this.service.findByOwner(user.id);
   }
@@ -34,18 +41,22 @@ export class StoreServiceController {
   async getNearby(
     @Query('lat') lat: number,
     @Query('lng') lng: number,
-    @Query('radius') radius: number = 5,
+    @Query('radius') radius?: number,
   ) {
-    return this.service.findNearby(Number(lat), Number(lng), Number(radius));
+    const normalizedRadius =
+      radius !== undefined ? Number(radius) : undefined;
+    return this.service.findNearby(Number(lat), Number(lng), normalizedRadius);
   }
 
   @Get('prime')
   async getPrime(
     @Query('lat') lat: number,
     @Query('lng') lng: number,
-    @Query('radius') radius: number = 5,
+    @Query('radius') radius?: number,
   ) {
-    return this.service.findPrime(Number(lat), Number(lng), Number(radius));
+    const normalizedRadius =
+      radius !== undefined ? Number(radius) : undefined;
+    return this.service.findPrime(Number(lat), Number(lng), normalizedRadius);
   }
 
   @Get(':id')
@@ -54,27 +65,30 @@ export class StoreServiceController {
   }
 
   @Put(':id')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async update(
     @Param('id') id: string,
     @Body() data: any,
-    @UserDecorator() user: any,
+    @AuthDec() auth: any,
   ) {
-    return this.service.update(id, user.id, data);
+    return this.service.update(id, auth, data);
   }
 
   @Put(':id/delivery-settings')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async updateDeliverySettings(
     @Param('id') id: string,
     @Body() data: UpdateDeliverySettingsDto,
-    @UserDecorator() user: any,
+    @AuthDec() auth: any,
   ) {
-    return this.service.updateDeliverySettings(id, user.id, data);
+    return this.service.updateDeliverySettings(id, auth, data);
   }
 
   @Put(':id/working-hours')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async updateWorkingHours(
     @Param('id') id: string,
     @Body()
@@ -84,29 +98,31 @@ export class StoreServiceController {
       close_time: string;
       is_open: boolean;
     }[],
-    @UserDecorator() user: any,
+    @AuthDec() auth: any,
   ) {
-    return this.service.updateWorkingHours(id, user.id, hours);
+    return this.service.updateWorkingHours(id, auth, hours);
   }
 
   @Put(':id/active')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async setActive(
     @Param('id') id: string,
     @Body('is_active') isActive: boolean,
-    @UserDecorator() user: any,
+    @AuthDec() auth: any,
   ) {
-    return this.service.setActive(id, user.id, isActive);
+    return this.service.setActive(id, auth, isActive);
   }
 
   @Put(':id/prime')
-  @UseGuards(AuthGuard)
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
   async setPrime(
     @Param('id') id: string,
     @Body('is_prime') isPrime: boolean,
-    @UserDecorator() user: any,
+    @AuthDec() auth: any,
   ) {
-    return this.service.setPrime(id, user.id, isPrime);
+    return this.service.setPrime(id, auth, isPrime);
   }
 
   @Get()

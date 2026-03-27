@@ -8,8 +8,9 @@ import {
 } from 'class-validator';
 
 export class CreateProductDto {
+  @IsOptional()
   @IsString()
-  slug: string;
+  slug?: string;
 
   @IsString()
   name: string;

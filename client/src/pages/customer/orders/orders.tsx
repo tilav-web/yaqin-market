@@ -1,49 +1,22 @@
 import { useQuery } from "@tanstack/react-query";
-import { api } from "../../../api/api";
+import { api } from "@/api/api";
 import { Link } from "react-router-dom";
-import { Button } from "../../../components/ui/button";
-
-interface Order {
-  id: string;
-  order_number: string;
-  status: string;
-  total_price: number;
-  createdAt: string;
-  store: {
-    name: string;
-  };
-  items: {
-    product_name: string;
-    quantity: number;
-    price: number;
-  }[];
-}
+import { Button } from "@/components/ui/button";
+import StatusPill from "@/components/common/status-pill";
+import type { OrderSummary } from "@/interfaces/market.interface";
+import { formatDateTime, formatMoney, getOrderStatusLabel } from "@/lib/market";
 
 export default function CustomerOrders() {
-  const { data: ordersRes, isLoading } = useQuery({
+  const { data: orders = [], isLoading } = useQuery({
     queryKey: ["orders", "my"],
-    queryFn: () => api.get("/orders/my"),
+    queryFn: async () => (await api.get<OrderSummary[]>("/orders/my")).data,
   });
 
-  const orders: Order[] = ordersRes?.data || [];
-
-  const getStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      PENDING: "bg-yellow-100 text-yellow-800",
-      ACCEPTED: "bg-blue-100 text-blue-800",
-      READY: "bg-purple-100 text-purple-800",
-      DELIVERING: "bg-orange-100 text-orange-800",
-      DELIVERED: "bg-green-100 text-green-800",
-      CANCELLED: "bg-red-100 text-red-800",
-    };
-    return colors[status] || "bg-gray-100";
-  };
-
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-4 px-4 pb-28 pt-4">
       <div>
-        <h1 className="text-xl font-semibold text-foreground">Mening buyurtmalarim</h1>
-        <p className="text-sm text-muted-foreground">
+        <h1 className="text-2xl font-semibold text-slate-950">Mening buyurtmalarim</h1>
+        <p className="mt-2 text-sm text-slate-500">
           Yangi va eski buyurtmalar tarixi.
         </p>
       </div>
@@ -58,7 +31,7 @@ export default function CustomerOrders() {
           ))}
         </div>
       ) : orders.length === 0 ? (
-        <div className="text-center py-10 text-muted-foreground">
+        <div className="rounded-[1.75rem] border border-dashed border-slate-300 bg-white/85 py-10 text-center text-slate-500">
           <p>Hozircha buyurtmalar yo'q</p>
           <Link to="/mobile">
             <Button className="mt-4">Bosh sahifaga qaytish</Button>
@@ -66,28 +39,33 @@ export default function CustomerOrders() {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((order: Order) => (
-            <div key={order.id} className="bg-white p-4 rounded-2xl shadow-sm border border-border">
-              <div className="flex justify-between items-start mb-2">
+          {orders.map((order) => (
+            <div
+              key={order.id}
+              className="rounded-[1.75rem] border border-white/70 bg-white/90 p-5 shadow-sm"
+            >
+              <div className="flex justify-between items-start mb-2 gap-3">
                 <div>
-                  <p className="font-semibold text-foreground">{order.store?.name}</p>
-                  <p className="text-xs text-gray-500">{order.order_number}</p>
+                  <p className="font-semibold text-slate-950">{order.store?.name ?? "Do'kon"}</p>
+                  <p className="text-xs text-slate-500">{order.order_number}</p>
+                  <p className="mt-1 text-xs text-slate-400">{formatDateTime(order.createdAt)}</p>
                 </div>
-                <span className={`px-2 py-1 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
-                  {order.status}
-                </span>
+                <StatusPill
+                  status={order.status}
+                  label={getOrderStatusLabel(order.status)}
+                />
               </div>
               <div className="border-t mt-2 pt-2">
                 {order.items?.map((item, idx) => (
                   <div key={idx} className="flex justify-between text-sm">
                     <span>{item.product_name} x{item.quantity}</span>
-                    <span>{item.price.toLocaleString()} so'm</span>
+                    <span>{formatMoney(item.price)}</span>
                   </div>
                 ))}
               </div>
               <div className="flex justify-between items-center mt-2 pt-2 border-t">
-                <span className="font-bold">{order.total_price.toLocaleString()} so'm</span>
-                <Link to={`/orders/${order.id}`}>
+                <span className="font-bold">{formatMoney(order.total_price)}</span>
+                <Link to={`/mobile/orders/${order.id}`}>
                   <Button variant="outline" size="sm">Batafsil</Button>
                 </Link>
               </div>

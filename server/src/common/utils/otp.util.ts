@@ -1,9 +1,14 @@
 /**
  * Tasdiqlash kodi (OTP) generatsiya qilish funksiyasi.
- * Hozircha doimiy '4444' qaytaradi.
- * Kelajakda tasodifiy sonlar generatsiyasiga o'zgartirish mumkin.
+ * Development uchun FIXED_OTP_CODE berilsa shu qaytadi,
+ * aks holda tasodifiy raqamlar generatsiya qilinadi.
  */
 export const generateOtp = (length: number = 6): string => {
-  // Hozircha faqat '666666' qaytaramiz
-  return '6'.repeat(length);
+  const fixedCode = process.env.FIXED_OTP_CODE?.trim();
+
+  if (fixedCode && new RegExp(`^\\d{${length}}$`).test(fixedCode)) {
+    return fixedCode;
+  }
+
+  return Array.from({ length }, () => Math.floor(Math.random() * 10)).join('');
 };
