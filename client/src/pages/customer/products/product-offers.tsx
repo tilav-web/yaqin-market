@@ -1,6 +1,7 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useParams, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
+import { LocateFixedIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/api/api";
 import LocationPickerMap from "@/components/maps/location-picker-map";
@@ -37,73 +38,93 @@ export default function ProductOffersPage() {
     enabled: !!productId && !!location,
   });
 
+  const productImage = product?.images?.[0]?.url ?? null;
+  const storeMarkers = useMemo(
+    () =>
+      offers
+        .filter((offer) => offer.store?.lat && offer.store?.lng)
+        .map((offer) => ({
+          id: offer.id,
+          lat: Number(offer.store?.lat),
+          lng: Number(offer.store?.lng),
+          label: offer.store?.name ?? "Do'kon",
+          meta: `${formatMoney(offer.price)} · ${offer.distance_meters ? `${Math.round(offer.distance_meters)} m` : "masofa yo'q"}`,
+          tone: offer.is_prime ? ("offer" as const) : ("store" as const),
+        })),
+    [offers],
+  );
+
+  const mapMarkers = useMemo(
+    () => [
+      ...(location
+        ? [
+            {
+              id: "me",
+              lat: location.lat,
+              lng: location.lng,
+              label: "Mening joylashuvim",
+              tone: "accent" as const,
+            },
+          ]
+        : []),
+      ...storeMarkers,
+    ],
+    [location, storeMarkers],
+  );
+
+  const showMap = storeMarkers.length > 0;
+
   return (
     <div className="space-y-5 px-4 pb-28 pt-4">
       <section className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.3)]">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
-              Product compare
-            </p>
-            <h1 className="mt-3 text-2xl font-semibold text-slate-950">
+        <div className="flex items-start gap-3">
+          <div className="h-20 w-20 shrink-0 overflow-hidden rounded-[1.35rem] bg-[linear-gradient(135deg,#fff1f2,#f8fbff)]">
+            {productImage ? (
+              <img
+                src={productImage}
+                alt={product?.name ?? "Mahsulot"}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center text-3xl">
+                📦
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <h1 className="text-2xl font-semibold text-slate-950">
               {product?.name ?? "Mahsulot narxlari"}
             </h1>
-            <p className="mt-2 max-w-2xl text-sm text-slate-500">
-              Shu mahsulotni qaysi yaqin do'kon qanday narxda sotayotganini ko'rib chiqing.
-            </p>
+
+            <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto pb-1">
+              <div className="inline-flex shrink-0 items-center rounded-full border border-primary/15 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
+                {offers.length} do'kon
+              </div>
+              {product?.category?.name ? (
+                <div className="inline-flex shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+                  {product.category.name}
+                </div>
+              ) : null}
+            </div>
           </div>
-          <div className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm">
-            <p className="text-slate-500">Filtr</p>
-            <p className="text-lg font-semibold text-slate-950">Store radiusi</p>
-          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 rounded-full"
+            onClick={() => requestCurrentLocation().catch(() => undefined)}
+          >
+            <LocateFixedIcon />
+            GPS
+          </Button>
         </div>
 
-        <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1fr)_280px]">
-          <LocationPickerMap
-            center={location}
-            markers={[
-              ...(location
-                ? [
-                    {
-                      id: "me",
-                      lat: location.lat,
-                      lng: location.lng,
-                      label: "Mening joylashuvim",
-                      meta: "Faqat yetkazib bera oladigan store'lar ko'rsatiladi",
-                      tone: "accent" as const,
-                    },
-                  ]
-                : []),
-              ...offers
-                .filter((offer) => offer.store?.lat && offer.store?.lng)
-                .map((offer) => ({
-                  id: offer.id,
-                  lat: Number(offer.store?.lat),
-                  lng: Number(offer.store?.lng),
-                  label: offer.store?.name ?? "Do'kon",
-                  meta: `${formatMoney(offer.price)} · ${offer.distance_meters ? `${Math.round(offer.distance_meters)} m` : "masofa yo'q"}`,
-                  tone: offer.is_prime ? ("offer" as const) : ("store" as const),
-                })),
-            ]}
-          />
-
-          <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4">
-            <p className="text-sm font-semibold text-slate-900">
-              Avtomatik yaqinlashtirish
-            </p>
-            <p className="mt-2 text-sm text-slate-500">
-              Mahsulot takliflari sizning joylashuvingiz store delivery radiusiga
-              kirgan do'konlardan chiqariladi.
-            </p>
-            <Button
-              variant="outline"
-              className="mt-4 w-full"
-              onClick={() => requestCurrentLocation().catch(() => undefined)}
-            >
-              GPS bo'yicha yangilash
-            </Button>
+        {showMap ? (
+          <div className="mt-5">
+            <LocationPickerMap center={location} markers={mapMarkers} />
           </div>
-        </div>
+        ) : null}
       </section>
 
       {offers.length === 0 ? (

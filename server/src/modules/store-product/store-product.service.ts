@@ -1,10 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { StoreProduct, StoreProductStatus } from './store-product.entity';
 import { CreateStoreProductDto } from './dto/create-store-product.dto';
 import { UpdateStoreProductDto } from './dto/update-store-product.dto';
 import { Store } from '../store/entities/store.entity';
+
+type StoreProductCatalogQuery = {
+  storeId: string;
+  includeInactive?: boolean;
+  q?: string;
+  categoryId?: string;
+  page?: number;
+  limit?: number;
+};
 
 function calculateDistance(
   lat1: number,
@@ -64,6 +73,152 @@ export class StoreProductService {
       relations: ['product', 'product.category', 'product.unit'],
       order: { createdAt: 'DESC' },
     });
+  }
+
+  async findCatalog(query: StoreProductCatalogQuery) {
+    const page =
+      Number.isFinite(query.page) && Number(query.page) > 0
+        ? Math.floor(Number(query.page))
+        : 1;
+    const limit =
+      Number.isFinite(query.limit) && Number(query.limit) > 0
+        ? Math.min(24, Math.floor(Number(query.limit)))
+        : 12;
+    const search = query.q?.trim();
+
+    const baseQuery = this.repo
+      .createQueryBuilder('storeProduct')
+      .innerJoin('storeProduct.product', 'product')
+      .leftJoin('product.category', 'category')
+      .where('storeProduct.store_id = :storeId', {
+        storeId: query.storeId,
+      })
+      .andWhere('product.is_active = :isActive', { isActive: true });
+
+    if (!query.includeInactive) {
+      baseQuery.andWhere('storeProduct.status = :status', {
+        status: StoreProductStatus.ACTIVE,
+      });
+    }
+
+    if (query.categoryId) {
+      baseQuery.andWhere('category.id = :categoryId', {
+        categoryId: query.categoryId,
+      });
+    }
+
+    if (search) {
+      const normalizedSearch = `%${search.toLowerCase()}%`;
+      baseQuery
+        .andWhere(
+          new Brackets((catalogQuery) => {
+            catalogQuery
+              .where('LOWER(product.name) LIKE :search')
+              .orWhere("LOWER(COALESCE(product.description, '')) LIKE :search")
+              .orWhere('LOWER(product.slug) LIKE :search')
+              .orWhere("LOWER(COALESCE(category.name, '')) LIKE :search");
+          }),
+        )
+        .setParameter('search', normalizedSearch);
+    }
+
+    const total = await baseQuery.clone().getCount();
+    const rows = await baseQuery
+      .clone()
+      .select('storeProduct.id', 'id')
+      .orderBy('storeProduct.is_prime', 'DESC')
+      .addOrderBy('storeProduct.createdAt', 'DESC')
+      .offset((page - 1) * limit)
+      .limit(limit)
+      .getRawMany<{ id: string }>();
+
+    const ids = rows.map((row) => row.id).filter(Boolean);
+
+    if (!ids.length) {
+      return {
+        items: [],
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: total ? Math.ceil(total / limit) : 0,
+          hasMore: false,
+        },
+      };
+    }
+
+    const items = await this.repo.find({
+      where: { id: In(ids) },
+      relations: ['product', 'product.category', 'product.unit'],
+    });
+
+    const sortOrder = new Map(ids.map((id, index) => [id, index]));
+    items.sort(
+      (left, right) =>
+        (sortOrder.get(left.id) ?? 0) - (sortOrder.get(right.id) ?? 0),
+    );
+
+    return {
+      items,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: total ? Math.ceil(total / limit) : 0,
+        hasMore: page * limit < total,
+      },
+    };
+  }
+
+  async findCategoriesByStore(storeId: string, includeInactive: boolean = false) {
+    const baseQuery = this.repo
+      .createQueryBuilder('storeProduct')
+      .innerJoin('storeProduct.product', 'product')
+      .innerJoin('product.category', 'category')
+      .where('storeProduct.store_id = :storeId', { storeId })
+      .andWhere('product.is_active = :isActive', { isActive: true });
+
+    if (!includeInactive) {
+      baseQuery.andWhere('storeProduct.status = :status', {
+        status: StoreProductStatus.ACTIVE,
+      });
+    }
+
+    const rows = await baseQuery
+      .select([
+        'category.id AS id',
+        'category.name AS name',
+        'category.slug AS slug',
+        'category.image AS image',
+        'category.order_number AS order_number',
+        'category.is_active AS is_active',
+        'category.createdAt AS "createdAt"',
+        'category.updatedAt AS "updatedAt"',
+      ])
+      .distinct(true)
+      .orderBy('category.order_number', 'ASC')
+      .addOrderBy('category.createdAt', 'DESC')
+      .getRawMany<{
+        id: string;
+        name: string;
+        slug: string;
+        image: string | null;
+        order_number: string | number;
+        is_active: boolean | string;
+        createdAt: string;
+        updatedAt: string;
+      }>();
+
+    return rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      image: row.image,
+      order_number: Number(row.order_number ?? 0),
+      is_active: row.is_active === true || row.is_active === 'true',
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+    }));
   }
 
   async findById(id: string) {

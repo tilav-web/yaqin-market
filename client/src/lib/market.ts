@@ -1,4 +1,5 @@
 import axios from "axios";
+import type { DeliverySettings } from "@/interfaces/market.interface";
 import type { AuthRole } from "@/types/auth-role.type";
 
 const moneyFormatter = new Intl.NumberFormat("uz-UZ");
@@ -11,6 +12,74 @@ const dateTimeFormatter = new Intl.DateTimeFormat("uz-UZ", {
 
 export function formatMoney(value: number | string | null | undefined) {
   return `${moneyFormatter.format(Number(value ?? 0))} so'm`;
+}
+
+export function calculateDistanceMeters(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number,
+) {
+  const earthRadiusKm = 6371;
+  const deltaLat = ((lat2 - lat1) * Math.PI) / 180;
+  const deltaLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(deltaLat / 2) * Math.sin(deltaLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(deltaLng / 2) *
+      Math.sin(deltaLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return earthRadiusKm * c * 1000;
+}
+
+export function calculateDeliveryQuote(
+  settings: DeliverySettings | null | undefined,
+  storeLocation: { lat: number; lng: number } | null,
+  destination: { lat: number; lng: number } | null,
+) {
+  if (!settings || !storeLocation || !destination) {
+    return null;
+  }
+
+  const distanceMeters = calculateDistanceMeters(
+    storeLocation.lat,
+    storeLocation.lng,
+    destination.lat,
+    destination.lng,
+  );
+  const maxDeliveryRadius = Number(settings.max_delivery_radius ?? 0);
+
+  if (maxDeliveryRadius > 0 && distanceMeters > maxDeliveryRadius) {
+    return {
+      distanceMeters,
+      deliveryPrice: 0,
+      isDeliverable: false,
+    };
+  }
+
+  if (!settings.is_delivery_enabled) {
+    return {
+      distanceMeters,
+      deliveryPrice: 0,
+      isDeliverable: false,
+    };
+  }
+
+  let deliveryPrice = 0;
+  const freeRadius = Number(settings.free_delivery_radius ?? 0);
+
+  if (distanceMeters > freeRadius) {
+    const extraKm = Math.max(0, (distanceMeters - freeRadius) / 1000);
+    deliveryPrice = Number(settings.delivery_price_per_km ?? 0) * extraKm;
+  }
+
+  return {
+    distanceMeters,
+    deliveryPrice,
+    isDeliverable: true,
+  };
 }
 
 export function formatDateTime(value: string | Date | null | undefined) {

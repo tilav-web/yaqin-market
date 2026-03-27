@@ -56,6 +56,19 @@ export interface SavedLocation {
   is_default: boolean;
 }
 
+export interface PaginatedMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+  hasMore: boolean;
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  meta: PaginatedMeta;
+}
+
 export interface ProductCatalogItem {
   id: number;
   name: string;

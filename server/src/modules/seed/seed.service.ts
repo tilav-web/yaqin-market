@@ -60,6 +60,65 @@ type ProductSeed = {
   attributes?: Record<string, string>;
 };
 
+type DemoLocationSeed = {
+  label: string;
+  address_line: string;
+  landmark?: string;
+  is_default: boolean;
+  details?: { entrance?: string; floor?: string; apartment?: string };
+  lat: number;
+  lng: number;
+};
+
+type StoreBlueprint = Omit<
+  StoreSeed,
+  'lat' | 'lng' | 'owner_name' | 'legal_name' | 'logo' | 'banner' | 'phone'
+> & {
+  northMeters: number;
+  eastMeters: number;
+};
+
+const DEMO_CLUSTER_CENTER = {
+  lat: 38.844661,
+  lng: 65.78014,
+};
+
+function offsetPoint(northMeters: number, eastMeters: number) {
+  const lat =
+    DEMO_CLUSTER_CENTER.lat + northMeters / 111_320;
+  const lng =
+    DEMO_CLUSTER_CENTER.lng +
+    eastMeters /
+      (111_320 * Math.cos((DEMO_CLUSTER_CENTER.lat * Math.PI) / 180));
+
+  return {
+    lat: Number(lat.toFixed(8)),
+    lng: Number(lng.toFixed(8)),
+  };
+}
+
+function buildStorePhone(index: number) {
+  return `7530${String(10101 + index).padStart(5, '0')}`;
+}
+
+const STORE_LOGOS = [
+  'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=400&q=80',
+  'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=400&q=80',
+  'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=400&q=80',
+  'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80',
+  'https://images.unsplash.com/photo-1601598851547-4302969d0614?auto=format&fit=crop&w=400&q=80',
+  'https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=400&q=80',
+];
+
+const STORE_BANNERS = [
+  'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=1400&q=80',
+  'https://images.unsplash.com/photo-1506617564039-2f3b650b7010?auto=format&fit=crop&w=1400&q=80',
+];
+
 const CATEGORY_SEEDS = [
   {
     name: 'Meva va sabzavot',
@@ -120,42 +179,7 @@ const UNIT_SEEDS = [
   { name: 'paket', short_name: 'pkt.' },
 ];
 
-const DEMO_ACCOUNTS: DemoAccountSeed[] = [
-  {
-    phone: '900000001',
-    role: AuthRoleEnum.SUPER_ADMIN,
-    first_name: 'Ali',
-    last_name: 'Admin',
-    wallet_balance: 0,
-  },
-  {
-    phone: '900000002',
-    role: AuthRoleEnum.CUSTOMER,
-    first_name: 'Aziza',
-    last_name: 'Mijoz',
-    wallet_balance: 450000,
-  },
-  {
-    phone: '900000003',
-    role: AuthRoleEnum.COURIER,
-    first_name: 'Jamshid',
-    last_name: 'Kuryer',
-    wallet_balance: 0,
-  },
-  {
-    phone: '900000004',
-    role: AuthRoleEnum.COURIER,
-    first_name: 'Suhrob',
-    last_name: 'Yetkazuvchi',
-    wallet_balance: 0,
-  },
-  {
-    phone: '900000005',
-    role: AuthRoleEnum.COURIER,
-    first_name: 'Maftuna',
-    last_name: 'Courier',
-    wallet_balance: 0,
-  },
+const SELLER_ACCOUNT_SEEDS: DemoAccountSeed[] = [
   {
     phone: '900000101',
     role: AuthRoleEnum.SELLER,
@@ -204,170 +228,355 @@ const DEMO_ACCOUNTS: DemoAccountSeed[] = [
     first_name: 'Shahnoza',
     last_name: 'Karimova',
   },
+  {
+    phone: '900000109',
+    role: AuthRoleEnum.SELLER,
+    first_name: 'Azamat',
+    last_name: 'Nasriddinov',
+  },
+  {
+    phone: '900000110',
+    role: AuthRoleEnum.SELLER,
+    first_name: 'Zarnigor',
+    last_name: 'Usmonova',
+  },
+  {
+    phone: '900000111',
+    role: AuthRoleEnum.SELLER,
+    first_name: 'Abbos',
+    last_name: 'Qahhorov',
+  },
+  {
+    phone: '900000112',
+    role: AuthRoleEnum.SELLER,
+    first_name: 'Nargiza',
+    last_name: 'Erkinova',
+  },
+  {
+    phone: '900000113',
+    role: AuthRoleEnum.SELLER,
+    first_name: 'Oybek',
+    last_name: 'Rustamov',
+  },
+  {
+    phone: '900000114',
+    role: AuthRoleEnum.SELLER,
+    first_name: 'Mohira',
+    last_name: 'Qudratova',
+  },
 ];
 
-const STORE_SEEDS: StoreSeed[] = [
+const DEMO_ACCOUNTS: DemoAccountSeed[] = [
   {
-    slug: 'chilonzor-yaqin-market',
-    name: 'Chilonzor Yaqin Market',
+    phone: '900000001',
+    role: AuthRoleEnum.SUPER_ADMIN,
+    first_name: 'Ali',
+    last_name: 'Admin',
+    wallet_balance: 0,
+  },
+  {
+    phone: '900000002',
+    role: AuthRoleEnum.CUSTOMER,
+    first_name: 'Aziza',
+    last_name: 'Mijoz',
+    wallet_balance: 450000,
+  },
+  {
+    phone: '900000003',
+    role: AuthRoleEnum.COURIER,
+    first_name: 'Jamshid',
+    last_name: 'Kuryer',
+    wallet_balance: 0,
+  },
+  {
+    phone: '900000004',
+    role: AuthRoleEnum.COURIER,
+    first_name: 'Suhrob',
+    last_name: 'Yetkazuvchi',
+    wallet_balance: 0,
+  },
+  {
+    phone: '900000005',
+    role: AuthRoleEnum.COURIER,
+    first_name: 'Maftuna',
+    last_name: 'Courier',
+    wallet_balance: 0,
+  },
+  {
+    phone: '900000006',
+    role: AuthRoleEnum.COURIER,
+    first_name: 'Bobur',
+    last_name: 'Nurmatov',
+    wallet_balance: 0,
+  },
+  {
+    phone: '900000007',
+    role: AuthRoleEnum.COURIER,
+    first_name: 'Zilola',
+    last_name: 'Umarova',
+    wallet_balance: 0,
+  },
+  ...SELLER_ACCOUNT_SEEDS,
+];
+
+const SELLER_NAME_BY_PHONE = new Map(
+  SELLER_ACCOUNT_SEEDS.map((seed) => [
+    seed.phone,
+    `${seed.first_name} ${seed.last_name}`,
+  ]),
+);
+
+const CUSTOMER_LOCATION_SEEDS: DemoLocationSeed[] = [
+  {
+    label: 'Uy',
+    address_line: "Qarshi shahri, Mustaqillik ko'chasi 18-uy",
+    landmark: 'Markaziy chorraha yaqinida',
+    is_default: true,
+    details: { entrance: '2-kirish', floor: '3', apartment: '27' },
+    ...offsetPoint(0, 0),
+  },
+  {
+    label: 'Ish',
+    address_line: "Qarshi shahri, Nasaf ko'chasi 44-uy",
+    landmark: 'Biznes markaz tomoni',
+    is_default: false,
+    details: { floor: '2', apartment: 'Ofis 12' },
+    ...offsetPoint(420, -280),
+  },
+  {
+    label: "Ota-onam",
+    address_line: "Qarshi shahri, Bunyodkor ko'chasi 9-uy",
+    landmark: 'Bolalar maydonchasi roparasida',
+    is_default: false,
+    details: { entrance: '1-kirish', floor: '1' },
+    ...offsetPoint(-620, 360),
+  },
+  {
+    label: 'Tez buyurtma',
+    address_line: "Qarshi shahri, Alpomish ko'chasi 31-uy",
+    landmark: 'Avtoturargoh yonida',
+    is_default: false,
+    ...offsetPoint(240, 680),
+  },
+];
+
+const STORE_BLUEPRINTS: StoreBlueprint[] = [
+  {
+    slug: 'qarshi-markaz-prime-basket',
+    name: 'Qarshi Markaz Prime Basket',
     ownerPhone: '900000101',
-    phone: '712030101',
-    owner_name: 'Sardor Xasanov',
-    legal_name: 'Chilonzor Yaqin Market MCHJ',
-    address: "Chilonzor tumani, Bunyodkor ko'chasi 12",
-    lat: 41.285912,
-    lng: 69.203118,
-    logo: 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=400&q=80',
-    banner:
-      'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1400&q=80',
-    is_prime: true,
-    rating: 4.8,
-    reviews_count: 164,
-    max_delivery_radius: 18000,
-    delivery_fee: 12000,
-    min_order_amount: 50000,
-  },
-  {
-    slug: 'mirzo-ulugbek-basket',
-    name: 'Mirzo Ulugbek Basket',
-    ownerPhone: '900000102',
-    phone: '712030102',
-    owner_name: 'Madina Qosimova',
-    legal_name: 'Mirzo Ulugbek Basket XK',
-    address: 'Mirzo Ulugbek tumani, Buyuk Ipak Yoli 88',
-    lat: 41.338844,
-    lng: 69.334177,
-    logo: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=400&q=80',
-    banner:
-      'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?auto=format&fit=crop&w=1400&q=80',
-    is_prime: false,
-    rating: 4.6,
-    reviews_count: 97,
-    max_delivery_radius: 14000,
-    delivery_fee: 10000,
-    min_order_amount: 40000,
-  },
-  {
-    slug: 'yunusobod-family-store',
-    name: 'Yunusobod Family Store',
-    ownerPhone: '900000103',
-    phone: '712030103',
-    owner_name: 'Behruz Ergashev',
-    legal_name: 'Yunusobod Family Store MCHJ',
-    address: 'Yunusobod tumani, 19-kvartal, 24-uy',
-    lat: 41.366142,
-    lng: 69.288693,
-    logo: 'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=400&q=80',
-    banner:
-      'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=1400&q=80',
+    address: "Qarshi shahri, Mustaqillik ko'chasi 14",
+    northMeters: 180,
+    eastMeters: 120,
     is_prime: true,
     rating: 4.9,
-    reviews_count: 211,
-    max_delivery_radius: 16000,
-    delivery_fee: 14000,
-    min_order_amount: 60000,
-  },
-  {
-    slug: 'sergeli-express-market',
-    name: 'Sergeli Express Market',
-    ownerPhone: '900000104',
-    phone: '712030104',
-    owner_name: 'Dilnoza Saidova',
-    legal_name: 'Sergeli Express Market XK',
-    address: 'Sergeli tumani, Yangi Sergeli 7A',
-    lat: 41.226102,
-    lng: 69.219807,
-    logo: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80',
-    banner:
-      'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=1400&q=80',
-    is_prime: false,
-    rating: 4.5,
-    reviews_count: 83,
-    max_delivery_radius: 22000,
-    delivery_fee: 11000,
-    min_order_amount: 45000,
-  },
-  {
-    slug: 'shayxontohur-eco-market',
-    name: 'Shayxontohur Eco Market',
-    ownerPhone: '900000105',
-    phone: '712030105',
-    owner_name: 'Javohir Nazarov',
-    legal_name: 'Shayxontohur Eco Market MCHJ',
-    address: 'Shayxontohur tumani, Sagbon 41',
-    lat: 41.324509,
-    lng: 69.240911,
-    logo: 'https://images.unsplash.com/photo-1601598851547-4302969d0614?auto=format&fit=crop&w=400&q=80',
-    banner:
-      'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1400&q=80',
-    is_prime: false,
-    rating: 4.7,
-    reviews_count: 132,
-    max_delivery_radius: 15000,
-    delivery_fee: 9000,
+    reviews_count: 248,
+    max_delivery_radius: 12000,
+    delivery_fee: 7000,
     min_order_amount: 35000,
   },
   {
-    slug: 'olmazor-discount-hub',
-    name: 'Olmazor Discount Hub',
-    ownerPhone: '900000106',
-    phone: '712030106',
-    owner_name: 'Kamola Yusupova',
-    legal_name: 'Olmazor Discount Hub XK',
-    address: 'Olmazor tumani, Sebzor 10',
-    lat: 41.348731,
-    lng: 69.205271,
-    logo: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=400&q=80',
-    banner:
-      'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=1400&q=80',
+    slug: 'nasaf-family-market',
+    name: 'Nasaf Family Market',
+    ownerPhone: '900000102',
+    address: "Qarshi shahri, Nasaf ko'chasi 28",
+    northMeters: 640,
+    eastMeters: -260,
+    is_prime: false,
+    rating: 4.7,
+    reviews_count: 173,
+    max_delivery_radius: 10000,
+    delivery_fee: 8000,
+    min_order_amount: 32000,
+  },
+  {
+    slug: 'alpomish-eco-store',
+    name: 'Alpomish Eco Store',
+    ownerPhone: '900000103',
+    address: "Qarshi shahri, Alpomish ko'chasi 9",
+    northMeters: -420,
+    eastMeters: 480,
     is_prime: true,
     rating: 4.8,
-    reviews_count: 145,
-    max_delivery_radius: 20000,
-    delivery_fee: 10000,
+    reviews_count: 211,
+    max_delivery_radius: 13000,
+    delivery_fee: 9000,
     min_order_amount: 40000,
   },
   {
-    slug: 'yashnobod-smart-mart',
-    name: 'Yashnobod Smart Mart',
+    slug: 'registon-smart-mart',
+    name: 'Registon Smart Mart',
+    ownerPhone: '900000104',
+    address: "Qarshi shahri, Registon ko'chasi 52",
+    northMeters: 980,
+    eastMeters: 870,
+    is_prime: false,
+    rating: 4.6,
+    reviews_count: 121,
+    max_delivery_radius: 11000,
+    delivery_fee: 8500,
+    min_order_amount: 34000,
+  },
+  {
+    slug: 'bunyodkor-fresh-market',
+    name: 'Bunyodkor Fresh Market',
+    ownerPhone: '900000105',
+    address: "Qarshi shahri, Bunyodkor ko'chasi 35",
+    northMeters: -850,
+    eastMeters: -540,
+    is_prime: false,
+    rating: 4.5,
+    reviews_count: 104,
+    max_delivery_radius: 9000,
+    delivery_fee: 7500,
+    min_order_amount: 30000,
+  },
+  {
+    slug: 'sarbozor-express',
+    name: 'Sarbozor Express',
+    ownerPhone: '900000106',
+    address: "Qarshi shahri, Sarbozor ko'chasi 17",
+    northMeters: 1600,
+    eastMeters: 220,
+    is_prime: true,
+    rating: 4.8,
+    reviews_count: 196,
+    max_delivery_radius: 15000,
+    delivery_fee: 9500,
+    min_order_amount: 42000,
+  },
+  {
+    slug: 'ipak-yoli-market',
+    name: "Ipak Yo'li Market",
     ownerPhone: '900000107',
-    phone: '712030107',
-    owner_name: 'Temur Raximov',
-    legal_name: 'Yashnobod Smart Mart MCHJ',
-    address: 'Yashnobod tumani, Parkent ko‘chasi 102',
-    lat: 41.31257,
-    lng: 69.35711,
-    logo: 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400&q=80',
-    banner:
-      'https://images.unsplash.com/photo-1506617564039-2f3b650b7010?auto=format&fit=crop&w=1400&q=80',
+    address: "Qarshi shahri, Ipak Yo'li ko'chasi 66",
+    northMeters: -1700,
+    eastMeters: 940,
+    is_prime: false,
+    rating: 4.6,
+    reviews_count: 138,
+    max_delivery_radius: 12000,
+    delivery_fee: 8000,
+    min_order_amount: 33000,
+  },
+  {
+    slug: 'bogzor-daily-food',
+    name: "Bog'zor Daily Food",
+    ownerPhone: '900000108',
+    address: "Qarshi shahri, Bog'zor ko'chasi 21",
+    northMeters: 350,
+    eastMeters: -1220,
+    is_prime: false,
+    rating: 4.4,
+    reviews_count: 91,
+    max_delivery_radius: 10000,
+    delivery_fee: 7000,
+    min_order_amount: 29000,
+  },
+  {
+    slug: 'oqtepa-discount-hub',
+    name: 'Oqtepa Discount Hub',
+    ownerPhone: '900000109',
+    address: "Qarshi shahri, Oqtepa ko'chasi 7",
+    northMeters: 2350,
+    eastMeters: -1600,
     is_prime: true,
     rating: 4.7,
-    reviews_count: 119,
-    max_delivery_radius: 17000,
-    delivery_fee: 11000,
+    reviews_count: 156,
+    max_delivery_radius: 16000,
+    delivery_fee: 9000,
+    min_order_amount: 36000,
+  },
+  {
+    slug: 'yangi-mahalla-mini-market',
+    name: 'Yangi Mahalla Mini Market',
+    ownerPhone: '900000110',
+    address: 'Qarshi shahri, Yangi mahalla 12-uy',
+    northMeters: -2280,
+    eastMeters: 1560,
+    is_prime: false,
+    rating: 4.5,
+    reviews_count: 118,
+    max_delivery_radius: 11000,
+    delivery_fee: 8200,
+    min_order_amount: 31000,
+  },
+  {
+    slug: 'qashqadaryo-basket',
+    name: 'Qashqadaryo Basket',
+    ownerPhone: '900000111',
+    address: "Qarshi shahri, Qashqadaryo ko'chasi 41",
+    northMeters: 3100,
+    eastMeters: 260,
+    is_prime: true,
+    rating: 4.9,
+    reviews_count: 224,
+    max_delivery_radius: 18000,
+    delivery_fee: 10000,
     min_order_amount: 45000,
   },
   {
-    slug: 'uchtepa-daily-food',
-    name: 'Uchtepa Daily Food',
-    ownerPhone: '900000108',
-    phone: '712030108',
-    owner_name: 'Shahnoza Karimova',
-    legal_name: 'Uchtepa Daily Food XK',
-    address: 'Uchtepa tumani, Foziltepa ko‘chasi 19',
-    lat: 41.28644,
-    lng: 69.16018,
-    logo: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?auto=format&fit=crop&w=400&q=80',
-    banner:
-      'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1400&q=80',
+    slug: 'grand-avenue-prime',
+    name: 'Grand Avenue Prime',
+    ownerPhone: '900000112',
+    address: "Qarshi shahri, Grand avenue 5",
+    northMeters: -3120,
+    eastMeters: -820,
+    is_prime: true,
+    rating: 4.8,
+    reviews_count: 189,
+    max_delivery_radius: 17000,
+    delivery_fee: 9800,
+    min_order_amount: 43000,
+  },
+  {
+    slug: 'family-food-hub',
+    name: 'Family Food Hub',
+    ownerPhone: '900000113',
+    address: "Qarshi shahri, Nurafshon ko'chasi 103",
+    northMeters: 3950,
+    eastMeters: 1940,
     is_prime: false,
     rating: 4.6,
-    reviews_count: 88,
-    max_delivery_radius: 19000,
-    delivery_fee: 9500,
-    min_order_amount: 38000,
+    reviews_count: 112,
+    max_delivery_radius: 14000,
+    delivery_fee: 9300,
+    min_order_amount: 37000,
+  },
+  {
+    slug: 'mahalla-247-market',
+    name: 'Mahalla 24/7 Market',
+    ownerPhone: '900000114',
+    address: 'Qarshi shahri, Mahalla guzari 3',
+    northMeters: -4020,
+    eastMeters: 1280,
+    is_prime: false,
+    rating: 4.3,
+    reviews_count: 76,
+    max_delivery_radius: 12000,
+    delivery_fee: 7800,
+    min_order_amount: 28000,
   },
 ];
+
+const STORE_SEEDS: StoreSeed[] = STORE_BLUEPRINTS.map((seed, index) => ({
+  slug: seed.slug,
+  name: seed.name,
+  ownerPhone: seed.ownerPhone,
+  phone: buildStorePhone(index),
+  owner_name: SELLER_NAME_BY_PHONE.get(seed.ownerPhone) ?? 'Demo Seller',
+  legal_name: `${seed.name} XK`,
+  address: seed.address,
+  logo: STORE_LOGOS[index % STORE_LOGOS.length],
+  banner: STORE_BANNERS[index % STORE_BANNERS.length],
+  is_prime: seed.is_prime,
+  rating: seed.rating,
+  reviews_count: seed.reviews_count,
+  max_delivery_radius: seed.max_delivery_radius,
+  delivery_fee: seed.delivery_fee,
+  min_order_amount: seed.min_order_amount,
+  ...offsetPoint(seed.northMeters, seed.eastMeters),
+}));
 
 const PRODUCT_SEEDS: ProductSeed[] = [
   {
@@ -732,7 +941,22 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   },
 ];
 
-const STORE_PRICE_FACTORS = [1, 1.04, 0.98, 1.08, 1.02, 0.95, 1.06, 0.97];
+const STORE_PRICE_FACTORS = [
+  1,
+  1.03,
+  0.98,
+  1.07,
+  0.95,
+  1.05,
+  1.01,
+  0.97,
+  1.11,
+  0.94,
+  1.06,
+  0.99,
+  1.08,
+  0.96,
+];
 
 @Injectable()
 export class SeedService {
@@ -895,7 +1119,6 @@ export class SeedService {
     for (const seed of DEMO_ACCOUNTS) {
       let auth = await authRepo.findOne({
         where: { phone: seed.phone },
-        relations: ['user'],
       });
 
       if (!auth) {
@@ -912,12 +1135,9 @@ export class SeedService {
         auth = await authRepo.save(auth);
       }
 
-      let user =
-        auth.user ??
-        (await userRepo.findOne({
-          where: { auth: { id: auth.id } },
-          relations: ['auth'],
-        }));
+      let user = await userRepo.findOne({
+        where: { auth: { id: auth.id } },
+      });
 
       if (!user) {
         user = userRepo.create({
@@ -936,7 +1156,6 @@ export class SeedService {
 
       let wallet = await walletRepo.findOne({
         where: { user: { id: user.id } },
-        relations: ['user'],
       });
 
       if (!wallet) {
@@ -955,27 +1174,7 @@ export class SeedService {
 
     const customer = usersByPhone.get('900000002');
     if (customer) {
-      const existingLocation = await locationRepo.findOne({
-        where: { user: { id: customer.id }, label: 'Uy' },
-        relations: ['user'],
-      });
-
-      const locationPayload = {
-        label: 'Uy',
-        lat: 41.311081,
-        lng: 69.240562,
-        address_line: 'Toshkent shahri, Amir Temur xiyoboni',
-        landmark: 'Metro yaqinida',
-        is_default: true,
-        user: customer,
-      };
-
-      if (!existingLocation) {
-        await locationRepo.save(locationRepo.create(locationPayload));
-      } else {
-        Object.assign(existingLocation, locationPayload);
-        await locationRepo.save(existingLocation);
-      }
+      await this.seedUserLocations(locationRepo, customer, CUSTOMER_LOCATION_SEEDS);
     }
 
     this.logger.log(`Accounts ready: ${usersByPhone.size}`);
@@ -1068,7 +1267,8 @@ export class SeedService {
     })).filter((seed) => seed.entity);
 
     for (const [storeIndex, store] of seededStores.entries()) {
-      const factor = STORE_PRICE_FACTORS[storeIndex] ?? 1;
+      const factor =
+        STORE_PRICE_FACTORS[storeIndex % STORE_PRICE_FACTORS.length] ?? 1;
 
       for (const [productIndex, seed] of seededProducts.entries()) {
         const product = seed.entity as Product;
@@ -1112,5 +1312,49 @@ export class SeedService {
     }
 
     this.logger.log('Store inventory ready');
+  }
+
+  private async seedUserLocations(
+    locationRepo: Repository<Location>,
+    user: User,
+    seeds: DemoLocationSeed[],
+  ) {
+    await locationRepo
+      .createQueryBuilder()
+      .update(Location)
+      .set({ is_default: false })
+      .where('user_id = :userId', { userId: user.id })
+      .execute();
+
+    const existingLocations = await locationRepo
+      .createQueryBuilder('location')
+      .where('location.user_id = :userId', { userId: user.id })
+      .getMany();
+
+    const existingByLabel = new Map(
+      existingLocations.map((location) => [location.label, location]),
+    );
+
+    for (const seed of seeds) {
+      let location = existingByLabel.get(seed.label);
+
+      if (!location) {
+        location = locationRepo.create({
+          label: seed.label,
+          user,
+        });
+      }
+
+      location.user = { id: user.id } as User;
+      location.label = seed.label;
+      location.lat = seed.lat;
+      location.lng = seed.lng;
+      location.address_line = seed.address_line;
+      location.landmark = (seed.landmark ?? null) as any;
+      location.details = (seed.details ?? null) as any;
+      location.is_default = seed.is_default;
+
+      await locationRepo.save(location);
+    }
   }
 }

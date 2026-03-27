@@ -129,7 +129,6 @@ export class OrderService {
       for (const item of dto.items) {
         const storeProduct = await queryRunner.manager.findOne(StoreProduct, {
           where: { id: item.store_product_id },
-          relations: ['product'],
           lock: { mode: 'pessimistic_write' },
         });
 
@@ -148,6 +147,10 @@ export class OrderService {
           );
         }
 
+        const product = await queryRunner.manager.findOne(Product, {
+          where: { id: storeProduct.product_id },
+        });
+
         storeProduct.stock -= item.quantity;
         storeProduct.status = this.resolveStoreProductStatus(
           Number(storeProduct.price),
@@ -158,8 +161,8 @@ export class OrderService {
         orderItems.push({
           order_id: savedOrder.id,
           product_id: storeProduct.product_id,
-          product_name: storeProduct.product.name,
-          product_image: storeProduct.product.images?.[0]?.url,
+          product_name: product?.name ?? 'Mahsulot',
+          product_image: product?.images?.[0]?.url,
           store_product_id: storeProduct.id,
           quantity: item.quantity,
           price: storeProduct.price,
@@ -225,7 +228,6 @@ export class OrderService {
       for (const item of dto.items) {
         const storeProduct = await queryRunner.manager.findOne(StoreProduct, {
           where: { id: item.store_product_id },
-          relations: ['product'],
           lock: { mode: 'pessimistic_write' },
         });
 
@@ -234,6 +236,10 @@ export class OrderService {
             `Insufficient stock for: ${item.store_product_id}`,
           );
         }
+
+        const product = await queryRunner.manager.findOne(Product, {
+          where: { id: storeProduct.product_id },
+        });
 
         storeProduct.stock -= item.quantity;
         storeProduct.status = this.resolveStoreProductStatus(
@@ -245,8 +251,8 @@ export class OrderService {
         await queryRunner.manager.save(OrderItem, {
           order_id: savedOrder.id,
           product_id: storeProduct.product_id,
-          product_name: storeProduct.product.name,
-          product_image: storeProduct.product.images?.[0]?.url,
+          product_name: product?.name ?? 'Mahsulot',
+          product_image: product?.images?.[0]?.url,
           store_product_id: storeProduct.id,
           quantity: item.quantity,
           price: storeProduct.price,
@@ -908,13 +914,16 @@ export class OrderService {
           id: requestId,
           customer_id: customerId,
         },
-        relations: ['items'],
         lock: { mode: 'pessimistic_write' },
       });
 
       if (!request) {
         throw new NotFoundException('Broadcast request not found');
       }
+
+      request.items = await queryRunner.manager.find(BroadcastRequestItem, {
+        where: { request_id: request.id },
+      });
 
       this.ensureBroadcastRequestIsOpen(request);
 
@@ -924,13 +933,16 @@ export class OrderService {
           request_id: requestId,
           status: BroadcastOfferStatus.PENDING,
         },
-        relations: ['items'],
         lock: { mode: 'pessimistic_write' },
       });
 
       if (!offer) {
         throw new NotFoundException('Broadcast offer not found');
       }
+
+      offer.items = await queryRunner.manager.find(BroadcastOfferItem, {
+        where: { offer_id: offer.id },
+      });
 
       const order = queryRunner.manager.create(Order, {
         order_number: `BRC-${Date.now()}`,

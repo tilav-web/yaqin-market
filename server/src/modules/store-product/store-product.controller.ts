@@ -39,6 +39,36 @@ export class StoreProductController {
     return this.service.findByStore(storeId, includeInactive);
   }
 
+  @Get('categories')
+  async findCategoriesByStore(
+    @Query('store_id') storeId: string,
+    @Query('include_inactive') includeInactive?: string,
+  ) {
+    return this.service.findCategoriesByStore(
+      storeId,
+      includeInactive === 'true',
+    );
+  }
+
+  @Get('catalog')
+  async findCatalog(
+    @Query('store_id') storeId: string,
+    @Query('q') q?: string,
+    @Query('category_id') categoryId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('include_inactive') includeInactive?: string,
+  ) {
+    return this.service.findCatalog({
+      storeId,
+      q,
+      categoryId,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 12,
+      includeInactive: includeInactive === 'true',
+    });
+  }
+
   @Get('product/:productId/nearby')
   @UseGuards(AuthGuard)
   async findNearbyByProduct(

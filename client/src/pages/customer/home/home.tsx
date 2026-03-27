@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
   ChevronRightIcon,
   CrownIcon,
@@ -15,9 +15,14 @@ import BroadcastCartSheet from "@/components/customer/broadcast-cart-sheet";
 import ProductDrawer from "@/components/customer/product-drawer";
 import EmptyState from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
 import type { ICategory } from "@/interfaces/category.interface";
-import type { ProductCatalogItem, StoreSummary } from "@/interfaces/market.interface";
+import type {
+  PaginatedResponse,
+  ProductCatalogItem,
+  StoreSummary,
+} from "@/interfaces/market.interface";
 import { formatMoney } from "@/lib/market";
 import { useBroadcastCartStore } from "@/stores/broadcast-cart.store";
 
@@ -75,6 +80,8 @@ const PROMO_THEME: Record<
   },
 };
 
+const PRODUCTS_PAGE_SIZE = 12;
+
 function formatDistance(distance?: number | null) {
   if (distance == null) return "Yaqin";
   if (distance < 1000) return `${Math.round(distance)} m`;
@@ -97,16 +104,30 @@ function dedupeStores(stores: StoreSummary[]) {
   return Array.from(map.values());
 }
 
-function normalizeProductId(value: number | string | null | undefined) {
-  return Number(value ?? 0);
+function ProductFeedSkeleton() {
+  return (
+    <div className="rounded-[1.5rem] border border-white/70 bg-white/92 p-3 shadow-[0_18px_48px_-40px_rgba(15,23,42,0.26)]">
+      <Skeleton className="aspect-[0.92] rounded-[1.25rem]" />
+      <div className="mt-3 space-y-2">
+        <Skeleton className="h-4 w-4/5 rounded-full" />
+        <Skeleton className="h-3 w-full rounded-full" />
+        <Skeleton className="h-3 w-2/3 rounded-full" />
+        <Skeleton className="h-4 w-24 rounded-full" />
+      </div>
+    </div>
+  );
 }
 
 export default function CustomerHome() {
   const [search, setSearch] = useState("");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [activeProduct, setActiveProduct] = useState<ProductCatalogItem | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const { location, requestCurrentLocation } = useDiscoveryPreferences();
   const cartItems = useBroadcastCartStore((state) => state.items);
+  const deferredSearch = useDeferredValue(search);
+  const normalizedSearch = deferredSearch.trim();
 
   useEffect(() => {
     if (!location) {
@@ -143,9 +164,28 @@ export default function CustomerHome() {
     staleTime: 60000,
   });
 
-  const { data: products = [] } = useQuery({
-    queryKey: ["products", "all"],
-    queryFn: async () => (await api.get<ProductCatalogItem[]>("/products")).data,
+  const {
+    data: productPages,
+    isLoading: productsLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["products", "catalog", normalizedSearch, selectedCategoryId],
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) =>
+      (
+        await api.get<PaginatedResponse<ProductCatalogItem>>("/products/catalog", {
+          params: {
+            q: normalizedSearch || undefined,
+            category_id: selectedCategoryId ? Number(selectedCategoryId) : undefined,
+            page: typeof pageParam === "number" ? pageParam : Number(pageParam ?? 1),
+            limit: PRODUCTS_PAGE_SIZE,
+          },
+        })
+      ).data,
+    getNextPageParam: (lastPage) =>
+      lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined,
     staleTime: 60000,
   });
 
@@ -160,24 +200,36 @@ export default function CustomerHome() {
     [primeStores, stores],
   );
 
-  const filteredProducts = useMemo(() => {
-    if (!search.trim()) return products;
-    const term = search.toLowerCase();
-
-    return products.filter((product) => {
-      const productName = product.name.toLowerCase();
-      const categoryName = product.category?.name?.toLowerCase() ?? "";
-      return productName.includes(term) || categoryName.includes(term);
-    });
-  }, [products, search]);
-
   const visibleProducts = useMemo(() => {
-    const rootProducts = filteredProducts.filter(
-      (product) => !normalizeProductId(product.parent_id),
+    return productPages?.pages.flatMap((page) => page.items) ?? [];
+  }, [productPages]);
+
+  const totalProducts = productPages?.pages[0]?.meta.total ?? visibleProducts.length;
+
+  useEffect(() => {
+    const node = loadMoreRef.current;
+
+    if (!node || !hasNextPage || isFetchingNextPage || productsLoading) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          fetchNextPage().catch(() => undefined);
+        }
+      },
+      { rootMargin: "480px 0px" },
     );
 
-    return search.trim() ? rootProducts : rootProducts.slice(0, 24);
-  }, [filteredProducts, search]);
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage, productsLoading, visibleProducts.length]);
+
+  const resetCatalogFilters = () => {
+    setSearch("");
+    setSelectedCategoryId(null);
+  };
 
   const promoStores = useMemo(() => {
     if (!nearbyStores.length) return [] as PromoStore[];
@@ -270,6 +322,8 @@ export default function CustomerHome() {
   }, [nearbyStores, primeStores]);
 
   const feedItems = useMemo(() => {
+    if (!visibleProducts.length) return [] as FeedItem[];
+
     const items: FeedItem[] = [];
     let promoIndex = 0;
 
@@ -299,11 +353,18 @@ export default function CustomerHome() {
       <div className="space-y-5 px-4 pb-10 pt-4">
         <header className="rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.14),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,244,245,0.98))] p-4 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.35)]">
           <div className="flex items-center justify-between gap-3">
-            <img
-              src="/logo-web.png"
-              alt="Yaqin Market"
-              className="h-9 w-auto sm:h-10"
-            />
+            <button
+              type="button"
+              onClick={resetCatalogFilters}
+              className="shrink-0 rounded-2xl transition active:scale-[0.98]"
+              aria-label="Filterlarni tozalash"
+            >
+              <img
+                src="/logo-web.png"
+                alt="Yaqin Market"
+                className="h-9 w-auto sm:h-10"
+              />
+            </button>
 
             <div className="flex items-center gap-2">
               <Button
@@ -337,7 +398,7 @@ export default function CustomerHome() {
             />
           </div>
 
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto pb-1">
             <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
               <MapPinIcon className="h-3.5 w-3.5" />
               {location ? "Joylashuv tayyor" : "Joylashuv olinmoqda"}
@@ -353,11 +414,15 @@ export default function CustomerHome() {
           </div>
 
           {categories.length > 0 ? (
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto pb-1">
               <button
                 type="button"
-                onClick={() => setSearch("")}
-                className="shrink-0 rounded-full border border-slate-200 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-white"
+                onClick={resetCatalogFilters}
+                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                  !selectedCategoryId
+                    ? "border-slate-200 bg-slate-950 text-white"
+                    : "border-slate-200 bg-white text-slate-700 hover:border-primary/15 hover:text-primary"
+                }`}
               >
                 Hammasi
               </button>
@@ -365,8 +430,16 @@ export default function CustomerHome() {
                 <button
                   key={category.id}
                   type="button"
-                  onClick={() => setSearch(category.name)}
-                  className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-primary/15 hover:text-primary"
+                  onClick={() =>
+                    setSelectedCategoryId((current) =>
+                      current === String(category.id) ? null : String(category.id),
+                    )
+                  }
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                    selectedCategoryId === String(category.id)
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-slate-200 bg-white text-slate-700 hover:border-primary/15 hover:text-primary"
+                  }`}
                 >
                   {category.name}
                 </button>
@@ -378,154 +451,176 @@ export default function CustomerHome() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-950">Feed</h2>
-            <span className="text-sm text-slate-400">{visibleProducts.length} ta</span>
+            <span className="text-sm text-slate-400">
+              {totalProducts > visibleProducts.length
+                ? `${visibleProducts.length} / ${totalProducts} ta`
+                : `${visibleProducts.length} ta`}
+            </span>
           </div>
 
-          {feedItems.length === 0 ? (
+          {productsLoading && visibleProducts.length === 0 ? (
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 6 }).map((_, index) => (
+                <ProductFeedSkeleton key={index} />
+              ))}
+            </div>
+          ) : feedItems.length === 0 ? (
             <EmptyState
               title="Mahsulot topilmadi"
-              description="Qidiruvni o'zgartirib ko'ring yoki GPS ni yangilang."
+              description="Qidiruv yoki kategoriya filtrini o'zgartirib ko'ring."
             />
           ) : (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-              {feedItems.map((item, index) => {
-                if (item.type === "store") {
-                  const { promo } = item;
-                  const theme = PROMO_THEME[promo.tone];
-                  const deliveryFee = getDeliveryFee(promo.store);
+            <>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+                {feedItems.map((item, index) => {
+                  if (item.type === "store") {
+                    const { promo } = item;
+                    const theme = PROMO_THEME[promo.tone];
+                    const deliveryFee = getDeliveryFee(promo.store);
+
+                    return (
+                      <Link
+                        key={`${promo.store.id}-${promo.badge}-${index}`}
+                        to={`/mobile/stores/${promo.store.id}`}
+                        className={`col-span-full overflow-hidden rounded-[1.9rem] border text-white shadow-[0_24px_70px_-50px_rgba(15,23,42,0.55)] ${theme.border}`}
+                      >
+                        <div className="relative overflow-hidden">
+                          {promo.store.banner ? (
+                            <img
+                              src={promo.store.banner}
+                              alt={promo.store.name}
+                              className="absolute inset-0 h-full w-full object-cover opacity-20"
+                            />
+                          ) : null}
+
+                          <div className="relative grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
+                            <div className="flex items-start gap-3">
+                              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[1.35rem] border border-white/25 bg-white/90">
+                                {promo.store.logo ? (
+                                  <img
+                                    src={promo.store.logo}
+                                    alt={promo.store.name}
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-2xl text-slate-900">
+                                    🏪
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="min-w-0">
+                                <div
+                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${theme.badge}`}
+                                >
+                                  {promo.tone === "prime" ? (
+                                    <CrownIcon className="h-3.5 w-3.5" />
+                                  ) : null}
+                                  {promo.badge}
+                                </div>
+
+                                <h3 className="mt-3 text-xl font-semibold leading-tight md:text-2xl">
+                                  {promo.store.name}
+                                </h3>
+
+                                <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-white/80">
+                                  <span>⭐ {Number(promo.store.rating ?? 0).toFixed(1)}</span>
+                                  <span>{formatDistance(promo.store.distance_meters)}</span>
+                                  <span>{formatMoney(deliveryFee)} delivery</span>
+                                </div>
+
+                                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/86">
+                                  {promo.store.address ?? promo.description}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className={`rounded-[1.35rem] p-4 ${theme.panel}`}>
+                                <p className="text-xs uppercase tracking-[0.2em] text-white/55">
+                                  Tavsiya
+                                </p>
+                                <p className="mt-2 text-2xl font-semibold">{promo.summary}</p>
+                                <p className="mt-1 text-sm text-white/80">
+                                  {promo.description}
+                                </p>
+                              </div>
+
+                              <div className="inline-flex items-center gap-2 text-sm font-semibold text-white">
+                                Do'konni ochish
+                                <ChevronRightIcon className="h-4 w-4" />
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    );
+                  }
+
+                  const { product } = item;
+                  const childCount =
+                    product.children?.filter((child) => child.is_active !== false).length ?? 0;
 
                   return (
-                    <Link
-                      key={`${promo.store.id}-${promo.badge}-${index}`}
-                      to={`/mobile/stores/${promo.store.id}`}
-                      className={`col-span-full overflow-hidden rounded-[1.9rem] border text-white shadow-[0_24px_70px_-50px_rgba(15,23,42,0.55)] ${theme.border}`}
+                    <button
+                      key={product.id}
+                      type="button"
+                      onClick={() => setActiveProduct(product)}
+                      className="group rounded-[1.5rem] border border-white/70 bg-white/92 p-3 text-left shadow-[0_18px_48px_-40px_rgba(15,23,42,0.26)] transition hover:-translate-y-0.5"
                     >
-                      <div className="relative overflow-hidden">
-                        {promo.store.banner ? (
+                      <div className="relative aspect-[0.92] overflow-hidden rounded-[1.25rem] bg-[linear-gradient(135deg,#fff1f1,#f8fbff)]">
+                        {product.images?.[0]?.url ? (
                           <img
-                            src={promo.store.banner}
-                            alt={promo.store.name}
-                            className="absolute inset-0 h-full w-full object-cover opacity-20"
+                            src={product.images[0].url}
+                            alt={product.name}
+                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                           />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-4xl">
+                            📦
+                          </div>
+                        )}
+
+                        {product.category?.name ? (
+                          <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
+                            {product.category.name}
+                          </span>
                         ) : null}
 
-                        <div className="relative grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
-                          <div className="flex items-start gap-3">
-                            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[1.35rem] border border-white/25 bg-white/90">
-                              {promo.store.logo ? (
-                                <img
-                                  src={promo.store.logo}
-                                  alt={promo.store.name}
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : (
-                                <div className="flex h-full w-full items-center justify-center text-2xl text-slate-900">
-                                  🏪
-                                </div>
-                              )}
-                            </div>
+                        {childCount > 0 ? (
+                          <span className="absolute right-2 top-2 rounded-full bg-slate-950/86 px-2.5 py-1 text-[11px] font-semibold text-white">
+                            {childCount} variant
+                          </span>
+                        ) : null}
+                      </div>
 
-                            <div className="min-w-0">
-                              <div
-                                className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${theme.badge}`}
-                              >
-                                {promo.tone === "prime" ? (
-                                  <CrownIcon className="h-3.5 w-3.5" />
-                                ) : null}
-                                {promo.badge}
-                              </div>
-
-                              <h3 className="mt-3 text-xl font-semibold leading-tight md:text-2xl">
-                                {promo.store.name}
-                              </h3>
-
-                              <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-white/80">
-                                <span>⭐ {Number(promo.store.rating ?? 0).toFixed(1)}</span>
-                                <span>{formatDistance(promo.store.distance_meters)}</span>
-                                <span>{formatMoney(deliveryFee)} delivery</span>
-                              </div>
-
-                              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/86">
-                                {promo.store.address ?? promo.description}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="space-y-3">
-                            <div className={`rounded-[1.35rem] p-4 ${theme.panel}`}>
-                              <p className="text-xs uppercase tracking-[0.2em] text-white/55">
-                                Tavsiya
-                              </p>
-                              <p className="mt-2 text-2xl font-semibold">{promo.summary}</p>
-                              <p className="mt-1 text-sm text-white/80">
-                                {promo.description}
-                              </p>
-                            </div>
-
-                            <div className="inline-flex items-center gap-2 text-sm font-semibold text-white">
-                              Do'konni ochish
-                              <ChevronRightIcon className="h-4 w-4" />
-                            </div>
-                          </div>
+                      <div className="mt-3">
+                        <p className="line-clamp-2 min-h-10 text-sm font-semibold text-slate-950">
+                          {product.name}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
+                          {product.description ?? product.category?.name ?? "Mahsulot tafsiloti"}
+                        </p>
+                        <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
+                          {childCount > 0 ? "Variant tanlash" : "Savatga qo'shish"}
+                          <ChevronRightIcon className="h-3.5 w-3.5" />
                         </div>
                       </div>
-                    </Link>
+                    </button>
                   );
-                }
+                })}
+              </div>
 
-                const { product } = item;
-                const childCount =
-                  product.children?.filter((child) => child.is_active !== false).length ?? 0;
+              {isFetchingNextPage ? (
+                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+                  {Array.from({ length: 4 }).map((_, index) => (
+                    <ProductFeedSkeleton key={`next-page-${index}`} />
+                  ))}
+                </div>
+              ) : null}
 
-                return (
-                  <button
-                    key={product.id}
-                    type="button"
-                    onClick={() => setActiveProduct(product)}
-                    className="group rounded-[1.5rem] border border-white/70 bg-white/92 p-3 text-left shadow-[0_18px_48px_-40px_rgba(15,23,42,0.26)] transition hover:-translate-y-0.5"
-                  >
-                    <div className="relative aspect-[0.92] overflow-hidden rounded-[1.25rem] bg-[linear-gradient(135deg,#fff1f1,#f8fbff)]">
-                      {product.images?.[0]?.url ? (
-                        <img
-                          src={product.images[0].url}
-                          alt={product.name}
-                          className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center text-4xl">
-                          📦
-                        </div>
-                      )}
-
-                      {product.category?.name ? (
-                        <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
-                          {product.category.name}
-                        </span>
-                      ) : null}
-
-                      {childCount > 0 ? (
-                        <span className="absolute right-2 top-2 rounded-full bg-slate-950/86 px-2.5 py-1 text-[11px] font-semibold text-white">
-                          {childCount} variant
-                        </span>
-                      ) : null}
-                    </div>
-
-                    <div className="mt-3">
-                      <p className="line-clamp-2 min-h-10 text-sm font-semibold text-slate-950">
-                        {product.name}
-                      </p>
-                      <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
-                        {product.description ?? product.category?.name ?? "Mahsulot tafsiloti"}
-                      </p>
-                      <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-                        {childCount > 0 ? "Variant tanlash" : "Savatga qo'shish"}
-                        <ChevronRightIcon className="h-3.5 w-3.5" />
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
+              {hasNextPage ? <div ref={loadMoreRef} className="h-4 w-full" /> : null}
+            </>
           )}
         </section>
       </div>

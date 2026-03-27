@@ -25,6 +25,21 @@ export class ProductController {
     return this.productService.findAll(categoryId ? Number(categoryId) : undefined);
   }
 
+  @Get('catalog')
+  async findCatalog(
+    @Query('q') q?: string,
+    @Query('category_id') categoryId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.productService.findCatalog({
+      q,
+      categoryId: categoryId ? Number(categoryId) : undefined,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 12,
+    });
+  }
+
   @Get(':id')
   async findById(@Param('id', ParseIntPipe) id: number) {
     return this.productService.findById(id);
