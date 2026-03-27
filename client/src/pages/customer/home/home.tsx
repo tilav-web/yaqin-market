@@ -1,22 +1,25 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
 import {
   ChevronRightIcon,
   CrownIcon,
   LocateFixedIcon,
   MapPinIcon,
   SearchIcon,
-  SendIcon,
+  ShoppingBagIcon,
   StarIcon,
 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { api } from "@/api/api";
+import BroadcastCartSheet from "@/components/customer/broadcast-cart-sheet";
+import ProductDrawer from "@/components/customer/product-drawer";
 import EmptyState from "@/components/common/empty-state";
 import { Button } from "@/components/ui/button";
+import { useDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
 import type { ICategory } from "@/interfaces/category.interface";
 import type { ProductCatalogItem, StoreSummary } from "@/interfaces/market.interface";
-import { useDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
 import { formatMoney } from "@/lib/market";
+import { useBroadcastCartStore } from "@/stores/broadcast-cart.store";
 
 type PromoTone = "prime" | "nearby" | "rated" | "value";
 
@@ -94,15 +97,27 @@ function dedupeStores(stores: StoreSummary[]) {
   return Array.from(map.values());
 }
 
+function normalizeProductId(value: number | string | null | undefined) {
+  return Number(value ?? 0);
+}
+
 export default function CustomerHome() {
   const [search, setSearch] = useState("");
+  const [activeProduct, setActiveProduct] = useState<ProductCatalogItem | null>(null);
+  const [cartOpen, setCartOpen] = useState(false);
   const { location, requestCurrentLocation } = useDiscoveryPreferences();
+  const cartItems = useBroadcastCartStore((state) => state.items);
 
   useEffect(() => {
     if (!location) {
       requestCurrentLocation().catch(() => undefined);
     }
   }, [location, requestCurrentLocation]);
+
+  const totalCartItems = useMemo(
+    () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
+    [cartItems],
+  );
 
   const { data: stores = [] } = useQuery({
     queryKey: ["stores", "nearby", location?.lat, location?.lng],
@@ -156,10 +171,13 @@ export default function CustomerHome() {
     });
   }, [products, search]);
 
-  const visibleProducts = useMemo(
-    () => (search.trim() ? filteredProducts : filteredProducts.slice(0, 24)),
-    [filteredProducts, search],
-  );
+  const visibleProducts = useMemo(() => {
+    const rootProducts = filteredProducts.filter(
+      (product) => !normalizeProductId(product.parent_id),
+    );
+
+    return search.trim() ? rootProducts : rootProducts.slice(0, 24);
+  }, [filteredProducts, search]);
 
   const promoStores = useMemo(() => {
     if (!nearbyStores.length) return [] as PromoStore[];
@@ -277,7 +295,7 @@ export default function CustomerHome() {
   }, [promoStores, visibleProducts]);
 
   return (
-    <div className="min-h-screen pb-28">
+    <div className="min-h-screen pb-32">
       <div className="space-y-5 px-4 pb-10 pt-4">
         <header className="rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top,rgba(255,124,61,0.16),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,246,238,0.98))] p-4 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.35)]">
           <div className="flex items-center justify-between gap-3">
@@ -297,12 +315,14 @@ export default function CustomerHome() {
                 <LocateFixedIcon />
                 GPS
               </Button>
-              <Link to="/mobile/broadcast/new">
-                <Button size="sm" className="rounded-full px-4">
-                  <SendIcon />
-                  Broadcast
-                </Button>
-              </Link>
+              <Button
+                size="sm"
+                className="rounded-full px-4"
+                onClick={() => setCartOpen(true)}
+              >
+                <ShoppingBagIcon />
+                Savat {totalCartItems ? `(${totalCartItems})` : ""}
+              </Button>
             </div>
           </div>
 
@@ -358,15 +378,13 @@ export default function CustomerHome() {
         <section className="space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-950">Feed</h2>
-            <span className="text-sm text-slate-400">{filteredProducts.length} ta</span>
+            <span className="text-sm text-slate-400">{visibleProducts.length} ta</span>
           </div>
 
           {feedItems.length === 0 ? (
             <EmptyState
               title="Mahsulot topilmadi"
               description="Qidiruvni o'zgartirib ko'ring yoki GPS ni yangilang."
-              actionLabel="Broadcast so'rov yuborish"
-              actionTo="/mobile/broadcast/new"
             />
           ) : (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
@@ -411,7 +429,9 @@ export default function CustomerHome() {
                               <div
                                 className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${theme.badge}`}
                               >
-                                {promo.tone === "prime" ? <CrownIcon className="h-3.5 w-3.5" /> : null}
+                                {promo.tone === "prime" ? (
+                                  <CrownIcon className="h-3.5 w-3.5" />
+                                ) : null}
                                 {promo.badge}
                               </div>
 
@@ -454,12 +474,15 @@ export default function CustomerHome() {
                 }
 
                 const { product } = item;
+                const childCount =
+                  product.children?.filter((child) => child.is_active !== false).length ?? 0;
 
                 return (
-                  <Link
+                  <button
                     key={product.id}
-                    to={`/mobile/products/${product.id}`}
-                    className="group rounded-[1.5rem] border border-white/70 bg-white/92 p-3 shadow-[0_18px_48px_-40px_rgba(15,23,42,0.26)] transition hover:-translate-y-0.5"
+                    type="button"
+                    onClick={() => setActiveProduct(product)}
+                    className="group rounded-[1.5rem] border border-white/70 bg-white/92 p-3 text-left shadow-[0_18px_48px_-40px_rgba(15,23,42,0.26)] transition hover:-translate-y-0.5"
                   >
                     <div className="relative aspect-[0.92] overflow-hidden rounded-[1.25rem] bg-[linear-gradient(135deg,#fff1e8,#f8fbff)]">
                       {product.images?.[0]?.url ? (
@@ -479,6 +502,12 @@ export default function CustomerHome() {
                           {product.category.name}
                         </span>
                       ) : null}
+
+                      {childCount > 0 ? (
+                        <span className="absolute right-2 top-2 rounded-full bg-slate-950/86 px-2.5 py-1 text-[11px] font-semibold text-white">
+                          {childCount} variant
+                        </span>
+                      ) : null}
                     </div>
 
                     <div className="mt-3">
@@ -489,17 +518,44 @@ export default function CustomerHome() {
                         {product.description ?? product.category?.name ?? "Mahsulot tafsiloti"}
                       </p>
                       <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-orange-700">
-                        Narxlarni ko'rish
+                        {childCount > 0 ? "Variant tanlash" : "Savatga qo'shish"}
                         <ChevronRightIcon className="h-3.5 w-3.5" />
                       </div>
                     </div>
-                  </Link>
+                  </button>
                 );
               })}
             </div>
           )}
         </section>
       </div>
+
+      {totalCartItems > 0 ? (
+        <div className="fixed inset-x-0 bottom-24 z-20 px-4 sm:bottom-6">
+          <Button
+            className="h-14 w-full rounded-[1.4rem] shadow-[0_24px_60px_-36px_rgba(15,23,42,0.45)]"
+            onClick={() => setCartOpen(true)}
+          >
+            <ShoppingBagIcon />
+            Savatni yuborish
+            <span className="rounded-full bg-white/16 px-2 py-0.5 text-xs">
+              {totalCartItems}
+            </span>
+          </Button>
+        </div>
+      ) : null}
+
+      <ProductDrawer
+        open={!!activeProduct}
+        product={activeProduct}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
+            setActiveProduct(null);
+          }
+        }}
+      />
+
+      <BroadcastCartSheet open={cartOpen} onOpenChange={setCartOpen} />
     </div>
   );
 }

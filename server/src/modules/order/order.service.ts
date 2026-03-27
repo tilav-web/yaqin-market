@@ -21,6 +21,12 @@ import { Product } from '../product/product.entity';
 import { CreateBroadcastRequestDto } from './dto/create-broadcast-request.dto';
 import { CreateBroadcastOfferDto } from './dto/create-broadcast-offer.dto';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
+import { BroadcastGateway } from './broadcast.gateway';
+import { BroadcastVisibleRequest } from './types/broadcast-visible-request.type';
+
+const PRIME_BROADCAST_VISIBILITY_DELAY_MS = 0;
+const DEFAULT_BROADCAST_VISIBILITY_DELAY_MS = 10000;
+const SOCKET_FEED_RADIUS_KM = 12;
 
 function calculateDistance(
   lat1: number,
@@ -45,6 +51,7 @@ function calculateDistance(
 export class OrderService {
   constructor(
     private readonly dataSource: DataSource,
+    private readonly broadcastGateway: BroadcastGateway,
     @InjectRepository(Order)
     private readonly orderRepo: Repository<Order>,
     @InjectRepository(OrderItem)
@@ -558,16 +565,17 @@ export class OrderService {
       throw new BadRequestException('At least one item is required');
     }
 
-    const productIds = dto.items.map((item) => item.product_id);
-    const products = await this.productRepo.find({
-      where: {
-        id: In(productIds),
-      },
-    });
-    const productMap = new Map(products.map((product) => [product.id, product]));
+    const productIds = dto.items.map((item) => String(item.product_id));
+    const products = await this.productRepo
+      .createQueryBuilder('product')
+      .where('product.id IN (:...ids)', { ids: productIds })
+      .getMany();
+    const productMap = new Map(
+      products.map((product) => [String(product.id), product]),
+    );
 
     const missingProductId = dto.items.find(
-      (item) => !productMap.has(item.product_id),
+      (item) => !productMap.has(String(item.product_id)),
     )?.product_id;
 
     if (missingProductId) {
@@ -583,6 +591,10 @@ export class OrderService {
       delivery_lng: dto.delivery_lng,
       delivery_address: dto.delivery_address,
       delivery_details: dto.delivery_details ?? null,
+      prime_visible_at: new Date(),
+      regular_visible_at: new Date(
+        Date.now() + DEFAULT_BROADCAST_VISIBILITY_DELAY_MS,
+      ),
       expires_at: new Date(
         Date.now() + (dto.expires_in_minutes ?? 120) * 60 * 1000,
       ),
@@ -591,7 +603,7 @@ export class OrderService {
     const savedRequest = await this.broadcastRequestRepo.save(request);
 
     const items = dto.items.map((item) => {
-      const product = productMap.get(item.product_id)!;
+      const product = productMap.get(String(item.product_id))!;
 
       return this.broadcastRequestItemRepo.create({
         request_id: savedRequest.id,
@@ -603,11 +615,15 @@ export class OrderService {
 
     await this.broadcastRequestItemRepo.save(items);
 
-    return this.findBroadcastRequestById(
+    const createdRequest = await this.findBroadcastRequestById(
       savedRequest.id,
       customerId,
       AuthRoleEnum.CUSTOMER,
     );
+
+    void this.scheduleBroadcastRequestNotifications(savedRequest.id);
+
+    return createdRequest;
   }
 
   async findMyBroadcastRequests(customerId: string) {
@@ -649,22 +665,7 @@ export class OrderService {
     return requests
       .map((request) => this.decorateBroadcastRequest(request))
       .filter((request) => {
-        if (request.status !== BroadcastRequestStatus.OPEN) {
-          return false;
-        }
-
-        const distanceMeters = calculateDistance(
-          Number(store.lat),
-          Number(store.lng),
-          Number(request.delivery_lat),
-          Number(request.delivery_lng),
-        );
-
-        const withinFeedRadius = distanceMeters <= radiusKm * 1000;
-        const withinRequestRadius =
-          distanceMeters <= Number(request.radius_km) * 1000;
-
-        return withinFeedRadius && withinRequestRadius;
+        return this.isBroadcastRequestVisibleToStore(request, store, radiusKm);
       })
       .map((request) => ({
         ...request,
@@ -697,6 +698,24 @@ export class OrderService {
       request.customer_id !== userId
     ) {
       throw new NotFoundException('Broadcast request not found');
+    }
+
+    if (role === AuthRoleEnum.SELLER) {
+      const store = await this.storeRepo.findOne({
+        where: { owner_id: userId },
+        relations: ['deliverySettings'],
+      });
+
+      if (
+        !store ||
+        !this.isBroadcastRequestVisibleToStore(
+          this.decorateBroadcastRequest(request),
+          store,
+          SOCKET_FEED_RADIUS_KM,
+        )
+      ) {
+        throw new NotFoundException('Broadcast request not found');
+      }
     }
 
     return this.decorateBroadcastRequest(request);
@@ -750,10 +769,21 @@ export class OrderService {
 
     const store = await this.storeRepo.findOne({
       where: { owner_id: sellerId },
+      relations: ['deliverySettings'],
     });
 
     if (!store) {
       throw new NotFoundException('Seller store not found');
+    }
+
+    if (
+      !this.isBroadcastRequestVisibleToStore(
+        request,
+        store,
+        SOCKET_FEED_RADIUS_KM,
+      )
+    ) {
+      throw new NotFoundException('Broadcast request not available for this store');
     }
 
     const requestItemMap = new Map(request.items.map((item) => [item.id, item]));
@@ -844,10 +874,22 @@ export class OrderService {
 
     await this.broadcastOfferItemRepo.save(preparedItems);
 
-    return this.broadcastOfferRepo.findOne({
+    const savedOfferWithRelations = await this.broadcastOfferRepo.findOne({
       where: { id: savedOffer.id },
       relations: ['items', 'store'],
     });
+
+    this.broadcastGateway.emitToCustomerUser(request.customer_id, 'broadcast:offer_updated', {
+      requestId,
+      offerId: savedOffer.id,
+    });
+
+    this.broadcastGateway.emitToSellerUser(sellerId, 'broadcast:request_updated', {
+      requestId,
+      offerId: savedOffer.id,
+    });
+
+    return savedOfferWithRelations;
   }
 
   async selectBroadcastOffer(
@@ -962,6 +1004,7 @@ export class OrderService {
       await queryRunner.manager.save(request);
 
       await queryRunner.commitTransaction();
+      await this.notifyBroadcastSelection(requestId, request.customer_id);
       return this.findById(savedOrder.id);
     } catch (error) {
       await queryRunner.rollbackTransaction();
@@ -1009,5 +1052,142 @@ export class OrderService {
     }
 
     return StoreProductStatus.ACTIVE;
+  }
+
+  private getStoreServiceRadiusMeters(store: Store | null | undefined) {
+    const settings = store?.deliverySettings?.[0];
+
+    if (!settings?.is_delivery_enabled) {
+      return 0;
+    }
+
+    return Number(settings.max_delivery_radius ?? 0);
+  }
+
+  private getBroadcastVisibilityDelayMs(store: Store) {
+    return store.is_prime
+      ? PRIME_BROADCAST_VISIBILITY_DELAY_MS
+      : DEFAULT_BROADCAST_VISIBILITY_DELAY_MS;
+  }
+
+  private isBroadcastRequestVisibleToStore(
+    request: BroadcastVisibleRequest,
+    store: Store,
+    feedRadiusKm: number = SOCKET_FEED_RADIUS_KM,
+  ) {
+    if (!store.is_active || !store.lat || !store.lng) {
+      return false;
+    }
+
+    if (request.status !== BroadcastRequestStatus.OPEN) {
+      return false;
+    }
+
+    const distanceMeters = calculateDistance(
+      Number(store.lat),
+      Number(store.lng),
+      Number(request.delivery_lat),
+      Number(request.delivery_lng),
+    );
+
+    const withinFeedRadius = distanceMeters <= feedRadiusKm * 1000;
+    const withinRequestRadius = distanceMeters <= Number(request.radius_km) * 1000;
+    const withinStoreRadius =
+      distanceMeters <= this.getStoreServiceRadiusMeters(store);
+    const visibleFrom =
+      store.is_prime || this.getBroadcastVisibilityDelayMs(store) === 0
+        ? request.prime_visible_at
+        : request.regular_visible_at;
+    const visibleByDelay =
+      visibleFrom !== null &&
+      visibleFrom !== undefined &&
+      Date.now() >= new Date(visibleFrom).getTime();
+
+    return (
+      withinFeedRadius &&
+      withinRequestRadius &&
+      withinStoreRadius &&
+      visibleByDelay
+    );
+  }
+
+  private async scheduleBroadcastRequestNotifications(requestId: string) {
+    const stores = await this.storeRepo.find({
+      where: { is_active: true },
+      relations: ['deliverySettings'],
+    });
+
+    for (const store of stores) {
+      if (!store.owner_id) {
+        continue;
+      }
+
+      const freshRequest = await this.broadcastRequestRepo.findOne({
+        where: { id: requestId },
+      });
+
+      if (!freshRequest) {
+        continue;
+      }
+
+      const visibleFrom =
+        store.is_prime || this.getBroadcastVisibilityDelayMs(store) === 0
+          ? freshRequest.prime_visible_at
+          : freshRequest.regular_visible_at;
+      const delayMs = Math.max(
+        0,
+        new Date(visibleFrom ?? new Date()).getTime() - Date.now(),
+      );
+
+      setTimeout(async () => {
+        const latestRequest = await this.broadcastRequestRepo.findOne({
+          where: { id: requestId },
+          relations: ['items', 'offers', 'offers.items', 'offers.store'],
+        });
+
+        if (!latestRequest) {
+          return;
+        }
+
+        const decoratedRequest = this.decorateBroadcastRequest(latestRequest);
+
+        if (
+          this.isBroadcastRequestVisibleToStore(
+            decoratedRequest,
+            store,
+            SOCKET_FEED_RADIUS_KM,
+          )
+        ) {
+          this.broadcastGateway.emitToSellerUser(
+            store.owner_id,
+            'broadcast:request_created',
+            {
+              requestId,
+            },
+          );
+        }
+      }, delayMs);
+    }
+  }
+
+  private async notifyBroadcastSelection(requestId: string, customerId: string) {
+    const request = await this.broadcastRequestRepo.findOne({
+      where: { id: requestId },
+      relations: ['offers'],
+    });
+
+    this.broadcastGateway.emitToCustomerUser(customerId, 'broadcast:request_updated', {
+      requestId,
+    });
+
+    for (const offer of request?.offers ?? []) {
+      if (!offer.seller_id) {
+        continue;
+      }
+
+      this.broadcastGateway.emitToSellerUser(offer.seller_id, 'broadcast:request_updated', {
+        requestId,
+      });
+    }
   }
 }

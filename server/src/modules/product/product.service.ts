@@ -19,7 +19,13 @@ export class ProductService {
 
     return this.productRepo.find({
       where,
-      relations: ['category', 'unit', 'children'],
+      relations: [
+        'category',
+        'unit',
+        'children',
+        'children.category',
+        'children.unit',
+      ],
       order: { createdAt: 'DESC' },
     });
   }
@@ -27,7 +33,14 @@ export class ProductService {
   async findById(id: number) {
     const product = await this.productRepo.findOne({
       where: { id },
-      relations: ['category', 'unit', 'parent', 'children'],
+      relations: [
+        'category',
+        'unit',
+        'parent',
+        'children',
+        'children.category',
+        'children.unit',
+      ],
     });
 
     if (!product) {

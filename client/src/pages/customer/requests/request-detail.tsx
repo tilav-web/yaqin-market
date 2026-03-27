@@ -6,6 +6,7 @@ import { api } from "@/api/api";
 import { Button } from "@/components/ui/button";
 import LocationPickerMap from "@/components/maps/location-picker-map";
 import StatusPill from "@/components/common/status-pill";
+import { useBroadcastSocket } from "@/hooks/use-broadcast-socket";
 import type { BroadcastRequest } from "@/interfaces/market.interface";
 import {
   extractErrorMessage,
@@ -25,6 +26,21 @@ export default function BroadcastRequestDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [paymentMethod, setPaymentMethod] = useState("CASH");
+
+  useBroadcastSocket({
+    role: "customer",
+    enabled: !!id,
+    onOfferUpdated: (payload) => {
+      if (payload.requestId !== id) return;
+      queryClient.invalidateQueries({ queryKey: ["broadcast-request", id] });
+      queryClient.invalidateQueries({ queryKey: ["broadcast-requests", "my"] });
+    },
+    onRequestUpdated: (payload) => {
+      if (payload.requestId !== id) return;
+      queryClient.invalidateQueries({ queryKey: ["broadcast-request", id] });
+      queryClient.invalidateQueries({ queryKey: ["broadcast-requests", "my"] });
+    },
+  });
 
   const { data: request } = useQuery({
     queryKey: ["broadcast-request", id],

@@ -1,12 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { api } from "@/api/api";
 import EmptyState from "@/components/common/empty-state";
 import StatusPill from "@/components/common/status-pill";
+import { useBroadcastSocket } from "@/hooks/use-broadcast-socket";
 import type { BroadcastRequest } from "@/interfaces/market.interface";
 import { formatDateTime, getBroadcastStatusLabel } from "@/lib/market";
 
 export default function CustomerRequestsPage() {
+  const queryClient = useQueryClient();
+
+  useBroadcastSocket({
+    role: "customer",
+    onOfferUpdated: () => {
+      queryClient.invalidateQueries({ queryKey: ["broadcast-requests", "my"] });
+    },
+    onRequestUpdated: () => {
+      queryClient.invalidateQueries({ queryKey: ["broadcast-requests", "my"] });
+    },
+  });
+
   const { data: requests = [] } = useQuery({
     queryKey: ["broadcast-requests", "my"],
     queryFn: async () =>

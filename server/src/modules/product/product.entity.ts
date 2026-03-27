@@ -24,7 +24,7 @@ export class Product {
   name: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description: string | null;
 
   @ManyToOne(() => Unit, (unit) => unit.products, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'unit_id' })
@@ -40,11 +40,11 @@ export class Product {
   is_active: boolean;
 
   @Column({ type: 'bigint', nullable: true })
-  parent_id: number;
+  parent_id: number | null;
 
   @ManyToOne(() => Product, (product) => product.children)
   @JoinColumn({ name: 'parent_id' })
-  parent: Product;
+  parent: Product | null;
 
   @OneToMany(() => Product, (product) => product.parent)
   children: Product[];

@@ -67,6 +67,12 @@ export class BroadcastRequest {
   selected_at: Date | null;
 
   @Column({ type: 'timestamp', nullable: true })
+  prime_visible_at: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  regular_visible_at: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
   expires_at: Date | null;
 
   @OneToMany(() => BroadcastRequestItem, (item) => item.request, {

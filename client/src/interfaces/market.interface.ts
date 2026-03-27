@@ -52,7 +52,10 @@ export interface ProductCatalogItem {
   slug: string;
   description?: string | null;
   images: ProductImage[];
+  attributes?: Record<string, unknown> | null;
   is_active: boolean;
+  parent_id?: number | null;
+  children?: ProductCatalogItem[];
   category?: {
     id: string;
     name: string;

@@ -103,11 +103,14 @@ export class OrderController {
   }
 
   @Get('broadcast-requests/:id')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async getBroadcastRequestById(
     @Param('id') id: string,
     @AuthDec() auth: any,
+    @UserDecorator() user: any,
   ) {
-    return this.orderService.findBroadcastRequestById(id, auth.id, auth.role);
+    return this.orderService.findBroadcastRequestById(id, user.id, auth.role);
   }
 
   @Get('broadcast-requests/:id/offers')
@@ -116,8 +119,9 @@ export class OrderController {
   async getBroadcastOffers(
     @Param('id') id: string,
     @AuthDec() auth: any,
+    @UserDecorator() user: any,
   ) {
-    return this.orderService.findBroadcastOffers(id, auth.id, auth.role);
+    return this.orderService.findBroadcastOffers(id, user.id, auth.role);
   }
 
   @Post('broadcast-requests/:id/offers')

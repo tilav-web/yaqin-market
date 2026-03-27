@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { api } from "@/api/api";
 import { Button } from "@/components/ui/button";
 import StatusPill from "@/components/common/status-pill";
+import { useBroadcastSocket } from "@/hooks/use-broadcast-socket";
 import type { BroadcastRequest, StoreProduct } from "@/interfaces/market.interface";
 import { extractErrorMessage, formatMoney, getBroadcastStatusLabel } from "@/lib/market";
 
@@ -20,6 +21,16 @@ type DraftState = Record<
 export default function SellerRequestsPage() {
   const queryClient = useQueryClient();
   const [drafts, setDrafts] = useState<DraftState>({});
+
+  useBroadcastSocket({
+    role: "seller",
+    onRequestCreated: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller", "broadcast-feed"] });
+    },
+    onRequestUpdated: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller", "broadcast-feed"] });
+    },
+  });
 
   const { data: myStoreProducts = [] } = useQuery({
     queryKey: ["seller", "store-products", "all"],

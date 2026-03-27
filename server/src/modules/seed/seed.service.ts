@@ -56,55 +56,56 @@ type ProductSeed = {
   unitName: string;
   image: string;
   basePrice: number;
+  parentSlug?: string;
   attributes?: Record<string, string>;
 };
 
 const CATEGORY_SEEDS = [
   {
-    name: "Meva va sabzavot",
-    slug: "meva-va-sabzavot",
+    name: 'Meva va sabzavot',
+    slug: 'meva-va-sabzavot',
     image:
       'https://images.unsplash.com/photo-1610348725531-843dff563e2c?auto=format&fit=crop&w=800&q=80',
     order_number: 1,
   },
   {
-    name: "Sut mahsulotlari",
-    slug: "sut-mahsulotlari",
+    name: 'Sut mahsulotlari',
+    slug: 'sut-mahsulotlari',
     image:
       'https://images.unsplash.com/photo-1628088062854-d1870b4553da?auto=format&fit=crop&w=800&q=80',
     order_number: 2,
   },
   {
-    name: "Ichimliklar",
-    slug: "ichimliklar",
+    name: 'Ichimliklar',
+    slug: 'ichimliklar',
     image:
       'https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=800&q=80',
     order_number: 3,
   },
   {
-    name: "Bakaleya",
-    slug: "bakaleya",
+    name: 'Bakaleya',
+    slug: 'bakaleya',
     image:
       'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&w=800&q=80',
     order_number: 4,
   },
   {
     name: "Go'sht va muzlatilgan",
-    slug: "gosht-va-muzlatilgan",
+    slug: 'gosht-va-muzlatilgan',
     image:
       'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=800&q=80',
     order_number: 5,
   },
   {
-    name: "Shirinlik va snack",
-    slug: "shirinlik-va-snack",
+    name: 'Shirinlik va snack',
+    slug: 'shirinlik-va-snack',
     image:
       'https://images.unsplash.com/photo-1551024601-bec78aea704b?auto=format&fit=crop&w=800&q=80',
     order_number: 6,
   },
   {
     name: "Uy-ro'zg'or",
-    slug: "uy-rozgor",
+    slug: 'uy-rozgor',
     image:
       'https://images.unsplash.com/photo-1583947582886-f40ec95dd752?auto=format&fit=crop&w=800&q=80',
     order_number: 7,
@@ -216,8 +217,7 @@ const STORE_SEEDS: StoreSeed[] = [
     address: "Chilonzor tumani, Bunyodkor ko'chasi 12",
     lat: 41.285912,
     lng: 69.203118,
-    logo:
-      'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=400&q=80',
+    logo: 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?auto=format&fit=crop&w=400&q=80',
     banner:
       'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=1400&q=80',
     is_prime: true,
@@ -237,8 +237,7 @@ const STORE_SEEDS: StoreSeed[] = [
     address: 'Mirzo Ulugbek tumani, Buyuk Ipak Yoli 88',
     lat: 41.338844,
     lng: 69.334177,
-    logo:
-      'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=400&q=80',
+    logo: 'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=400&q=80',
     banner:
       'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?auto=format&fit=crop&w=1400&q=80',
     is_prime: false,
@@ -258,8 +257,7 @@ const STORE_SEEDS: StoreSeed[] = [
     address: 'Yunusobod tumani, 19-kvartal, 24-uy',
     lat: 41.366142,
     lng: 69.288693,
-    logo:
-      'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=400&q=80',
+    logo: 'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=400&q=80',
     banner:
       'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=1400&q=80',
     is_prime: true,
@@ -279,8 +277,7 @@ const STORE_SEEDS: StoreSeed[] = [
     address: 'Sergeli tumani, Yangi Sergeli 7A',
     lat: 41.226102,
     lng: 69.219807,
-    logo:
-      'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80',
+    logo: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?auto=format&fit=crop&w=400&q=80',
     banner:
       'https://images.unsplash.com/photo-1604719312566-8912e9c8a213?auto=format&fit=crop&w=1400&q=80',
     is_prime: false,
@@ -300,8 +297,7 @@ const STORE_SEEDS: StoreSeed[] = [
     address: 'Shayxontohur tumani, Sagbon 41',
     lat: 41.324509,
     lng: 69.240911,
-    logo:
-      'https://images.unsplash.com/photo-1601598851547-4302969d0614?auto=format&fit=crop&w=400&q=80',
+    logo: 'https://images.unsplash.com/photo-1601598851547-4302969d0614?auto=format&fit=crop&w=400&q=80',
     banner:
       'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1400&q=80',
     is_prime: false,
@@ -321,8 +317,7 @@ const STORE_SEEDS: StoreSeed[] = [
     address: 'Olmazor tumani, Sebzor 10',
     lat: 41.348731,
     lng: 69.205271,
-    logo:
-      'https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=400&q=80',
+    logo: 'https://images.unsplash.com/photo-1556740749-887f6717d7e4?auto=format&fit=crop&w=400&q=80',
     banner:
       'https://images.unsplash.com/photo-1583258292688-d0213dc5a3a8?auto=format&fit=crop&w=1400&q=80',
     is_prime: true,
@@ -342,8 +337,7 @@ const STORE_SEEDS: StoreSeed[] = [
     address: 'Yashnobod tumani, Parkent ko‘chasi 102',
     lat: 41.31257,
     lng: 69.35711,
-    logo:
-      'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400&q=80',
+    logo: 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&w=400&q=80',
     banner:
       'https://images.unsplash.com/photo-1506617564039-2f3b650b7010?auto=format&fit=crop&w=1400&q=80',
     is_prime: true,
@@ -363,8 +357,7 @@ const STORE_SEEDS: StoreSeed[] = [
     address: 'Uchtepa tumani, Foziltepa ko‘chasi 19',
     lat: 41.28644,
     lng: 69.16018,
-    logo:
-      'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?auto=format&fit=crop&w=400&q=80',
+    logo: 'https://images.unsplash.com/photo-1516594798947-e65505dbb29d?auto=format&fit=crop&w=400&q=80',
     banner:
       'https://images.unsplash.com/photo-1488459716781-31db52582fe9?auto=format&fit=crop&w=1400&q=80',
     is_prime: false,
@@ -399,7 +392,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   },
   {
     slug: 'pomidor-pushti',
-    name: "Pomidor pushti",
+    name: 'Pomidor pushti',
     description: 'Salat va taomlar uchun yangi pushti pomidor.',
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
@@ -410,7 +403,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'bodring-sersuv',
     name: 'Bodring sersuv',
-    description: "Yangi uzilgan bodring, ertalabki salat uchun ayni muddao.",
+    description: 'Yangi uzilgan bodring, ertalabki salat uchun ayni muddao.',
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
     image:
@@ -429,7 +422,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   },
   {
     slug: 'piyoz-sariq',
-    name: "Piyoz sariq",
+    name: 'Piyoz sariq',
     description: 'Taomga mazali taʼm beruvchi sariq piyoz.',
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
@@ -448,6 +441,18 @@ const PRODUCT_SEEDS: ProductSeed[] = [
     basePrice: 13500,
   },
   {
+    slug: 'sut-05l',
+    name: 'Sut 0.5L',
+    description: 'Yarim litr tetrapak tabiiy sut.',
+    categorySlug: 'sut-mahsulotlari',
+    unitName: 'litr',
+    image:
+      'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=800&q=80',
+    basePrice: 8000,
+    parentSlug: 'sut-1l',
+    attributes: { volume: '0.5L' },
+  },
+  {
     slug: 'qatiq-1l',
     name: 'Qatiq 1L',
     description: 'Yengil va foydali tabiiy qatiq.',
@@ -456,6 +461,18 @@ const PRODUCT_SEEDS: ProductSeed[] = [
     image:
       'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
     basePrice: 14500,
+  },
+  {
+    slug: 'qatiq-05l',
+    name: 'Qatiq 0.5L',
+    description: 'Yengil va foydali qatiq, kichik hajm.',
+    categorySlug: 'sut-mahsulotlari',
+    unitName: 'litr',
+    image:
+      'https://images.unsplash.com/photo-1488477181946-6428a0291777?auto=format&fit=crop&w=800&q=80',
+    basePrice: 8500,
+    parentSlug: 'qatiq-1l',
+    attributes: { volume: '0.5L' },
   },
   {
     slug: 'qaymoq-15',
@@ -538,6 +555,30 @@ const PRODUCT_SEEDS: ProductSeed[] = [
     basePrice: 12000,
   },
   {
+    slug: 'cola-05l',
+    name: 'Cola 0.5L',
+    description: 'Kichik hajmdagi gazlangan ichimlik.',
+    categorySlug: 'ichimliklar',
+    unitName: 'litr',
+    image:
+      'https://images.unsplash.com/photo-1581006852262-e4307cf6283a?auto=format&fit=crop&w=800&q=80',
+    basePrice: 8000,
+    parentSlug: 'cola-15l',
+    attributes: { volume: '0.5L' },
+  },
+  {
+    slug: 'cola-2l',
+    name: 'Cola 2L',
+    description: 'Katta hajmdagi gazlangan ichimlik.',
+    categorySlug: 'ichimliklar',
+    unitName: 'litr',
+    image:
+      'https://images.unsplash.com/photo-1581006852262-e4307cf6283a?auto=format&fit=crop&w=800&q=80',
+    basePrice: 15500,
+    parentSlug: 'cola-15l',
+    attributes: { volume: '2L' },
+  },
+  {
     slug: 'fanta-15l',
     name: 'Fanta 1.5L',
     description: 'Apelsin taʼmli gazlangan ichimlik.',
@@ -546,6 +587,18 @@ const PRODUCT_SEEDS: ProductSeed[] = [
     image:
       'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=800&q=80',
     basePrice: 12000,
+  },
+  {
+    slug: 'fanta-05l',
+    name: 'Fanta 0.5L',
+    description: 'Kichik hajmdagi apelsin taʼmli ichimlik.',
+    categorySlug: 'ichimliklar',
+    unitName: 'litr',
+    image:
+      'https://images.unsplash.com/photo-1629203851122-3726ecdf080e?auto=format&fit=crop&w=800&q=80',
+    basePrice: 8000,
+    parentSlug: 'fanta-15l',
+    attributes: { volume: '0.5L' },
   },
   {
     slug: 'suv-gazsiz-15l',
@@ -696,8 +749,9 @@ export class SeedService {
     const walletRepo = this.dataSource.getRepository(Wallet);
     const locationRepo = this.dataSource.getRepository(Location);
     const storeRepo = this.dataSource.getRepository(Store);
-    const deliverySettingsRepo =
-      this.dataSource.getRepository(StoreDeliverySettings);
+    const deliverySettingsRepo = this.dataSource.getRepository(
+      StoreDeliverySettings,
+    );
     const workingHourRepo = this.dataSource.getRepository(StoreWorkingHour);
     const storeProductRepo = this.dataSource.getRepository(StoreProduct);
 
@@ -792,6 +846,7 @@ export class SeedService {
           images: [{ url: seed.image, is_main: true }],
           attributes: seed.attributes ?? {},
           is_active: true,
+          parent_id: null,
         });
       } else {
         product.name = seed.name;
@@ -801,8 +856,27 @@ export class SeedService {
         product.images = [{ url: seed.image, is_main: true }];
         product.attributes = seed.attributes ?? {};
         product.is_active = true;
+        product.parent = null;
+        product.parent_id = null;
       }
 
+      result.set(seed.slug, await productRepo.save(product));
+    }
+
+    for (const seed of PRODUCT_SEEDS) {
+      if (!seed.parentSlug) {
+        continue;
+      }
+
+      const product = result.get(seed.slug);
+      const parent = result.get(seed.parentSlug);
+
+      if (!product || !parent) {
+        throw new Error(`Parent product not found for ${seed.slug}`);
+      }
+
+      product.parent = parent;
+      product.parent_id = Number(parent.id);
       result.set(seed.slug, await productRepo.save(product));
     }
 
