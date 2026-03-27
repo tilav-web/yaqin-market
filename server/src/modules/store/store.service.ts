@@ -57,6 +57,7 @@ export class StoreService {
       free_delivery_radius: 0,
       delivery_price_per_km: 2000,
       max_delivery_radius: 10000,
+      delivery_note: null,
       is_delivery_enabled: true,
     });
 

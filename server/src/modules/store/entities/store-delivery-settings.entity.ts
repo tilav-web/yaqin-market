@@ -41,6 +41,9 @@ export class StoreDeliverySettings {
   @Column({ type: 'decimal', precision: 12, scale: 2, default: 10000 })
   max_delivery_radius: number;
 
+  @Column({ type: 'text', nullable: true })
+  delivery_note: string | null;
+
   @Column({ default: true })
   is_delivery_enabled: boolean;
 

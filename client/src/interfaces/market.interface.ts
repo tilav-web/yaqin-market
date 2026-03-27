@@ -6,6 +6,7 @@ export interface DeliverySettings {
   free_delivery_radius: number;
   delivery_price_per_km: number;
   max_delivery_radius: number;
+  delivery_note?: string | null;
   is_delivery_enabled: boolean;
 }
 

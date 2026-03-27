@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { toast } from "sonner";
+import { getDeliveryPolicySummary } from "@/lib/market";
 import { cn } from "@/lib/utils";
 
 interface StoreDeliverySettings {
@@ -14,6 +15,7 @@ interface StoreDeliverySettings {
   free_delivery_radius: number;
   delivery_price_per_km: number;
   max_delivery_radius: number;
+  delivery_note?: string | null;
   is_delivery_enabled: boolean;
 }
 
@@ -68,6 +70,7 @@ export default function SellerStore() {
     free_delivery_radius: "",
     delivery_price_per_km: "",
     max_delivery_radius: "",
+    delivery_note: "",
     is_delivery_enabled: true,
   });
 
@@ -111,6 +114,7 @@ export default function SellerStore() {
       free_delivery_radius: String(settings.free_delivery_radius ?? 0),
       delivery_price_per_km: String(settings.delivery_price_per_km ?? 2000),
       max_delivery_radius: String(settings.max_delivery_radius ?? 10000),
+      delivery_note: settings.delivery_note ?? "",
       is_delivery_enabled: settings.is_delivery_enabled ?? true,
     });
   }, [settings]);
@@ -196,9 +200,21 @@ export default function SellerStore() {
       free_delivery_radius: Number(deliveryForm.free_delivery_radius) || 0,
       delivery_price_per_km: Number(deliveryForm.delivery_price_per_km) || 0,
       max_delivery_radius: Number(deliveryForm.max_delivery_radius) || 0,
+      delivery_note: deliveryForm.delivery_note.trim() || undefined,
       is_delivery_enabled: deliveryForm.is_delivery_enabled,
     });
   };
+
+  const deliveryPreview = getDeliveryPolicySummary({
+    min_order_amount: Number(deliveryForm.min_order_amount) || 0,
+    delivery_fee: Number(deliveryForm.delivery_fee) || 0,
+    preparation_time: Number(deliveryForm.preparation_time) || 0,
+    free_delivery_radius: Number(deliveryForm.free_delivery_radius) || 0,
+    delivery_price_per_km: Number(deliveryForm.delivery_price_per_km) || 0,
+    max_delivery_radius: Number(deliveryForm.max_delivery_radius) || 0,
+    delivery_note: deliveryForm.delivery_note || null,
+    is_delivery_enabled: deliveryForm.is_delivery_enabled,
+  });
 
   return (
     <div className="space-y-6">
@@ -293,7 +309,7 @@ export default function SellerStore() {
             Yetkazib berish sozlamalari
           </h2>
           <p className="text-sm text-muted-foreground">
-            Minimal buyurtma va yetkazib berish narxlarini sozlang.
+            Bepul radius, bazaviy narx, har 1 km narxi va maksimal masofani sozlang.
           </p>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
@@ -305,7 +321,7 @@ export default function SellerStore() {
             }
           />
           <Input
-            placeholder="Yetkazib berish narxi (so'm)"
+            placeholder="Bazaviy yetkazib berish narxi (so'm)"
             value={deliveryForm.delivery_fee}
             onChange={(e) =>
               setDeliveryForm({ ...deliveryForm, delivery_fee: e.target.value })
@@ -348,6 +364,24 @@ export default function SellerStore() {
               })
             }
           />
+        </div>
+        <div className="mt-3">
+          <textarea
+            value={deliveryForm.delivery_note}
+            onChange={(e) =>
+              setDeliveryForm({ ...deliveryForm, delivery_note: e.target.value })
+            }
+            placeholder="Ixtiyoriy izoh: masalan, 2 km gacha tekin, undan keyin bazaviy narx va har 1 km uchun to'lov olinadi."
+            className="min-h-24 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+        </div>
+        <div className="mt-4 rounded-2xl border border-border bg-muted/40 px-4 py-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Preview
+          </p>
+          <p className="mt-2 text-sm leading-6 text-foreground">
+            {deliveryPreview}
+          </p>
         </div>
         <div className="mt-4 flex items-center justify-between">
           <button

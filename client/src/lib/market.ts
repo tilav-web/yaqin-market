@@ -14,6 +14,23 @@ export function formatMoney(value: number | string | null | undefined) {
   return `${moneyFormatter.format(Number(value ?? 0))} so'm`;
 }
 
+export function formatDistanceMeasure(value: number | string | null | undefined) {
+  const distance = Number(value ?? 0);
+
+  if (!Number.isFinite(distance) || distance <= 0) {
+    return "0 m";
+  }
+
+  if (distance >= 1000) {
+    const kilometers = distance / 1000;
+    return Number.isInteger(kilometers)
+      ? `${kilometers} km`
+      : `${kilometers.toFixed(1)} km`;
+  }
+
+  return `${Math.round(distance)} m`;
+}
+
 export function calculateDistanceMeters(
   lat1: number,
   lng1: number,
@@ -69,10 +86,13 @@ export function calculateDeliveryQuote(
 
   let deliveryPrice = 0;
   const freeRadius = Number(settings.free_delivery_radius ?? 0);
+  const baseFee = Number(settings.delivery_fee ?? 0);
 
   if (distanceMeters > freeRadius) {
     const extraKm = Math.max(0, (distanceMeters - freeRadius) / 1000);
-    deliveryPrice = Number(settings.delivery_price_per_km ?? 0) * extraKm;
+    deliveryPrice = Math.ceil(
+      baseFee + Number(settings.delivery_price_per_km ?? 0) * extraKm,
+    );
   }
 
   return {
@@ -80,6 +100,47 @@ export function calculateDeliveryQuote(
     deliveryPrice,
     isDeliverable: true,
   };
+}
+
+export function getDeliveryPolicySummary(settings: DeliverySettings | null | undefined) {
+  if (!settings?.is_delivery_enabled) {
+    return "Yetkazib berish o'chirilgan.";
+  }
+
+  if (settings.delivery_note?.trim()) {
+    return settings.delivery_note.trim();
+  }
+
+  const freeRadius = Number(settings.free_delivery_radius ?? 0);
+  const maxRadius = Number(settings.max_delivery_radius ?? 0);
+  const baseFee = Number(settings.delivery_fee ?? 0);
+  const pricePerKm = Number(settings.delivery_price_per_km ?? 0);
+  const parts: string[] = [];
+
+  if (freeRadius > 0) {
+    parts.push(`${formatDistanceMeasure(freeRadius)} gacha tekin`);
+  }
+
+  if (pricePerKm > 0) {
+    const pricingText =
+      baseFee > 0
+        ? `${formatMoney(baseFee)} bazaviy narx + har 1 km uchun ${formatMoney(pricePerKm)}`
+        : `har 1 km uchun ${formatMoney(pricePerKm)}`;
+
+    parts.push(freeRadius > 0 ? `undan keyin ${pricingText}` : pricingText);
+  } else if (baseFee > 0) {
+    parts.push(
+      freeRadius > 0
+        ? `undan keyin ${formatMoney(baseFee)}`
+        : `${formatMoney(baseFee)} bazaviy narx`,
+    );
+  }
+
+  if (maxRadius > 0) {
+    parts.push(`maksimum ${formatDistanceMeasure(maxRadius)}`);
+  }
+
+  return parts.length ? parts.join(", ") : "Yetkazib berish narxi hali sozlanmagan.";
 }
 
 export function formatDateTime(value: string | Date | null | undefined) {

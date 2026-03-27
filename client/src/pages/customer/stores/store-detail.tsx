@@ -19,6 +19,7 @@ import type { ICategory } from "@/interfaces/category.interface";
 import {
   calculateDeliveryQuote,
   extractErrorMessage,
+  getDeliveryPolicySummary,
   formatMoney,
 } from "@/lib/market";
 import type {
@@ -252,6 +253,10 @@ export default function StoreDetail() {
 
   const deliverySettings = store?.deliverySettings?.[0];
   const minOrder = deliverySettings?.min_order_amount ?? 0;
+  const deliveryPolicy = useMemo(
+    () => getDeliveryPolicySummary(deliverySettings),
+    [deliverySettings],
+  );
   const storeLocation = useMemo(() => {
     if (!store?.lat || !store?.lng) {
       return null;
@@ -261,7 +266,7 @@ export default function StoreDetail() {
       lat: Number(store.lat),
       lng: Number(store.lng),
     };
-  }, [store?.lat, store?.lng]);
+  }, [store]);
 
   const addToCart = (productId: string) => {
     setCart((prev) => ({ ...prev, [productId]: (prev[productId] || 0) + 1 }));
@@ -532,6 +537,19 @@ export default function StoreDetail() {
                     ? "hududdan tashqari"
                     : formatMoney(estimatedDeliveryPrice)}
               </p>
+              <p className="mt-2 text-xs leading-5 text-slate-500">
+                {deliveryPolicy}
+              </p>
+              <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
+                <span className="text-primary">Siz turgan joygacha:</span>
+                <span>
+                  {!location
+                    ? "manzil tanlang"
+                    : isOutsideDeliveryRadius
+                      ? "yetkazib bera olmaydi"
+                      : formatMoney(estimatedDeliveryPrice)}
+                </span>
+              </div>
             </div>
 
             <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4">

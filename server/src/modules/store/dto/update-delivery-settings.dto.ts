@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsBoolean } from 'class-validator';
+import { IsNumber, IsOptional, IsBoolean, IsString } from 'class-validator';
 
 export class UpdateDeliverySettingsDto {
   @IsOptional()
@@ -24,6 +24,10 @@ export class UpdateDeliverySettingsDto {
   @IsOptional()
   @IsNumber()
   max_delivery_radius?: number;
+
+  @IsOptional()
+  @IsString()
+  delivery_note?: string;
 
   @IsOptional()
   @IsBoolean()

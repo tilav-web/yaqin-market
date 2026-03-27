@@ -23,7 +23,7 @@ import type {
   ProductCatalogItem,
   StoreSummary,
 } from "@/interfaces/market.interface";
-import { formatMoney } from "@/lib/market";
+import { calculateDeliveryQuote, formatMoney } from "@/lib/market";
 import { useBroadcastCartStore } from "@/stores/broadcast-cart.store";
 
 type PromoTone = "prime" | "nearby" | "rated" | "value";
@@ -88,7 +88,25 @@ function formatDistance(distance?: number | null) {
   return `${(distance / 1000).toFixed(1)} km`;
 }
 
-function getDeliveryFee(store: StoreSummary) {
+function getDeliveryFee(
+  store: StoreSummary,
+  location?: { lat: number; lng: number } | null,
+) {
+  if (location && store.lat && store.lng) {
+    const quote = calculateDeliveryQuote(
+      store.deliverySettings?.[0],
+      {
+        lat: Number(store.lat),
+        lng: Number(store.lng),
+      },
+      location,
+    );
+
+    if (quote?.isDeliverable) {
+      return Number(quote.deliveryPrice ?? 0);
+    }
+  }
+
   return Number(store.deliverySettings?.[0]?.delivery_fee ?? 0);
 }
 
@@ -256,7 +274,7 @@ export default function CustomerHome() {
 
     const bestValueStore = [...nearbyStores].sort(
       (left, right) =>
-        getDeliveryFee(left) - getDeliveryFee(right) ||
+        getDeliveryFee(left, location) - getDeliveryFee(right, location) ||
         Number(left.distance_meters ?? Number.MAX_SAFE_INTEGER) -
           Number(right.distance_meters ?? Number.MAX_SAFE_INTEGER),
     )[0];
@@ -270,7 +288,7 @@ export default function CustomerHome() {
             store: primaryStore,
             badge: primaryStore.is_prime ? "Prime tavsiya" : "Bugungi tavsiya",
             summary: `${Number(primaryStore.rating ?? 0).toFixed(1)} reyting`,
-            description: `${formatDistance(primaryStore.distance_meters)} · ${formatMoney(getDeliveryFee(primaryStore))} delivery`,
+            description: `${formatDistance(primaryStore.distance_meters)} · ${formatMoney(getDeliveryFee(primaryStore, location))} delivery`,
             tone: "prime" as const,
           }
         : null,
@@ -296,7 +314,7 @@ export default function CustomerHome() {
         ? {
             store: bestValueStore,
             badge: "Eng qulay",
-            summary: formatMoney(getDeliveryFee(bestValueStore)),
+            summary: formatMoney(getDeliveryFee(bestValueStore, location)),
             description: "Delivery narxi qulay bo'lgan yaqin do'kon",
             tone: "value" as const,
           }
@@ -305,7 +323,7 @@ export default function CustomerHome() {
         store,
         badge: store.is_prime ? "Prime" : "Yaqin do'kon",
         summary: `${Number(store.rating ?? 0).toFixed(1)} reyting`,
-        description: `${formatDistance(store.distance_meters)} · ${formatMoney(getDeliveryFee(store))} delivery`,
+        description: `${formatDistance(store.distance_meters)} · ${formatMoney(getDeliveryFee(store, location))} delivery`,
         tone: "prime" as const,
       })),
     ].filter((item): item is PromoStore => item !== null);
@@ -319,7 +337,7 @@ export default function CustomerHome() {
     }
 
     return Array.from(unique.values());
-  }, [nearbyStores, primeStores]);
+  }, [location, nearbyStores, primeStores]);
 
   const feedItems = useMemo(() => {
     if (!visibleProducts.length) return [] as FeedItem[];
@@ -476,7 +494,7 @@ export default function CustomerHome() {
                   if (item.type === "store") {
                     const { promo } = item;
                     const theme = PROMO_THEME[promo.tone];
-                    const deliveryFee = getDeliveryFee(promo.store);
+                    const deliveryFee = getDeliveryFee(promo.store, location);
 
                     return (
                       <Link

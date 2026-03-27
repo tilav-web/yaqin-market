@@ -1234,6 +1234,7 @@ export class SeedService {
       settings.free_delivery_radius = 2000;
       settings.delivery_price_per_km = 2500;
       settings.max_delivery_radius = seed.max_delivery_radius;
+      settings.delivery_note = `2 km gacha tekin, undan keyin ${seed.delivery_fee.toLocaleString('uz-UZ')} so'm bazaviy narx va har 1 km uchun 2 500 so'm. Maksimum ${Math.round(seed.max_delivery_radius / 1000)} km.`;
       settings.is_delivery_enabled = true;
       await deliverySettingsRepo.save(settings);
 

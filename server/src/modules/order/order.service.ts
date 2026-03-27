@@ -47,6 +47,22 @@ function calculateDistance(
   return R * c * 1000;
 }
 
+function calculateDeliveryCharge(
+  settings: StoreDeliverySettings,
+  distanceMeters: number,
+) {
+  const freeRadius = Number(settings.free_delivery_radius ?? 0);
+  const baseFee = Number(settings.delivery_fee ?? 0);
+  const pricePerKm = Number(settings.delivery_price_per_km ?? 0);
+
+  if (distanceMeters <= freeRadius) {
+    return 0;
+  }
+
+  const extraKm = Math.max(0, (distanceMeters - freeRadius) / 1000);
+  return Math.ceil(baseFee + pricePerKm * extraKm);
+}
+
 @Injectable()
 export class OrderService {
   constructor(
@@ -283,18 +299,11 @@ export class OrderService {
         dto.delivery_lng,
       );
 
-      if (distance > Number(deliverySettings.free_delivery_radius)) {
-        const extraKm = Math.max(
-          0,
-          (distance - Number(deliverySettings.free_delivery_radius)) / 1000,
-        );
-        deliveryPrice =
-          Number(deliverySettings.delivery_price_per_km) * extraKm;
-      }
-
       if (distance > Number(deliverySettings.max_delivery_radius)) {
         throw new BadRequestException('Too far for delivery');
       }
+
+      deliveryPrice = calculateDeliveryCharge(deliverySettings, distance);
     }
 
     let itemsPrice = 0;
