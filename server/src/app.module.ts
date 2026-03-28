@@ -16,6 +16,7 @@ import { LocationModule } from './modules/location/location.module';
 import { ReviewModule } from './modules/review/review.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { ApplicationModule } from './modules/application/application.module';
 
 @Module({
   imports: [
@@ -24,17 +25,26 @@ import { PaymentModule } from './modules/payment/payment.module';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres',
-        host: config.get('POSTGRES_HOST'),
-        port: Number(config.get('POSTGRES_PORT')),
-        username: config.get('POSTGRES_USER'),
-        password: config.get('POSTGRES_PASSWORD'),
-        database: config.get('POSTGRES_DB'),
-        autoLoadEntities: true,
-        synchronize: config.get('NODE_ENV') === 'development',
-        logging: config.get('NODE_ENV') === 'development',
-      }),
+      useFactory: (config: ConfigService) => {
+        const synchronize =
+          config.get<string>('DB_SYNCHRONIZE') ??
+          String(config.get('NODE_ENV') === 'development');
+        const logging =
+          config.get<string>('DB_LOGGING') ??
+          String(config.get('NODE_ENV') === 'development');
+
+        return {
+          type: 'postgres' as const,
+          host: config.get<string>('POSTGRES_HOST'),
+          port: Number(config.get<string>('POSTGRES_PORT')),
+          username: config.get<string>('POSTGRES_USER'),
+          password: config.get<string>('POSTGRES_PASSWORD'),
+          database: config.get<string>('POSTGRES_DB'),
+          autoLoadEntities: true,
+          synchronize: synchronize === 'true',
+          logging: logging === 'true',
+        };
+      },
     }),
     RedisModule,
     ImageModule,
@@ -51,6 +61,7 @@ import { PaymentModule } from './modules/payment/payment.module';
     ReviewModule,
     WalletModule,
     PaymentModule,
+    ApplicationModule,
   ],
 })
 export class AppModule {}

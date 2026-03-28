@@ -1,4 +1,4 @@
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 import CustomerLayout from "../layouts/customer-layout";
 import PrivateRoute from "./private-route";
 import CustomerHome from "../pages/customer/home/home";
@@ -12,12 +12,14 @@ import ProductOffersPage from "../pages/customer/products/product-offers";
 import CreateBroadcastRequestPage from "../pages/customer/broadcast/create-request";
 import CustomerRequestsPage from "../pages/customer/requests/requests";
 import BroadcastRequestDetailPage from "../pages/customer/requests/request-detail";
+import ApplySellerPage from "../pages/customer/profile/apply-seller";
+import ApplyCourierPage from "../pages/customer/profile/apply-courier";
 
 export const customerRouter: RouteObject[] = [
   {
     path: "/mobile",
     element: (
-      <PrivateRoute roles={["CUSTOMER"]}>
+      <PrivateRoute roles={["CUSTOMER", "SELLER", "COURIER"]}>
         <CustomerLayout />
       </PrivateRoute>
     ),
@@ -65,6 +67,22 @@ export const customerRouter: RouteObject[] = [
       {
         path: "wallet",
         element: <CustomerWalletPage />,
+      },
+      {
+        path: "profile/seller-store",
+        element: <Navigate to="/mobile/seller/store" replace />,
+      },
+      {
+        path: "profile/courier-orders",
+        element: <Navigate to="/mobile/courier/orders" replace />,
+      },
+      {
+        path: "profile/apply-seller",
+        element: <ApplySellerPage />,
+      },
+      {
+        path: "profile/apply-courier",
+        element: <ApplyCourierPage />,
       },
     ],
   },

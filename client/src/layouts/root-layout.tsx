@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 export default function RootLayout() {
   const location = useLocation();
   const isLoginRoute = location.pathname.startsWith("/login");
-  const isDashboardRoute = /^\/(admin|seller|courier)(\/|$)/.test(location.pathname);
+  const isDashboardRoute = /^\/admin(\/|$)/.test(location.pathname);
 
   return (
     <div

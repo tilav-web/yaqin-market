@@ -1,26 +1,13 @@
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 import PrivateRoute from "./private-route";
-import CourierLayout from "../layouts/courier-layout";
-import CourierDashboard from "../pages/courier/dashboard/dashboard";
-import CourierOrders from "../pages/courier/orders/orders";
 
 export const courierRouter: RouteObject[] = [
   {
-    path: "/courier",
+    path: "/courier/*",
     element: (
       <PrivateRoute roles={["COURIER"]}>
-        <CourierLayout />
+        <Navigate to="/mobile/courier/orders" replace />
       </PrivateRoute>
     ),
-    children: [
-      {
-        index: true,
-        element: <CourierDashboard />,
-      },
-      {
-        path: "orders",
-        element: <CourierOrders />,
-      },
-    ],
   },
 ];

@@ -708,29 +708,32 @@ export class OrderService {
       throw new NotFoundException('Broadcast request not found');
     }
 
-    if (
-      role === AuthRoleEnum.CUSTOMER &&
-      request.customer_id !== userId
-    ) {
+    if (this.isBroadcastRequestOwner(request, userId)) {
+      return this.decorateBroadcastRequest(request);
+    }
+
+    if (role === AuthRoleEnum.SUPER_ADMIN) {
+      return this.decorateBroadcastRequest(request);
+    }
+
+    if (role !== AuthRoleEnum.SELLER) {
       throw new NotFoundException('Broadcast request not found');
     }
 
-    if (role === AuthRoleEnum.SELLER) {
-      const store = await this.storeRepo.findOne({
-        where: { owner_id: userId },
-        relations: ['deliverySettings'],
-      });
+    const store = await this.storeRepo.findOne({
+      where: { owner_id: userId },
+      relations: ['deliverySettings'],
+    });
 
-      if (
-        !store ||
-        !this.isBroadcastRequestVisibleToStore(
-          this.decorateBroadcastRequest(request),
-          store,
-          SOCKET_FEED_RADIUS_KM,
-        )
-      ) {
-        throw new NotFoundException('Broadcast request not found');
-      }
+    if (
+      !store ||
+      !this.isBroadcastRequestVisibleToStore(
+        this.decorateBroadcastRequest(request),
+        store,
+        SOCKET_FEED_RADIUS_KM,
+      )
+    ) {
+      throw new NotFoundException('Broadcast request not found');
     }
 
     return this.decorateBroadcastRequest(request);
@@ -751,8 +754,8 @@ export class OrderService {
     }
 
     if (
-      role === AuthRoleEnum.CUSTOMER &&
-      request.customer_id !== userId
+      !this.isBroadcastRequestOwner(request, userId) &&
+      role !== AuthRoleEnum.SUPER_ADMIN
     ) {
       throw new NotFoundException('Broadcast request not found');
     }
@@ -1051,6 +1054,13 @@ export class OrderService {
         (left, right) => Number(left.total_price) - Number(right.total_price),
       ),
     };
+  }
+
+  private isBroadcastRequestOwner(
+    request: Pick<BroadcastRequest, 'customer_id'>,
+    userId: string,
+  ) {
+    return request.customer_id === userId;
   }
 
   private ensureBroadcastRequestIsOpen(request: BroadcastRequest) {

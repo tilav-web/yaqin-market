@@ -4,6 +4,8 @@ import { adminRouter } from "./admin-router";
 import { customerRouter } from "./customer-router";
 import { sellerRouter } from "./seller-router";
 import { courierRouter } from "./courier-router";
+import { sellerMobileRouter } from "./seller-mobile-router";
+import { courierMobileRouter } from "./courier-mobile-router";
 import Auth from "../pages/auth/auth";
 import LandingPage from "../pages/landing";
 import NotFoundPage from "../pages/not-found";
@@ -23,6 +25,8 @@ export const router = createBrowserRouter([
         ),
       },
       ...customerRouter,
+      ...sellerMobileRouter,
+      ...courierMobileRouter,
       ...sellerRouter,
       ...courierRouter,
       ...adminRouter,

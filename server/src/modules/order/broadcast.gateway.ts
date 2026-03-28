@@ -79,9 +79,11 @@ export class BroadcastGateway
 
     if (
       auth.role !== AuthRoleEnum.CUSTOMER &&
+      auth.role !== AuthRoleEnum.SELLER &&
+      auth.role !== AuthRoleEnum.COURIER &&
       auth.role !== AuthRoleEnum.SUPER_ADMIN
     ) {
-      throw new WsException('Customer access required');
+      throw new WsException('Customer app access required');
     }
 
     const customerId = auth.user?.id;

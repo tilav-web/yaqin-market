@@ -27,14 +27,24 @@ export class OrderController {
 
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SUPER_ADMIN)
+  @Roles(
+    AuthRoleEnum.CUSTOMER,
+    AuthRoleEnum.SELLER,
+    AuthRoleEnum.COURIER,
+    AuthRoleEnum.SUPER_ADMIN,
+  )
   async create(@Body() createOrderDto: CreateOrderDto, @UserDecorator() user: any) {
     return this.orderService.create(createOrderDto, user.id);
   }
 
   @Get('my')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SUPER_ADMIN)
+  @Roles(
+    AuthRoleEnum.CUSTOMER,
+    AuthRoleEnum.SELLER,
+    AuthRoleEnum.COURIER,
+    AuthRoleEnum.SUPER_ADMIN,
+  )
   async getMyOrders(
     @UserDecorator() user: any,
     @Query('status') status?: OrderStatus,
@@ -77,7 +87,12 @@ export class OrderController {
 
   @Get('broadcast-requests/my')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SUPER_ADMIN)
+  @Roles(
+    AuthRoleEnum.CUSTOMER,
+    AuthRoleEnum.SELLER,
+    AuthRoleEnum.COURIER,
+    AuthRoleEnum.SUPER_ADMIN,
+  )
   async getMyBroadcastRequests(@UserDecorator() user: any) {
     return this.orderService.findMyBroadcastRequests(user.id);
   }
@@ -94,7 +109,12 @@ export class OrderController {
 
   @Post('broadcast-requests')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SUPER_ADMIN)
+  @Roles(
+    AuthRoleEnum.CUSTOMER,
+    AuthRoleEnum.SELLER,
+    AuthRoleEnum.COURIER,
+    AuthRoleEnum.SUPER_ADMIN,
+  )
   async createBroadcastRequest(
     @Body() dto: CreateBroadcastRequestDto,
     @UserDecorator() user: any,
@@ -104,7 +124,12 @@ export class OrderController {
 
   @Get('broadcast-requests/:id')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
+  @Roles(
+    AuthRoleEnum.CUSTOMER,
+    AuthRoleEnum.SELLER,
+    AuthRoleEnum.COURIER,
+    AuthRoleEnum.SUPER_ADMIN,
+  )
   async getBroadcastRequestById(
     @Param('id') id: string,
     @AuthDec() auth: any,
@@ -115,7 +140,12 @@ export class OrderController {
 
   @Get('broadcast-requests/:id/offers')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SUPER_ADMIN)
+  @Roles(
+    AuthRoleEnum.CUSTOMER,
+    AuthRoleEnum.SELLER,
+    AuthRoleEnum.COURIER,
+    AuthRoleEnum.SUPER_ADMIN,
+  )
   async getBroadcastOffers(
     @Param('id') id: string,
     @AuthDec() auth: any,
@@ -137,7 +167,12 @@ export class OrderController {
 
   @Post('broadcast-requests/:id/select-offer')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SUPER_ADMIN)
+  @Roles(
+    AuthRoleEnum.CUSTOMER,
+    AuthRoleEnum.SELLER,
+    AuthRoleEnum.COURIER,
+    AuthRoleEnum.SUPER_ADMIN,
+  )
   async selectBroadcastOffer(
     @Param('id') id: string,
     @Body() dto: SelectBroadcastOfferDto,

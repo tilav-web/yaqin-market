@@ -22,31 +22,38 @@ import { SeedService } from './seed.service';
     }),
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres' as const,
-        host: config.get<string>('POSTGRES_HOST') ?? 'localhost',
-        port: Number(config.get<string>('POSTGRES_PORT') ?? 5432),
-        username: config.get<string>('POSTGRES_USER') ?? 'postgres',
-        password: config.get<string>('POSTGRES_PASSWORD') ?? 'postgres',
-        database: config.get<string>('POSTGRES_DB') ?? 'postgres',
-        entities: [
-          Auth,
-          User,
-          Wallet,
-          Location,
-          Category,
-          Unit,
-          Product,
-          Store,
-          StoreDeliverySettings,
-          StoreWorkingHour,
-          StoreProduct,
-          Telegram,
-        ],
-        autoLoadEntities: true,
-        synchronize: config.get('NODE_ENV') === 'development',
-        logging: false,
-      }),
+      useFactory: (config: ConfigService) => {
+        const synchronize =
+          config.get<string>('DB_SYNCHRONIZE') ??
+          String(config.get('NODE_ENV') === 'development');
+        const logging = config.get<string>('DB_LOGGING') ?? 'false';
+
+        return {
+          type: 'postgres' as const,
+          host: config.get<string>('POSTGRES_HOST') ?? 'localhost',
+          port: Number(config.get<string>('POSTGRES_PORT') ?? 5432),
+          username: config.get<string>('POSTGRES_USER') ?? 'postgres',
+          password: config.get<string>('POSTGRES_PASSWORD') ?? 'postgres',
+          database: config.get<string>('POSTGRES_DB') ?? 'postgres',
+          entities: [
+            Auth,
+            User,
+            Wallet,
+            Location,
+            Category,
+            Unit,
+            Product,
+            Store,
+            StoreDeliverySettings,
+            StoreWorkingHour,
+            StoreProduct,
+            Telegram,
+          ],
+          autoLoadEntities: true,
+          synchronize: synchronize === 'true',
+          logging: logging === 'true',
+        };
+      },
     }),
   ],
   providers: [SeedService],

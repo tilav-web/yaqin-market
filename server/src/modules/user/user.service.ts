@@ -58,7 +58,6 @@ export class UserService {
               .where('LOWER(user.first_name) LIKE :search')
               .orWhere('LOWER(user.last_name) LIKE :search')
               .orWhere("LOWER(COALESCE(auth.phone, '')) LIKE :search")
-              .orWhere("LOWER(COALESCE(auth.role, '')) LIKE :search")
               .orWhere("LOWER(COALESCE(store.name, '')) LIKE :search");
           }),
         )

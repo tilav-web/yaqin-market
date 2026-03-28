@@ -1,5 +1,6 @@
 import {
   BoxesIcon,
+  FileCheckIcon,
   LayoutGridIcon,
   SendIcon,
   Settings2Icon,
@@ -19,6 +20,7 @@ export const adminSections: SidebarSection[] = [
       { label: "Mahsulotlar", to: "/admin/products", icon: BoxesIcon },
       { label: "Do'konlar", to: "/admin/stores", icon: StoreIcon },
       { label: "Foydalanuvchilar", to: "/admin/users", icon: Users2Icon },
+      { label: "Arizalar", to: "/admin/applications", icon: FileCheckIcon },
     ],
   },
   {

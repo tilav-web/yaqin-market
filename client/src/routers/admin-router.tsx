@@ -6,6 +6,7 @@ import AdminProducts from "../pages/admin/products/products";
 import AdminStores from "../pages/admin/stores/stores";
 import AdminUsersPage from "../pages/admin/users/users";
 import AdminProfilePage from "../pages/admin/profile/profile";
+import AdminApplicationsPage from "../pages/admin/applications/applications";
 
 export const adminRouter: RouteObject[] = [
   {
@@ -35,6 +36,10 @@ export const adminRouter: RouteObject[] = [
       {
         path: "users",
         element: <AdminUsersPage />,
+      },
+      {
+        path: "applications",
+        element: <AdminApplicationsPage />,
       },
       {
         path: "profile",

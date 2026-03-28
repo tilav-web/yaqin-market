@@ -119,7 +119,7 @@ export default function Auth() {
       await authService.verifyOtp(phoneDigits, otpValue);
       const me = await authService.findMe();
       setMe(me);
-      if (me.role === "CUSTOMER") {
+      if (me.role !== "SUPER_ADMIN") {
         await captureDiscoveryLocation();
       }
       toast.success("Tizimga muvaffaqiyatli kirdingiz");

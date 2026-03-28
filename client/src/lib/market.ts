@@ -152,10 +152,6 @@ export function getRoleHomePath(role?: AuthRole | null) {
   switch (role) {
     case "SUPER_ADMIN":
       return "/admin";
-    case "SELLER":
-      return "/seller";
-    case "COURIER":
-      return "/courier";
     default:
       return "/mobile";
   }

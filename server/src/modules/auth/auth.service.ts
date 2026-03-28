@@ -210,7 +210,10 @@ export class AuthService {
   }
 
   private setRefreshCookie(res: Response, token: string) {
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd =
+      process.env.COOKIE_SECURE === 'true' ||
+      (process.env.COOKIE_SECURE !== 'false' &&
+        process.env.NODE_ENV === 'production');
     res.cookie('refresh_token', token, {
       httpOnly: true,
       secure: isProd,
@@ -221,7 +224,10 @@ export class AuthService {
   }
 
   private clearRefreshCookie(res: Response) {
-    const isProd = process.env.NODE_ENV === 'production';
+    const isProd =
+      process.env.COOKIE_SECURE === 'true' ||
+      (process.env.COOKIE_SECURE !== 'false' &&
+        process.env.NODE_ENV === 'production');
     res.cookie('refresh_token', '', {
       httpOnly: true,
       secure: isProd,

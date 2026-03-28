@@ -73,6 +73,7 @@ export default function AdminUsersPage() {
   const queryClient = useQueryClient();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
+  const [selectedRole, setSelectedRole] = useState<AuthRole | "">("");
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim();
 
@@ -83,13 +84,14 @@ export default function AdminUsersPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["admin", "users", "catalog", normalizedQuery],
+    queryKey: ["admin", "users", "catalog", normalizedQuery, selectedRole],
     initialPageParam: 1,
     queryFn: async ({ pageParam }) =>
       (
         await api.get<UserCatalogResponse>("/users", {
           params: {
             q: normalizedQuery || undefined,
+            role: selectedRole || undefined,
             page: typeof pageParam === "number" ? pageParam : Number(pageParam ?? 1),
             limit: PAGE_SIZE,
           },
@@ -169,15 +171,29 @@ export default function AdminUsersPage() {
               Har bir foydalanuvchini tegishli oqimga biriktirish uchun roli shu yerda boshqariladi.
             </p>
           </div>
-          <div className="flex items-center gap-2 rounded-[1.1rem] border border-slate-200 bg-white px-4 py-2.5 lg:w-[320px]">
-            <SearchIcon className="h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Ism, telefon, rol yoki store"
-              className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            />
+          <div className="flex flex-col gap-3 sm:flex-row lg:w-auto">
+            <div className="flex items-center gap-2 rounded-[1.1rem] border border-slate-200 bg-white px-4 py-2.5 sm:w-[320px]">
+              <SearchIcon className="h-4 w-4 text-slate-400" />
+              <input
+                type="text"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Ism, telefon yoki store"
+                className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+              />
+            </div>
+            <select
+              value={selectedRole}
+              onChange={(event) => setSelectedRole(event.target.value as AuthRole | "")}
+              className="h-[46px] rounded-[1.1rem] border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none sm:min-w-[180px]"
+            >
+              <option value="">Barcha rollar</option>
+              {roles.map((role) => (
+                <option key={role} value={role}>
+                  {getRoleLabel(role)}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -191,11 +207,18 @@ export default function AdminUsersPage() {
           <div className="mt-5 rounded-[1.6rem] border border-dashed border-slate-300 bg-slate-50/80 px-5 py-10 text-center">
             <p className="text-base font-semibold text-slate-900">Mos foydalanuvchi topilmadi</p>
             <p className="mt-2 text-sm text-slate-500">
-              Searchni o'zgartirib ko'ring yoki maydonni tozalang.
+              Search yoki role filterini o'zgartirib ko'ring.
             </p>
             <div className="mt-4 flex justify-center">
-              <Button variant="outline" className="rounded-full" onClick={() => setQuery("")}>
-                Searchni tozalash
+              <Button
+                variant="outline"
+                className="rounded-full"
+                onClick={() => {
+                  setQuery("");
+                  setSelectedRole("");
+                }}
+              >
+                Filterlarni tozalash
               </Button>
             </div>
           </div>

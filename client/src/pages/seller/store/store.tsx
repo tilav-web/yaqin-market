@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Skeleton } from "../../../components/ui/skeleton";
 import { toast } from "sonner";
+import type { RoleApplication } from "@/interfaces/application.interface";
 import { getDeliveryPolicySummary } from "@/lib/market";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +89,13 @@ export default function SellerStore() {
     enabled: !!store?.id,
   });
 
+  const { data: courierApplications = [] } = useQuery({
+    queryKey: ["seller", "courier-applications"],
+    queryFn: async () =>
+      (await api.get<RoleApplication[]>("/applications/courier/store/my")).data,
+    enabled: !!store?.id,
+  });
+
   const products: StoreProduct[] = productsRes?.data || [];
   const settings = useMemo(
     () => store?.deliverySettings?.[0],
@@ -156,6 +164,27 @@ export default function SellerStore() {
       api.post(`/store-products/${id}/price?store_id=${store?.id}`, { price }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["store-products", store?.id] });
+    },
+  });
+
+  const reviewCourierApplication = useMutation({
+    mutationFn: async ({
+      id,
+      status,
+      reason,
+    }: {
+      id: string;
+      status: "APPROVED" | "REJECTED";
+      reason?: string;
+    }) => (await api.put(`/applications/courier/${id}/review`, { status, reason })).data,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["seller", "courier-applications"] });
+      toast.success("Kuryer arizasi ko'rib chiqildi");
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error ? error.message : "Kuryer arizasini ko'rib chiqishda xatolik",
+      );
     },
   });
 
@@ -475,6 +504,89 @@ export default function SellerStore() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      <section className="rounded-3xl border border-border bg-card/90 p-6 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.55)]">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold text-foreground">Kuryer arizalari</h2>
+          <p className="text-sm text-muted-foreground">
+            Delivery bo'lishni istagan userlarni shu yerda tasdiqlaysiz.
+          </p>
+        </div>
+
+        {courierApplications.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Hozircha arizalar yo'q.</p>
+        ) : (
+          <div className="space-y-3">
+            {courierApplications.map((application) => {
+              const fullName = `${application.user?.first_name ?? ""} ${
+                application.user?.last_name ?? ""
+              }`.trim();
+
+              return (
+                <div
+                  key={application.id}
+                  className="rounded-2xl border border-border bg-background p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {fullName || "Foydalanuvchi"}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {application.phone || application.user?.auth?.phone || "-"}
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground">
+                      {application.status}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                    <p>Transport: {application.transport_type || "Ko'rsatilmagan"}</p>
+                    <p>Raqam: {application.vehicle_number || "Ko'rsatilmagan"}</p>
+                    {application.note ? <p>Izoh: {application.note}</p> : null}
+                    {application.rejection_reason ? (
+                      <p className="text-rose-600">{application.rejection_reason}</p>
+                    ) : null}
+                  </div>
+
+                  {application.status === "PENDING" ? (
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        disabled={reviewCourierApplication.isPending}
+                        onClick={() =>
+                          reviewCourierApplication.mutate({
+                            id: application.id,
+                            status: "APPROVED",
+                          })
+                        }
+                      >
+                        Tasdiqlash
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={reviewCourierApplication.isPending}
+                        onClick={() => {
+                          const reason = window.prompt("Rad etish sababi", "");
+                          reviewCourierApplication.mutate({
+                            id: application.id,
+                            status: "REJECTED",
+                            reason: reason || undefined,
+                          });
+                        }}
+                      >
+                        Rad etish
+                      </Button>
+                    </div>
+                  ) : null}
+                </div>
+              );
+            })}
           </div>
         )}
       </section>
