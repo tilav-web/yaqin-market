@@ -39,6 +39,18 @@ export class Payment {
   @Column({ nullable: true })
   transaction_id: string;
 
+  @Column({ type: 'bigint', nullable: true })
+  provider_create_time: number | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  provider_perform_time: number | null;
+
+  @Column({ type: 'bigint', nullable: true })
+  provider_cancel_time: number | null;
+
+  @Column({ type: 'int', nullable: true })
+  cancel_reason: number | null;
+
   @Column({ type: 'jsonb', nullable: true })
   raw_response: Record<string, any>;
 

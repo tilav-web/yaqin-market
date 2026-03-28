@@ -23,8 +23,6 @@ export enum OrderStatus {
 
 export enum PaymentMethod {
   CASH = 'CASH',
-  CARD = 'CARD',
-  WALLET = 'WALLET',
   CLICK = 'CLICK',
   PAYME = 'PAYME',
 }
@@ -69,6 +67,12 @@ export class Order {
 
   @Column({ nullable: true })
   courier_id: string;
+
+  @Column({ type: 'uuid', nullable: true })
+  source_broadcast_request_id: string | null;
+
+  @Column({ type: 'uuid', nullable: true })
+  source_broadcast_offer_id: string | null;
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   items_price: number;

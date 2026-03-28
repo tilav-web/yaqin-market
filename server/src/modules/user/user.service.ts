@@ -65,7 +65,10 @@ export class UserService {
     }
 
     const countByRole = (role: AuthRoleEnum) =>
-      baseQuery.clone().andWhere('auth.role = :summaryRole', { summaryRole: role }).getCount();
+      baseQuery
+        .clone()
+        .andWhere('auth.role = :summaryRole', { summaryRole: role })
+        .getCount();
 
     const [total, customers, sellers, couriers, admins] = await Promise.all([
       baseQuery.clone().getCount(),
@@ -108,7 +111,7 @@ export class UserService {
     }
 
     const items = await this.userRepo.find({
-      where: { id: In(ids) } as any,
+      where: { id: In(ids) },
       relations: ['auth', 'stores'],
     });
 

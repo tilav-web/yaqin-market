@@ -1,5 +1,11 @@
 import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { Type, Transform, type TransformFnParams } from 'class-transformer';
+
+function normalizeBoolean({ value }: TransformFnParams): unknown {
+  if (value === 'true' || value === true) return true;
+  if (value === 'false' || value === false) return false;
+  return value;
+}
 
 export class CreateCategoryDto {
   @IsString()
@@ -20,11 +26,7 @@ export class CreateCategoryDto {
   order_number?: number;
 
   @IsOptional()
-  @Transform(({ value }) => {
-    if (value === 'true') return true;
-    if (value === 'false') return false;
-    return value;
-  })
+  @Transform(normalizeBoolean)
   @IsBoolean()
   is_active?: boolean;
 }

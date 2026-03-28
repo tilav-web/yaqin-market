@@ -31,10 +31,10 @@ services:
       [
         "sh",
         "-c",
-        "redis-server --appendonly yes --requirepass \"$${REDIS_PASSWORD}\"",
+        'redis-server --appendonly yes --requirepass "$${REDIS_PASSWORD}"',
       ]
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping"]
+      test: ["CMD-SHELL", 'redis-cli -a "$${REDIS_PASSWORD}" ping']
       interval: 10s
       timeout: 5s
       retries: 10
@@ -49,14 +49,14 @@ services:
       dockerfile: Dockerfile
     container_name: yaqin-market-server
     restart: unless-stopped
+    env_file:
+      - ./server/.env
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
     environment:
-      PORT: 5000
-      NODE_ENV: production
       DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
       DB_LOGGING: ${DB_LOGGING:-false}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
@@ -64,24 +64,9 @@ services:
       SERVER_URL: ${PUBLIC_API_URL:-http://localhost:5000}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-yaqin_market}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-password}
-      JWT_SECRET: ${JWT_SECRET:-your_secret_key}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
-      JWT_REFRESH_TOKEN_EXPIRE_DAYS: ${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
-      FIXED_OTP_CODE: ${FIXED_OTP_CODE:-111111}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-https://yaqin-market.uz}
-      CLICK_SERVICE_ID: ${CLICK_SERVICE_ID:-}
-      CLICK_MERCHANT_ID: ${CLICK_MERCHANT_ID:-}
-      CLICK_SECRET_KEY: ${CLICK_SECRET_KEY:-}
-      PAYME_MERCHANT_ID: ${PAYME_MERCHANT_ID:-}
-      PAYME_SECRET_KEY: ${PAYME_SECRET_KEY:-}
+      CLICK_RETURN_URL_BASE: ${PUBLIC_APP_URL:-http://localhost:5173}
     volumes:
       - server_uploads:/app/uploads
     ports:
@@ -93,8 +78,6 @@ services:
     build:
       context: ./client
       dockerfile: Dockerfile
-      args:
-        VITE_API_URL: ${PUBLIC_API_URL:-http://localhost:5000}
     container_name: yaqin-market-client
     restart: unless-stopped
     depends_on:
@@ -111,33 +94,19 @@ services:
       target: build
     container_name: yaqin-market-seed
     profiles: ["tools"]
+    env_file:
+      - ./server/.env
     depends_on:
       postgres:
         condition: service_healthy
     environment:
-      NODE_ENV: production
       DB_SYNCHRONIZE: ${DB_SYNCHRONIZE:-true}
       DB_LOGGING: ${DB_LOGGING:-false}
       POSTGRES_HOST: postgres
       POSTGRES_PORT: 5432
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-yaqin_market}
       REDIS_HOST: redis
       REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-password}
-      JWT_SECRET: ${JWT_SECRET:-your_secret_key}
-      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
-      JWT_ACCESS_TOKEN_EXPIRE_MINUTES: ${JWT_ACCESS_TOKEN_EXPIRE_MINUTES:-30}
-      JWT_REFRESH_TOKEN_EXPIRE_DAYS: ${JWT_REFRESH_TOKEN_EXPIRE_DAYS:-7}
-      FIXED_OTP_CODE: ${FIXED_OTP_CODE:-111111}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      TELEGRAM_WEBAPP_URL: ${TELEGRAM_WEBAPP_URL:-https://yaqin-market.uz}
-      CLICK_SERVICE_ID: ${CLICK_SERVICE_ID:-}
-      CLICK_MERCHANT_ID: ${CLICK_MERCHANT_ID:-}
-      CLICK_SECRET_KEY: ${CLICK_SECRET_KEY:-}
-      PAYME_MERCHANT_ID: ${PAYME_MERCHANT_ID:-}
-      PAYME_SECRET_KEY: ${PAYME_SECRET_KEY:-}
+      CLICK_RETURN_URL_BASE: ${PUBLIC_APP_URL:-http://localhost:5173}
     command: ["npm", "run", "seed"]
     networks:
       - yaqin-market

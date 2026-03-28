@@ -3,7 +3,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, In, Repository } from 'typeorm';
 import { Store } from './entities/store.entity';
 import { StoreDeliverySettings } from './entities/store-delivery-settings.entity';
-import { StoreWorkingHour, DayOfWeek } from './entities/store-working-hour.entity';
+import {
+  StoreWorkingHour,
+  DayOfWeek,
+} from './entities/store-working-hour.entity';
 import { UpdateDeliverySettingsDto } from './dto/update-delivery-settings.dto';
 import { Auth } from '../auth/auth.entity';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
@@ -153,7 +156,12 @@ export class StoreService {
   async updateWorkingHours(
     storeId: string,
     auth: Auth,
-    hours: { day_of_week: DayOfWeek; open_time: string; close_time: string; is_open: boolean }[],
+    hours: {
+      day_of_week: DayOfWeek;
+      open_time: string;
+      close_time: string;
+      is_open: boolean;
+    }[],
   ) {
     await this.findManagedStore(storeId, auth);
 
@@ -196,7 +204,8 @@ export class StoreService {
       )
       .sort(
         (left, right) =>
-          Number(left.distance_meters ?? 0) - Number(right.distance_meters ?? 0),
+          Number(left.distance_meters ?? 0) -
+          Number(right.distance_meters ?? 0),
       );
   }
 
@@ -227,7 +236,8 @@ export class StoreService {
       )
       .sort(
         (left, right) =>
-          Number(left.distance_meters ?? 0) - Number(right.distance_meters ?? 0),
+          Number(left.distance_meters ?? 0) -
+          Number(right.distance_meters ?? 0),
       );
   }
 
@@ -245,7 +255,9 @@ export class StoreService {
     return this.storeRepo.save(store);
   }
 
-  async findAdminCatalog(query: { q?: string; page?: number; limit?: number } = {}) {
+  async findAdminCatalog(
+    query: { q?: string; page?: number; limit?: number } = {},
+  ) {
     const page =
       Number.isFinite(query.page) && Number(query.page) > 0
         ? Math.floor(Number(query.page))
@@ -318,7 +330,7 @@ export class StoreService {
     }
 
     const items = await this.storeRepo.find({
-      where: { id: In(ids) } as any,
+      where: { id: In(ids) },
       relations: ['deliverySettings', 'workingHours', 'owner'],
     });
 

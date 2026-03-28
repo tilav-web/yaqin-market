@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Param, Post, Put, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  UseGuards,
+} from '@nestjs/common';
 import { ApplicationService } from './application.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { UserDecorator } from '../auth/decorators/user.decorator';
@@ -8,6 +16,7 @@ import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import { CreateSellerApplicationDto } from './dto/create-seller-application.dto';
 import { CreateCourierApplicationDto } from './dto/create-courier-application.dto';
 import { ReviewApplicationDto } from './dto/review-application.dto';
+import { User } from '../user/user.entity';
 
 @Controller('applications')
 @UseGuards(AuthGuard)
@@ -15,13 +24,13 @@ export class ApplicationController {
   constructor(private readonly applicationService: ApplicationService) {}
 
   @Get('me')
-  async getMyApplications(@UserDecorator() user: any) {
+  async getMyApplications(@UserDecorator() user: User) {
     return this.applicationService.getMyApplications(user.id);
   }
 
   @Post('seller')
   async submitSellerApplication(
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
     @Body() dto: CreateSellerApplicationDto,
   ) {
     return this.applicationService.submitSellerApplication(user.id, dto);
@@ -29,7 +38,7 @@ export class ApplicationController {
 
   @Post('courier')
   async submitCourierApplication(
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
     @Body() dto: CreateCourierApplicationDto,
   ) {
     return this.applicationService.submitCourierApplication(user.id, dto);
@@ -47,7 +56,7 @@ export class ApplicationController {
   @Roles(AuthRoleEnum.SUPER_ADMIN)
   async reviewSellerApplication(
     @Param('id') id: string,
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
     @Body() dto: ReviewApplicationDto,
   ) {
     return this.applicationService.reviewSellerApplication(id, user.id, dto);
@@ -56,7 +65,7 @@ export class ApplicationController {
   @Get('courier/store/my')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER)
-  async getStoreCourierApplications(@UserDecorator() user: any) {
+  async getStoreCourierApplications(@UserDecorator() user: User) {
     return this.applicationService.getCourierApplicationsForSeller(user.id);
   }
 
@@ -65,7 +74,7 @@ export class ApplicationController {
   @Roles(AuthRoleEnum.SELLER)
   async reviewCourierApplication(
     @Param('id') id: string,
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
     @Body() dto: ReviewApplicationDto,
   ) {
     return this.applicationService.reviewCourierApplication(id, user.id, dto);

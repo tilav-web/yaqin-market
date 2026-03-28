@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   Injectable,
   NotFoundException,
   UnauthorizedException,
@@ -13,6 +15,8 @@ import { User } from '../user/user.entity';
 import { JwtService } from '@nestjs/jwt';
 import { JwtTypeEnum } from 'src/enums/jwt-type.enum';
 import type { Response } from 'express';
+import { BotAuthService } from '../bot/services/bot-auth.service';
+import { RateLimitRedisService } from '../redis/rate-limit.redis.service';
 
 @Injectable()
 export class AuthService {
@@ -21,6 +25,8 @@ export class AuthService {
     @InjectRepository(User) private readonly userRepository: Repository<User>,
     private readonly authRedisService: AuthRedisService,
     private readonly jwtService: JwtService,
+    private readonly botAuthService: BotAuthService,
+    private readonly rateLimitRedisService: RateLimitRedisService,
   ) {}
 
   async findById(id: string) {
@@ -75,22 +81,67 @@ export class AuthService {
 
   async sendOtp({ phone, ip }: { phone: string; ip: string }) {
     const normalizedPhone = this.normalizePhone(phone);
+    await this.assertRateLimit(
+      `auth:send-otp:phone:${normalizedPhone}`,
+      5,
+      600,
+      'OTP yuborish limiti tugadi. Keyinroq urinib ko‘ring',
+    );
+    await this.assertRateLimit(
+      `auth:send-otp:ip:${ip}`,
+      20,
+      600,
+      'Juda ko‘p OTP so‘rovlari yuborildi. Keyinroq urinib ko‘ring',
+    );
+
+    const linkedAuth = await this.repository.findOne({
+      where: { phone: normalizedPhone },
+    });
     const existingOtp = await this.authRedisService.getOtp(normalizedPhone, ip);
     let previewOtp: string | undefined;
+    let deliveryChannel: 'telegram' | 'preview' | 'sms' = 'sms';
+    let message = 'OTP sent successfully';
 
     if (!existingOtp) {
       const otp = generateOtp(6);
       await this.authRedisService.saveOtp(normalizedPhone, ip, otp);
-      previewOtp = otp;
+
+      if (linkedAuth?.telegram_id) {
+        const sentToTelegram = await this.botAuthService.sendOtpToTelegram({
+          telegramId: linkedAuth.telegram_id,
+          otp,
+        });
+
+        if (sentToTelegram) {
+          deliveryChannel = 'telegram';
+          message = 'OTP Telegram botga yuborildi';
+        } else {
+          deliveryChannel = 'preview';
+          previewOtp = otp;
+          message =
+            process.env.NODE_ENV !== 'production'
+              ? 'Telegramga yuborib bo‘lmadi, test OTP qaytarildi'
+              : 'OTP sent successfully';
+        }
+      } else {
+        deliveryChannel = 'preview';
+        previewOtp = otp;
+      }
     } else if (process.env.NODE_ENV !== 'production') {
       previewOtp = existingOtp;
+      deliveryChannel = 'preview';
+    } else if (linkedAuth?.telegram_id) {
+      deliveryChannel = 'telegram';
+      message = 'OTP Telegram botga yuborildi';
     }
 
     return {
       success: true,
-      message: 'OTP sent successfully',
+      message,
       otp_length: 6 as const,
-      otp_preview: process.env.NODE_ENV !== 'production' ? previewOtp : undefined,
+      delivery_channel: deliveryChannel,
+      otp_preview:
+        process.env.NODE_ENV !== 'production' ? previewOtp : undefined,
     };
   }
 
@@ -106,6 +157,12 @@ export class AuthService {
     res: Response;
   }) {
     const normalizedPhone = this.normalizePhone(phone);
+    await this.assertRateLimit(
+      `auth:verify-otp:phone:${normalizedPhone}`,
+      10,
+      600,
+      'OTP tekshirish limiti tugadi. Keyinroq urinib ko‘ring',
+    );
     const savedOtp = await this.authRedisService.getOtp(normalizedPhone, ip);
 
     if (!savedOtp || savedOtp !== otp) {
@@ -179,7 +236,7 @@ export class AuthService {
     };
   }
 
-  async logout(res: Response) {
+  logout(res: Response) {
     this.clearRefreshCookie(res);
 
     return {
@@ -239,5 +296,22 @@ export class AuthService {
 
   private normalizePhone(phone: string) {
     return phone.replace(/\D/g, '').slice(-9);
+  }
+
+  private async assertRateLimit(
+    key: string,
+    limit: number,
+    windowSeconds: number,
+    message: string,
+  ) {
+    const result = await this.rateLimitRedisService.consume(
+      key,
+      limit,
+      windowSeconds,
+    );
+
+    if (!result.allowed) {
+      throw new HttpException(message, HttpStatus.TOO_MANY_REQUESTS);
+    }
   }
 }

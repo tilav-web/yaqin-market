@@ -8,6 +8,7 @@ import LocationPickerMap from "@/components/maps/location-picker-map";
 import StatusPill from "@/components/common/status-pill";
 import { useBroadcastSocket } from "@/hooks/use-broadcast-socket";
 import type { BroadcastRequest } from "@/interfaces/market.interface";
+import { getClickPaymentUrl } from "@/services/payment.service";
 import {
   extractErrorMessage,
   formatDateTime,
@@ -17,8 +18,7 @@ import {
 
 const paymentMethods = [
   { value: "CASH", label: "Naqd" },
-  { value: "CARD", label: "Karta" },
-  { value: "WALLET", label: "Wallet" },
+  { value: "CLICK", label: "Online" },
 ];
 
 export default function BroadcastRequestDetailPage() {
@@ -45,7 +45,8 @@ export default function BroadcastRequestDetailPage() {
   const { data: request } = useQuery({
     queryKey: ["broadcast-request", id],
     queryFn: async () =>
-      (await api.get<BroadcastRequest>(`/orders/broadcast-requests/${id}`)).data,
+      (await api.get<BroadcastRequest>(`/orders/broadcast-requests/${id}`))
+        .data,
     enabled: !!id,
   });
 
@@ -57,9 +58,25 @@ export default function BroadcastRequestDetailPage() {
           payment_method: paymentMethod,
         })
       ).data,
-    onSuccess: (order: { id: string }) => {
-      toast.success("Taklif tanlandi va order yaratildi");
+    onSuccess: async (order: { id: string }) => {
       queryClient.invalidateQueries({ queryKey: ["broadcast-requests", "my"] });
+
+      if (paymentMethod === "CLICK") {
+        try {
+          const payment = await getClickPaymentUrl(order.id);
+          window.location.assign(payment.url);
+          return;
+        } catch (error) {
+          toast.error(
+            extractErrorMessage(error) ||
+              "Order yaratildi, lekin to'lov sahifasi ochilmadi",
+          );
+          navigate(`/mobile/orders/${order.id}`);
+          return;
+        }
+      }
+
+      toast.success("Taklif tanlandi va order yaratildi");
       navigate(`/mobile/orders/${order.id}`);
     },
     onError: (error) => {
@@ -76,8 +93,12 @@ export default function BroadcastRequestDetailPage() {
       <section className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.3)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-950">{request.title}</h1>
-            <p className="mt-2 text-sm text-slate-500">{request.delivery_address}</p>
+            <h1 className="text-2xl font-semibold text-slate-950">
+              {request.title}
+            </h1>
+            <p className="mt-2 text-sm text-slate-500">
+              {request.delivery_address}
+            </p>
           </div>
           <StatusPill
             status={request.status}
@@ -112,20 +133,30 @@ export default function BroadcastRequestDetailPage() {
           />
 
           <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 p-4">
-            <p className="text-sm font-semibold text-slate-900">So'rov tafsiloti</p>
+            <p className="text-sm font-semibold text-slate-900">
+              So'rov tafsiloti
+            </p>
             <div className="mt-4 space-y-3">
               <div className="rounded-[1.25rem] bg-white px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Yaratilgan</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                  Yaratilgan
+                </p>
                 <p className="mt-2 font-semibold text-slate-950">
                   {formatDateTime(request.createdAt)}
                 </p>
               </div>
               <div className="rounded-[1.25rem] bg-white px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Radius</p>
-                <p className="mt-2 font-semibold text-slate-950">{request.radius_km} km</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                  Radius
+                </p>
+                <p className="mt-2 font-semibold text-slate-950">
+                  {request.radius_km} km
+                </p>
               </div>
               <div className="rounded-[1.25rem] bg-white px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">To'lov</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                  To'lov
+                </p>
                 <select
                   value={paymentMethod}
                   onChange={(event) => setPaymentMethod(event.target.value)}
@@ -144,10 +175,15 @@ export default function BroadcastRequestDetailPage() {
       </section>
 
       <section className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-slate-950">So'ralgan mahsulotlar</h2>
+        <h2 className="text-lg font-semibold text-slate-950">
+          So'ralgan mahsulotlar
+        </h2>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {request.items.map((item) => (
-            <div key={item.id} className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3">
+            <div
+              key={item.id}
+              className="rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3"
+            >
               <p className="font-medium text-slate-900">{item.product_name}</p>
               <p className="mt-1 text-sm text-slate-500">{item.quantity} ta</p>
             </div>
@@ -158,12 +194,16 @@ export default function BroadcastRequestDetailPage() {
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Seller takliflari</h2>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Seller takliflari
+            </h2>
             <p className="text-sm text-slate-500">
               Eng qulay narxni tanlab, orderni davom ettiring
             </p>
           </div>
-          <span className="text-sm text-slate-400">{request.offers.length} ta</span>
+          <span className="text-sm text-slate-400">
+            {request.offers.length} ta
+          </span>
         </div>
 
         {request.offers.length === 0 ? (
@@ -179,9 +219,12 @@ export default function BroadcastRequestDetailPage() {
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-xl font-semibold text-slate-950">{offer.store.name}</h3>
+                    <h3 className="text-xl font-semibold text-slate-950">
+                      {offer.store.name}
+                    </h3>
                     <p className="mt-1 text-sm text-slate-500">
-                      ETA {offer.estimated_minutes} min · {offer.message || "Izoh qoldirilmagan"}
+                      ETA {offer.estimated_minutes} min ·{" "}
+                      {offer.message || "Izoh qoldirilmagan"}
                     </p>
                   </div>
                   <StatusPill status={offer.status} />
@@ -189,19 +232,25 @@ export default function BroadcastRequestDetailPage() {
 
                 <div className="mt-5 grid gap-3 md:grid-cols-3">
                   <div className="rounded-[1.25rem] bg-slate-50 px-4 py-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Savat</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                      Savat
+                    </p>
                     <p className="mt-2 text-lg font-semibold text-slate-950">
                       {formatMoney(offer.subtotal_price)}
                     </p>
                   </div>
                   <div className="rounded-[1.25rem] bg-slate-50 px-4 py-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Delivery</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                      Delivery
+                    </p>
                     <p className="mt-2 text-lg font-semibold text-slate-950">
                       {formatMoney(offer.delivery_price)}
                     </p>
                   </div>
                   <div className="rounded-[1.25rem] bg-slate-50 px-4 py-3">
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">Jami</p>
+                    <p className="text-xs uppercase tracking-[0.18em] text-slate-400">
+                      Jami
+                    </p>
                     <p className="mt-2 text-lg font-semibold text-slate-950">
                       {formatMoney(offer.total_price)}
                     </p>

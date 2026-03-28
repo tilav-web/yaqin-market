@@ -1,10 +1,16 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Review } from './review.entity';
 import { Store } from '../store/entities/store.entity';
-import { Order } from '../order/entities/order.entity';
+import { Order, OrderStatus } from '../order/entities/order.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
+import { User } from '../user/user.entity';
+import { Product } from '../product/product.entity';
 
 @Injectable()
 export class ReviewService {
@@ -26,7 +32,7 @@ export class ReviewService {
       throw new NotFoundException('Order not found');
     }
 
-    if (order.status !== 'DELIVERED') {
+    if (order.status !== OrderStatus.DELIVERED) {
       throw new BadRequestException('Can only review delivered orders');
     }
 
@@ -35,15 +41,17 @@ export class ReviewService {
     });
 
     if (existing) {
-      throw new BadRequestException('You already reviewed this store for this order');
+      throw new BadRequestException(
+        'You already reviewed this store for this order',
+      );
     }
 
     const review = this.reviewRepo.create({
       rating: dto.rating,
       comment: dto.comment,
-      owner: { id: userId } as any,
-      store: { id: dto.store_id } as any,
-      product: dto.product_id ? ({ id: dto.product_id } as any) : undefined,
+      owner: { id: userId } as User,
+      store: { id: dto.store_id } as Store,
+      product: dto.product_id ? ({ id: dto.product_id } as Product) : undefined,
     });
 
     const saved = await this.reviewRepo.save(review);
@@ -83,7 +91,7 @@ export class ReviewService {
       .select('AVG(review.rating)', 'avg')
       .addSelect('COUNT(review.id)', 'count')
       .where('review.store_id = :storeId', { storeId })
-      .getRawOne();
+      .getRawOne<{ avg: string | null; count: string | null }>();
 
     const avgRating = parseFloat(result?.avg || '0');
     const count = parseInt(result?.count || '0', 10);

@@ -4,7 +4,7 @@ import { BroadcastRequestStatus } from '../entities/broadcast-request.entity';
 export type BroadcastVisibleRequest = {
   id: string;
   customer_id: string;
-  status: BroadcastRequestStatus | string;
+  status: BroadcastRequestStatus;
   radius_km: number;
   delivery_lat: number;
   delivery_lng: number;

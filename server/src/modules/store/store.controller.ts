@@ -18,6 +18,9 @@ import { DayOfWeek } from './entities/store-working-hour.entity';
 import { RolesGuard } from '../auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
+import { Auth } from '../auth/auth.entity';
+import { User } from '../user/user.entity';
+import { Store } from './entities/store.entity';
 
 @Controller('stores')
 export class StoreServiceController {
@@ -26,14 +29,14 @@ export class StoreServiceController {
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
-  async create(@Body() data: CreateStoreDto, @AuthDec() auth: any) {
+  async create(@Body() data: CreateStoreDto, @AuthDec() auth: Auth) {
     return this.service.create(auth, data);
   }
 
   @Get('my')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
-  async getMyStores(@UserDecorator() user: any) {
+  async getMyStores(@UserDecorator() user: User) {
     return this.service.findByOwner(user.id);
   }
 
@@ -43,8 +46,7 @@ export class StoreServiceController {
     @Query('lng') lng: number,
     @Query('radius') radius?: number,
   ) {
-    const normalizedRadius =
-      radius !== undefined ? Number(radius) : undefined;
+    const normalizedRadius = radius !== undefined ? Number(radius) : undefined;
     return this.service.findNearby(Number(lat), Number(lng), normalizedRadius);
   }
 
@@ -54,8 +56,7 @@ export class StoreServiceController {
     @Query('lng') lng: number,
     @Query('radius') radius?: number,
   ) {
-    const normalizedRadius =
-      radius !== undefined ? Number(radius) : undefined;
+    const normalizedRadius = radius !== undefined ? Number(radius) : undefined;
     return this.service.findPrime(Number(lat), Number(lng), normalizedRadius);
   }
 
@@ -69,8 +70,8 @@ export class StoreServiceController {
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async update(
     @Param('id') id: string,
-    @Body() data: any,
-    @AuthDec() auth: any,
+    @Body() data: Partial<Store>,
+    @AuthDec() auth: Auth,
   ) {
     return this.service.update(id, auth, data);
   }
@@ -81,7 +82,7 @@ export class StoreServiceController {
   async updateDeliverySettings(
     @Param('id') id: string,
     @Body() data: UpdateDeliverySettingsDto,
-    @AuthDec() auth: any,
+    @AuthDec() auth: Auth,
   ) {
     return this.service.updateDeliverySettings(id, auth, data);
   }
@@ -98,7 +99,7 @@ export class StoreServiceController {
       close_time: string;
       is_open: boolean;
     }[],
-    @AuthDec() auth: any,
+    @AuthDec() auth: Auth,
   ) {
     return this.service.updateWorkingHours(id, auth, hours);
   }
@@ -109,7 +110,7 @@ export class StoreServiceController {
   async setActive(
     @Param('id') id: string,
     @Body('is_active') isActive: boolean,
-    @AuthDec() auth: any,
+    @AuthDec() auth: Auth,
   ) {
     return this.service.setActive(id, auth, isActive);
   }
@@ -120,7 +121,7 @@ export class StoreServiceController {
   async setPrime(
     @Param('id') id: string,
     @Body('is_prime') isPrime: boolean,
-    @AuthDec() auth: any,
+    @AuthDec() auth: Auth,
   ) {
     return this.service.setPrime(id, auth, isPrime);
   }

@@ -19,11 +19,23 @@ import { AuthDec } from '../auth/decorators/user.decorator';
 import { CreateBroadcastRequestDto } from './dto/create-broadcast-request.dto';
 import { CreateBroadcastOfferDto } from './dto/create-broadcast-offer.dto';
 import { SelectBroadcastOfferDto } from './dto/select-broadcast-offer.dto';
+import { User } from '../user/user.entity';
+import { Auth } from '../auth/auth.entity';
 
 @Controller('orders')
 @UseGuards(AuthGuard)
 export class OrderController {
   constructor(private readonly orderService: OrderService) {}
+
+  private getManagedStoreId(user: User) {
+    const storeId = user.stores?.[0]?.id;
+
+    if (!storeId) {
+      throw new Error('Store not found');
+    }
+
+    return storeId;
+  }
 
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
@@ -33,7 +45,10 @@ export class OrderController {
     AuthRoleEnum.COURIER,
     AuthRoleEnum.SUPER_ADMIN,
   )
-  async create(@Body() createOrderDto: CreateOrderDto, @UserDecorator() user: any) {
+  async create(
+    @Body() createOrderDto: CreateOrderDto,
+    @UserDecorator() user: User,
+  ) {
     return this.orderService.create(createOrderDto, user.id);
   }
 
@@ -46,7 +61,7 @@ export class OrderController {
     AuthRoleEnum.SUPER_ADMIN,
   )
   async getMyOrders(
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
     @Query('status') status?: OrderStatus,
   ) {
     return this.orderService.findByCustomer(user.id, status);
@@ -56,12 +71,10 @@ export class OrderController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async getMyStoreOrders(
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
     @Query('status') status?: OrderStatus,
   ) {
-    const store = user.stores?.[0];
-    if (!store) throw new Error('Store not found');
-    return this.orderService.findByStore(store.id, status);
+    return this.orderService.findByStore(this.getManagedStoreId(user), status);
   }
 
   @Get('courier/nearby')
@@ -72,14 +85,18 @@ export class OrderController {
     @Query('lng') lng: number,
     @Query('radius') radius: number = 10,
   ) {
-    return this.orderService.findNearbyOrders(Number(lat), Number(lng), Number(radius));
+    return this.orderService.findNearbyOrders(
+      Number(lat),
+      Number(lng),
+      Number(radius),
+    );
   }
 
   @Get('courier/my')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.COURIER, AuthRoleEnum.SUPER_ADMIN)
   async getMyDeliveryOrders(
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
     @Query('status') status?: OrderStatus,
   ) {
     return this.orderService.findByCourier(user.id, status);
@@ -93,7 +110,7 @@ export class OrderController {
     AuthRoleEnum.COURIER,
     AuthRoleEnum.SUPER_ADMIN,
   )
-  async getMyBroadcastRequests(@UserDecorator() user: any) {
+  async getMyBroadcastRequests(@UserDecorator() user: User) {
     return this.orderService.findMyBroadcastRequests(user.id);
   }
 
@@ -101,7 +118,7 @@ export class OrderController {
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
   async getBroadcastFeed(
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
     @Query('radius') radius: number = 10,
   ) {
     return this.orderService.findStoreBroadcastFeed(user.id, Number(radius));
@@ -117,7 +134,7 @@ export class OrderController {
   )
   async createBroadcastRequest(
     @Body() dto: CreateBroadcastRequestDto,
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
   ) {
     return this.orderService.createBroadcastRequest(dto, user.id);
   }
@@ -132,8 +149,8 @@ export class OrderController {
   )
   async getBroadcastRequestById(
     @Param('id') id: string,
-    @AuthDec() auth: any,
-    @UserDecorator() user: any,
+    @AuthDec() auth: Auth,
+    @UserDecorator() user: User,
   ) {
     return this.orderService.findBroadcastRequestById(id, user.id, auth.role);
   }
@@ -148,8 +165,8 @@ export class OrderController {
   )
   async getBroadcastOffers(
     @Param('id') id: string,
-    @AuthDec() auth: any,
-    @UserDecorator() user: any,
+    @AuthDec() auth: Auth,
+    @UserDecorator() user: User,
   ) {
     return this.orderService.findBroadcastOffers(id, user.id, auth.role);
   }
@@ -160,7 +177,7 @@ export class OrderController {
   async createBroadcastOffer(
     @Param('id') id: string,
     @Body() dto: CreateBroadcastOfferDto,
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
   ) {
     return this.orderService.createOrUpdateBroadcastOffer(id, user.id, dto);
   }
@@ -176,7 +193,7 @@ export class OrderController {
   async selectBroadcastOffer(
     @Param('id') id: string,
     @Body() dto: SelectBroadcastOfferDto,
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
   ) {
     return this.orderService.selectBroadcastOffer(
       id,
@@ -189,13 +206,8 @@ export class OrderController {
   @Post(':id/accept')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
-  async acceptOrder(
-    @Param('id') id: string,
-    @UserDecorator() user: any,
-  ) {
-    const store = user.stores?.[0];
-    if (!store) throw new Error('Store not found');
-    return this.orderService.acceptOrder(id, store.id);
+  async acceptOrder(@Param('id') id: string, @UserDecorator() user: User) {
+    return this.orderService.acceptOrder(id, this.getManagedStoreId(user));
   }
 
   @Post(':id/ready')
@@ -204,11 +216,9 @@ export class OrderController {
   async readyOrder(
     @Param('id') id: string,
     @Body('note') note: string,
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
   ) {
-    const store = user.stores?.[0];
-    if (!store) throw new Error('Store not found');
-    return this.orderService.readyOrder(id, store.id, note);
+    return this.orderService.readyOrder(id, this.getManagedStoreId(user), note);
   }
 
   @Post(':id/cancel')
@@ -217,24 +227,26 @@ export class OrderController {
   async cancelOrder(
     @Param('id') id: string,
     @Body('reason') reason: string,
-    @UserDecorator() user: any,
+    @UserDecorator() user: User,
   ) {
-    const store = user.stores?.[0];
-    if (!store) throw new Error('Store not found');
-    return this.orderService.cancelOrder(id, store.id, reason);
+    return this.orderService.cancelOrder(
+      id,
+      this.getManagedStoreId(user),
+      reason,
+    );
   }
 
   @Post(':id/deliver')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.COURIER, AuthRoleEnum.SUPER_ADMIN)
-  async deliverOrder(@Param('id') id: string, @UserDecorator() user: any) {
+  async deliverOrder(@Param('id') id: string, @UserDecorator() user: User) {
     return this.orderService.deliverOrder(id, user.id);
   }
 
   @Post(':id/assign-courier')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.COURIER, AuthRoleEnum.SUPER_ADMIN)
-  async assignCourier(@Param('id') id: string, @UserDecorator() user: any) {
+  async assignCourier(@Param('id') id: string, @UserDecorator() user: User) {
     return this.orderService.assignCourier(id, user.id);
   }
 

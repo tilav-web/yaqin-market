@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, In, Repository } from 'typeorm';
+import { Brackets, In, Repository, type FindOptionsWhere } from 'typeorm';
 import { StoreProduct, StoreProductStatus } from './store-product.entity';
 import { CreateStoreProductDto } from './dto/create-store-product.dto';
 import { UpdateStoreProductDto } from './dto/update-store-product.dto';
@@ -37,7 +37,8 @@ function calculateDistance(
 @Injectable()
 export class StoreProductService {
   constructor(
-    @InjectRepository(StoreProduct) private readonly repo: Repository<StoreProduct>,
+    @InjectRepository(StoreProduct)
+    private readonly repo: Repository<StoreProduct>,
   ) {}
 
   async create(storeId: string, dto: CreateStoreProductDto) {
@@ -63,7 +64,7 @@ export class StoreProductService {
   }
 
   async findByStore(storeId: string, includeInactive: boolean = false) {
-    const where: any = { store_id: storeId };
+    const where: FindOptionsWhere<StoreProduct> = { store_id: storeId };
     if (!includeInactive) {
       where.status = StoreProductStatus.ACTIVE;
     }
@@ -170,7 +171,10 @@ export class StoreProductService {
     };
   }
 
-  async findCategoriesByStore(storeId: string, includeInactive: boolean = false) {
+  async findCategoriesByStore(
+    storeId: string,
+    includeInactive: boolean = false,
+  ) {
     const baseQuery = this.repo
       .createQueryBuilder('storeProduct')
       .innerJoin('storeProduct.product', 'product')
@@ -246,7 +250,9 @@ export class StoreProductService {
     }
 
     if (dto.status !== undefined) {
-      storeProduct.status = dto.status ? StoreProductStatus.ACTIVE : StoreProductStatus.INACTIVE;
+      storeProduct.status = dto.status
+        ? StoreProductStatus.ACTIVE
+        : StoreProductStatus.INACTIVE;
     } else if (dto.price !== undefined || dto.stock !== undefined) {
       storeProduct.status = this.resolveStatus(
         Number(storeProduct.price),
@@ -284,7 +290,7 @@ export class StoreProductService {
     return this.repo.save(storeProduct);
   }
 
-  async findAvailableProducts(storeId: string, lat?: number, lng?: number) {
+  async findAvailableProducts(storeId: string) {
     return this.repo.find({
       where: {
         store_id: storeId,
@@ -318,12 +324,19 @@ export class StoreProductService {
         product_id: productId,
         status: StoreProductStatus.ACTIVE,
       },
-      relations: ['product', 'store', 'store.deliverySettings', 'store.workingHours'],
+      relations: [
+        'product',
+        'store',
+        'store.deliverySettings',
+        'store.workingHours',
+      ],
       order: { is_prime: 'DESC', createdAt: 'DESC' },
     });
 
     return items
-      .filter((item) => item.store?.is_active && item.store.lat && item.store.lng)
+      .filter(
+        (item) => item.store?.is_active && item.store.lat && item.store.lng,
+      )
       .map((item) => {
         const distanceMeters = calculateDistance(
           lat,

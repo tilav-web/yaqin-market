@@ -4,7 +4,6 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { ImageModule } from './modules/image/image.module';
-import { TelegramModule } from './modules/telegram/telegram.module';
 import { CategoryModule } from './modules/category/category.module';
 import { StoreModule } from './modules/store/store.module';
 import { StoreProductModule } from './modules/store-product/store-product.module';
@@ -17,6 +16,8 @@ import { ReviewModule } from './modules/review/review.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { ApplicationModule } from './modules/application/application.module';
+import { BotModule } from './modules/bot/bot.module';
+import { HealthModule } from './modules/health/health.module';
 
 @Module({
   imports: [
@@ -48,7 +49,7 @@ import { ApplicationModule } from './modules/application/application.module';
     }),
     RedisModule,
     ImageModule,
-    TelegramModule,
+    BotModule,
     AuthModule,
     UserModule,
     CategoryModule,
@@ -62,6 +63,7 @@ import { ApplicationModule } from './modules/application/application.module';
     WalletModule,
     PaymentModule,
     ApplicationModule,
+    HealthModule,
   ],
 })
 export class AppModule {}

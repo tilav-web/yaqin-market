@@ -25,10 +25,10 @@ export class Location {
   address_line: string;
 
   @Column({ type: 'varchar', nullable: true })
-  landmark: string; // Mo'ljal
+  landmark: string | null; // Mo'ljal
 
   @Column({ type: 'jsonb', nullable: true })
-  details: { entrance?: string; floor?: string; apartment?: string };
+  details: { entrance?: string; floor?: string; apartment?: string } | null;
 
   @Column({ default: false })
   is_default: boolean;

@@ -1,11 +1,28 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
-import { Order, OrderStatus, OrderType, PaymentMethod } from './entities/order.entity';
+import {
+  DataSource,
+  QueryRunner,
+  Repository,
+  type FindOptionsWhere,
+} from 'typeorm';
+import {
+  Order,
+  OrderStatus,
+  OrderType,
+  PaymentMethod,
+} from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { Store } from '../store/entities/store.entity';
-import { StoreProduct, StoreProductStatus } from '../store-product/store-product.entity';
+import {
+  StoreProduct,
+  StoreProductStatus,
+} from '../store-product/store-product.entity';
 import { StoreDeliverySettings } from '../store/entities/store-delivery-settings.entity';
 import {
   BroadcastRequest,
@@ -230,7 +247,7 @@ export class OrderService {
         items_price: itemsPrice,
         delivery_price: deliveryPrice,
         total_price: itemsPrice + deliveryPrice,
-        payment_method: dto.payment_method || ('CASH' as any),
+        payment_method: dto.payment_method ?? PaymentMethod.CASH,
         delivery_lat: dto.delivery_lat,
         delivery_lng: dto.delivery_lng,
         delivery_address: dto.delivery_address,
@@ -287,8 +304,9 @@ export class OrderService {
   }
 
   private async calculatePrices(store: Store, dto: CreateOrderDto) {
-    const deliverySettings =
-      store.deliverySettings?.[0] as StoreDeliverySettings | undefined;
+    const deliverySettings = store.deliverySettings?.[0] as
+      | StoreDeliverySettings
+      | undefined;
     let deliveryPrice = 0;
 
     if (deliverySettings?.is_delivery_enabled) {
@@ -378,7 +396,7 @@ export class OrderService {
         store.storeProducts?.some(
           (sp) =>
             sp.id === item.store_product_id &&
-            sp.status === 'ACTIVE' &&
+            sp.status === StoreProductStatus.ACTIVE &&
             sp.stock >= item.quantity,
         ),
       );
@@ -400,7 +418,7 @@ export class OrderService {
   }
 
   async findByCustomer(customerId: string, status?: OrderStatus) {
-    const where: any = { customer_id: customerId };
+    const where: FindOptionsWhere<Order> = { customer_id: customerId };
     if (status) where.status = status;
 
     return this.orderRepo.find({
@@ -411,7 +429,7 @@ export class OrderService {
   }
 
   async findByStore(storeId: string, status?: OrderStatus) {
-    const where: any = { store_id: storeId };
+    const where: FindOptionsWhere<Order> = { store_id: storeId };
     if (status) where.status = status;
 
     return this.orderRepo.find({
@@ -422,7 +440,7 @@ export class OrderService {
   }
 
   async findByCourier(courierId: string, status?: OrderStatus) {
-    const where: any = { courier_id: courierId };
+    const where: FindOptionsWhere<Order> = { courier_id: courierId };
     if (status) where.status = status;
 
     return this.orderRepo.find({
@@ -443,6 +461,12 @@ export class OrderService {
 
     if (order.status !== OrderStatus.PENDING) {
       throw new BadRequestException('Order cannot be accepted');
+    }
+
+    if (order.payment_method !== PaymentMethod.CASH && !order.is_paid) {
+      throw new BadRequestException(
+        'Online to`lov qilinmagan buyurtmani qabul qilib bo`lmaydi',
+      );
     }
 
     order.status = OrderStatus.ACCEPTED;
@@ -507,31 +531,29 @@ export class OrderService {
       throw new BadRequestException('Order is not in delivery');
     }
 
+    if (order.payment_method !== PaymentMethod.CASH && !order.is_paid) {
+      throw new BadRequestException(
+        'Online to`lov tasdiqlanmagan buyurtmani yakunlab bo`lmaydi',
+      );
+    }
+
     order.status = OrderStatus.DELIVERED;
     order.delivered_at = new Date();
-    order.is_paid = true;
+
+    if (order.payment_method === PaymentMethod.CASH) {
+      order.is_paid = true;
+    }
 
     return this.orderRepo.save(order);
   }
 
   async cancelOrder(orderId: string, storeId: string, reason: string) {
-    const order = await this.orderRepo.findOne({
-      where: { id: orderId, store_id: storeId },
+    await this.cancelOrderWithInventoryRestore(orderId, {
+      storeId,
+      reason,
     });
 
-    if (!order) {
-      throw new NotFoundException('Order not found');
-    }
-
-    if (order.status === OrderStatus.DELIVERED) {
-      throw new BadRequestException('Cannot cancel delivered order');
-    }
-
-    order.status = OrderStatus.CANCELLED;
-    order.cancelled_at = new Date();
-    order.cancelled_reason = reason;
-
-    return this.orderRepo.save(order);
+    return this.findById(orderId);
   }
 
   async findNearbyOrders(lat: number, lng: number, radiusKm: number = 10) {
@@ -563,7 +585,7 @@ export class OrderService {
       .getMany();
   }
 
-  async findBroadcastOrders(lat: number, lng: number, radiusKm: number = 5) {
+  async findBroadcastOrders() {
     return this.orderRepo
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.items', 'items')
@@ -575,7 +597,10 @@ export class OrderService {
       .getMany();
   }
 
-  async createBroadcastRequest(dto: CreateBroadcastRequestDto, customerId: string) {
+  async createBroadcastRequest(
+    dto: CreateBroadcastRequestDto,
+    customerId: string,
+  ) {
     if (!dto.items.length) {
       throw new BadRequestException('At least one item is required');
     }
@@ -644,12 +669,7 @@ export class OrderService {
   async findMyBroadcastRequests(customerId: string) {
     const requests = await this.broadcastRequestRepo.find({
       where: { customer_id: customerId },
-      relations: [
-        'items',
-        'offers',
-        'offers.store',
-        'offers.items',
-      ],
+      relations: ['items', 'offers', 'offers.store', 'offers.items'],
       order: { createdAt: 'DESC' },
     });
 
@@ -668,12 +688,7 @@ export class OrderService {
 
     const requests = await this.broadcastRequestRepo.find({
       where: { status: BroadcastRequestStatus.OPEN },
-      relations: [
-        'items',
-        'offers',
-        'offers.items',
-        'offers.store',
-      ],
+      relations: ['items', 'offers', 'offers.items', 'offers.store'],
       order: { createdAt: 'DESC' },
     });
 
@@ -696,12 +711,7 @@ export class OrderService {
   ) {
     const request = await this.broadcastRequestRepo.findOne({
       where: { id },
-      relations: [
-        'items',
-        'offers',
-        'offers.items',
-        'offers.store',
-      ],
+      relations: ['items', 'offers', 'offers.items', 'offers.store'],
     });
 
     if (!request) {
@@ -801,10 +811,14 @@ export class OrderService {
         SOCKET_FEED_RADIUS_KM,
       )
     ) {
-      throw new NotFoundException('Broadcast request not available for this store');
+      throw new NotFoundException(
+        'Broadcast request not available for this store',
+      );
     }
 
-    const requestItemMap = new Map(request.items.map((item) => [item.id, item]));
+    const requestItemMap = new Map(
+      request.items.map((item) => [item.id, item]),
+    );
     let subtotalPrice = 0;
 
     const existingOffer = await this.broadcastOfferRepo.findOne({
@@ -836,7 +850,9 @@ export class OrderService {
         });
 
         if (!matchedStoreProduct) {
-          throw new BadRequestException('Store product not found for offer item');
+          throw new BadRequestException(
+            'Store product not found for offer item',
+          );
         }
       } else {
         matchedStoreProduct =
@@ -897,15 +913,23 @@ export class OrderService {
       relations: ['items', 'store'],
     });
 
-    this.broadcastGateway.emitToCustomerUser(request.customer_id, 'broadcast:offer_updated', {
-      requestId,
-      offerId: savedOffer.id,
-    });
+    this.broadcastGateway.emitToCustomerUser(
+      request.customer_id,
+      'broadcast:offer_updated',
+      {
+        requestId,
+        offerId: savedOffer.id,
+      },
+    );
 
-    this.broadcastGateway.emitToSellerUser(sellerId, 'broadcast:request_updated', {
-      requestId,
-      offerId: savedOffer.id,
-    });
+    this.broadcastGateway.emitToSellerUser(
+      sellerId,
+      'broadcast:request_updated',
+      {
+        requestId,
+        offerId: savedOffer.id,
+      },
+    );
 
     return savedOfferWithRelations;
   }
@@ -961,6 +985,8 @@ export class OrderService {
         order_type: OrderType.BROADCAST,
         customer_id: customerId,
         store_id: offer.store_id,
+        source_broadcast_request_id: request.id,
+        source_broadcast_offer_id: offer.id,
         items_price: offer.subtotal_price,
         delivery_price: offer.delivery_price,
         total_price: offer.total_price,
@@ -1030,6 +1056,77 @@ export class OrderService {
       await queryRunner.commitTransaction();
       await this.notifyBroadcastSelection(requestId, request.customer_id);
       return this.findById(savedOrder.id);
+    } catch (error) {
+      await queryRunner.rollbackTransaction();
+      throw error;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async cancelOrderWithInventoryRestore(
+    orderId: string,
+    options: {
+      reason: string;
+      storeId?: string;
+      reopenBroadcastRequest?: boolean;
+    },
+  ) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const whereClause: {
+        id: string;
+        store_id?: string;
+      } = {
+        id: orderId,
+      };
+
+      if (options.storeId) {
+        whereClause.store_id = options.storeId;
+      }
+
+      const order = await queryRunner.manager.findOne(Order, {
+        where: whereClause,
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!order) {
+        throw new NotFoundException('Order not found');
+      }
+
+      if (order.status === OrderStatus.DELIVERED) {
+        throw new BadRequestException('Cannot cancel delivered order');
+      }
+
+      if (order.status === OrderStatus.CANCELLED) {
+        throw new BadRequestException('Order already cancelled');
+      }
+
+      const items = await queryRunner.manager.find(OrderItem, {
+        where: { order_id: order.id },
+      });
+
+      await this.restoreInventoryForOrderItems(queryRunner, items);
+
+      order.status = OrderStatus.CANCELLED;
+      order.cancelled_at = new Date();
+      order.cancelled_reason = options.reason;
+      await queryRunner.manager.save(order);
+
+      if (
+        options.reopenBroadcastRequest &&
+        order.order_type === OrderType.BROADCAST &&
+        order.source_broadcast_request_id &&
+        order.source_broadcast_offer_id
+      ) {
+        await this.reopenBroadcastRequestSelection(queryRunner, order);
+      }
+
+      await queryRunner.commitTransaction();
+      return order;
     } catch (error) {
       await queryRunner.rollbackTransaction();
       throw error;
@@ -1122,7 +1219,8 @@ export class OrderService {
     );
 
     const withinFeedRadius = distanceMeters <= feedRadiusKm * 1000;
-    const withinRequestRadius = distanceMeters <= Number(request.radius_km) * 1000;
+    const withinRequestRadius =
+      distanceMeters <= Number(request.radius_km) * 1000;
     const withinStoreRadius =
       distanceMeters <= this.getStoreServiceRadiusMeters(store);
     const visibleFrom =
@@ -1170,55 +1268,140 @@ export class OrderService {
         new Date(visibleFrom ?? new Date()).getTime() - Date.now(),
       );
 
-      setTimeout(async () => {
-        const latestRequest = await this.broadcastRequestRepo.findOne({
-          where: { id: requestId },
-          relations: ['items', 'offers', 'offers.items', 'offers.store'],
-        });
+      setTimeout(() => {
+        void (async () => {
+          const latestRequest = await this.broadcastRequestRepo.findOne({
+            where: { id: requestId },
+            relations: ['items', 'offers', 'offers.items', 'offers.store'],
+          });
 
-        if (!latestRequest) {
-          return;
-        }
+          if (!latestRequest) {
+            return;
+          }
 
-        const decoratedRequest = this.decorateBroadcastRequest(latestRequest);
+          const decoratedRequest = this.decorateBroadcastRequest(latestRequest);
 
-        if (
-          this.isBroadcastRequestVisibleToStore(
-            decoratedRequest,
-            store,
-            SOCKET_FEED_RADIUS_KM,
-          )
-        ) {
-          this.broadcastGateway.emitToSellerUser(
-            store.owner_id,
-            'broadcast:request_created',
-            {
-              requestId,
-            },
-          );
-        }
+          if (
+            this.isBroadcastRequestVisibleToStore(
+              decoratedRequest,
+              store,
+              SOCKET_FEED_RADIUS_KM,
+            )
+          ) {
+            this.broadcastGateway.emitToSellerUser(
+              store.owner_id,
+              'broadcast:request_created',
+              {
+                requestId,
+              },
+            );
+          }
+        })();
       }, delayMs);
     }
   }
 
-  private async notifyBroadcastSelection(requestId: string, customerId: string) {
+  private async notifyBroadcastSelection(
+    requestId: string,
+    customerId: string,
+  ) {
     const request = await this.broadcastRequestRepo.findOne({
       where: { id: requestId },
       relations: ['offers'],
     });
 
-    this.broadcastGateway.emitToCustomerUser(customerId, 'broadcast:request_updated', {
-      requestId,
-    });
+    this.broadcastGateway.emitToCustomerUser(
+      customerId,
+      'broadcast:request_updated',
+      {
+        requestId,
+      },
+    );
 
     for (const offer of request?.offers ?? []) {
       if (!offer.seller_id) {
         continue;
       }
 
-      this.broadcastGateway.emitToSellerUser(offer.seller_id, 'broadcast:request_updated', {
-        requestId,
-      });
+      this.broadcastGateway.emitToSellerUser(
+        offer.seller_id,
+        'broadcast:request_updated',
+        {
+          requestId,
+        },
+      );
     }
+  }
+
+  private async restoreInventoryForOrderItems(
+    queryRunner: QueryRunner,
+    items: OrderItem[],
+  ) {
+    for (const item of items) {
+      if (!item.store_product_id) {
+        continue;
+      }
+
+      const storeProduct = await queryRunner.manager.findOne(StoreProduct, {
+        where: { id: item.store_product_id },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!storeProduct) {
+        continue;
+      }
+
+      storeProduct.stock += Number(item.quantity);
+      storeProduct.status = this.resolveStoreProductStatus(
+        Number(storeProduct.price),
+        Number(storeProduct.stock),
+      );
+      await queryRunner.manager.save(storeProduct);
+    }
+  }
+
+  private async reopenBroadcastRequestSelection(
+    queryRunner: QueryRunner,
+    order: Order,
+  ) {
+    const request = await queryRunner.manager.findOne(BroadcastRequest, {
+      where: { id: order.source_broadcast_request_id ?? undefined },
+      lock: { mode: 'pessimistic_write' },
+    });
+
+    if (!request) {
+      return;
+    }
+
+    if (
+      request.status !== BroadcastRequestStatus.SELECTED ||
+      request.selected_offer_id !== order.source_broadcast_offer_id
+    ) {
+      return;
+    }
+
+    if (request.expires_at && request.expires_at.getTime() < Date.now()) {
+      request.status = BroadcastRequestStatus.EXPIRED;
+      await queryRunner.manager.save(request);
+      return;
+    }
+
+    request.status = BroadcastRequestStatus.OPEN;
+    request.selected_offer_id = null;
+    request.selected_at = null;
+    await queryRunner.manager.save(request);
+
+    await queryRunner.manager
+      .createQueryBuilder()
+      .update(BroadcastOffer)
+      .set({ status: BroadcastOfferStatus.PENDING })
+      .where('request_id = :requestId', { requestId: request.id })
+      .andWhere('status IN (:...statuses)', {
+        statuses: [
+          BroadcastOfferStatus.SELECTED,
+          BroadcastOfferStatus.REJECTED,
+        ],
+      })
+      .execute();
   }
 }

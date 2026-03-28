@@ -6,6 +6,7 @@ export interface SendOtpResponse {
   message?: string;
   otp_length?: 4 | 6;
   otp_preview?: string;
+  delivery_channel?: "telegram" | "preview" | "sms";
 }
 
 export interface VerifyOtpResponse {

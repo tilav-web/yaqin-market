@@ -29,7 +29,7 @@ export class ImageService {
     this.uploadPath = path.resolve(process.cwd(), 'uploads');
     this.serverUrl = this.configService.get<string>(
       'SERVER_URL',
-      'http://localhost:3000',
+      'http://localhost:5000',
     );
 
     // Constructor ichida sinxron mkdir — ilova start bo'lishidan oldin kerak

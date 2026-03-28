@@ -39,9 +39,13 @@ export class BroadcastGateway
     private readonly authRepo: Repository<Auth>,
   ) {}
 
-  handleConnection(_client: Socket) {}
+  handleConnection(client: Socket) {
+    void client;
+  }
 
-  handleDisconnect(_client: Socket) {}
+  handleDisconnect(client: Socket) {
+    void client;
+  }
 
   @SubscribeMessage('seller:subscribe')
   async handleSellerSubscribe(
@@ -62,7 +66,7 @@ export class BroadcastGateway
       throw new WsException('Seller user not found');
     }
 
-    client.join(this.getSellerRoom(sellerId));
+    await client.join(this.getSellerRoom(sellerId));
 
     return {
       success: true,
@@ -91,7 +95,7 @@ export class BroadcastGateway
       throw new WsException('Customer user not found');
     }
 
-    client.join(this.getCustomerRoom(customerId));
+    await client.join(this.getCustomerRoom(customerId));
 
     return {
       success: true,

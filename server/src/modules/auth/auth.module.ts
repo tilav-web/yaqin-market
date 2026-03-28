@@ -9,11 +9,13 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategy/jwt.strategy';
 import { PassportModule } from '@nestjs/passport';
+import { BotModule } from '../bot/bot.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Auth, User, Telegram]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
+    BotModule,
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

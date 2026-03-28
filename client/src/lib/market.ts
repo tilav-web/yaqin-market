@@ -14,7 +14,9 @@ export function formatMoney(value: number | string | null | undefined) {
   return `${moneyFormatter.format(Number(value ?? 0))} so'm`;
 }
 
-export function formatDistanceMeasure(value: number | string | null | undefined) {
+export function formatDistanceMeasure(
+  value: number | string | null | undefined,
+) {
   const distance = Number(value ?? 0);
 
   if (!Number.isFinite(distance) || distance <= 0) {
@@ -102,7 +104,9 @@ export function calculateDeliveryQuote(
   };
 }
 
-export function getDeliveryPolicySummary(settings: DeliverySettings | null | undefined) {
+export function getDeliveryPolicySummary(
+  settings: DeliverySettings | null | undefined,
+) {
   if (!settings?.is_delivery_enabled) {
     return "Yetkazib berish o'chirilgan.";
   }
@@ -140,7 +144,9 @@ export function getDeliveryPolicySummary(settings: DeliverySettings | null | und
     parts.push(`maksimum ${formatDistanceMeasure(maxRadius)}`);
   }
 
-  return parts.length ? parts.join(", ") : "Yetkazib berish narxi hali sozlanmagan.";
+  return parts.length
+    ? parts.join(", ")
+    : "Yetkazib berish narxi hali sozlanmagan.";
 }
 
 export function formatDateTime(value: string | Date | null | undefined) {
@@ -186,6 +192,19 @@ export function getOrderStatusLabel(status: string) {
       return "Bekor qilingan";
     default:
       return status;
+  }
+}
+
+export function getPaymentMethodLabel(method: string) {
+  switch (method) {
+    case "CLICK":
+      return "Online";
+    case "CASH":
+      return "Naqd";
+    case "PAYME":
+      return "Payme";
+    default:
+      return method;
   }
 }
 

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
 import type { ICategory } from "@/interfaces/category.interface";
+import { getClickPaymentUrl } from "@/services/payment.service";
 import {
   calculateDeliveryQuote,
   extractErrorMessage,
@@ -51,27 +52,44 @@ export default function StoreDetail() {
   const { location, setLocation, address, setAddress, requestCurrentLocation } =
     useDiscoveryPreferences();
   const [cart, setCart] = useState<Record<string, number>>({});
-  const [productCache, setProductCache] = useState<Record<string, StoreProduct>>({});
+  const [productCache, setProductCache] = useState<
+    Record<string, StoreProduct>
+  >({});
   const [orderError, setOrderError] = useState("");
-  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(null);
+  const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
+    null,
+  );
   const [search, setSearch] = useState("");
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
+    null,
+  );
+  const [paymentMethod, setPaymentMethod] = useState<"CASH" | "CLICK">("CASH");
+  const [isSubmittingOrder, setIsSubmittingOrder] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [hasScrolledForFloatingCart, setHasScrolledForFloatingCart] = useState(false);
+  const [hasScrolledForFloatingCart, setHasScrolledForFloatingCart] =
+    useState(false);
   const [isSummaryVisible, setIsSummaryVisible] = useState(false);
   const summaryRef = useRef<HTMLDivElement | null>(null);
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const deferredSearch = useDeferredValue(search);
   const normalizedSearch = deferredSearch.trim();
 
-  const { data: savedLocations = [], isFetched: isLocationsFetched } = useQuery({
-    queryKey: ["locations", "my"],
-    queryFn: async () => (await api.get<SavedLocation[]>("/locations/my")).data,
-    staleTime: 60000,
-  });
+  const { data: savedLocations = [], isFetched: isLocationsFetched } = useQuery(
+    {
+      queryKey: ["locations", "my"],
+      queryFn: async () =>
+        (await api.get<SavedLocation[]>("/locations/my")).data,
+      staleTime: 60000,
+    },
+  );
 
   useEffect(() => {
-    if (!location && !selectedLocationId && isLocationsFetched && savedLocations.length === 0) {
+    if (
+      !location &&
+      !selectedLocationId &&
+      isLocationsFetched &&
+      savedLocations.length === 0
+    ) {
       requestCurrentLocation().catch(() => undefined);
     }
   }, [
@@ -145,20 +163,32 @@ export default function StoreDetail() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
-    queryKey: ["store-products", "catalog", id, normalizedSearch, selectedCategoryId],
+    queryKey: [
+      "store-products",
+      "catalog",
+      id,
+      normalizedSearch,
+      selectedCategoryId,
+    ],
     enabled: !!id,
     initialPageParam: 1,
     queryFn: async ({ pageParam }) =>
       (
-        await api.get<PaginatedResponse<StoreProduct>>("/store-products/catalog", {
-          params: {
-            store_id: id,
-            q: normalizedSearch || undefined,
-            category_id: selectedCategoryId || undefined,
-            page: typeof pageParam === "number" ? pageParam : Number(pageParam ?? 1),
-            limit: STORE_PRODUCTS_PAGE_SIZE,
+        await api.get<PaginatedResponse<StoreProduct>>(
+          "/store-products/catalog",
+          {
+            params: {
+              store_id: id,
+              q: normalizedSearch || undefined,
+              category_id: selectedCategoryId || undefined,
+              page:
+                typeof pageParam === "number"
+                  ? pageParam
+                  : Number(pageParam ?? 1),
+              limit: STORE_PRODUCTS_PAGE_SIZE,
+            },
           },
-        })
+        )
       ).data,
     getNextPageParam: (lastPage) =>
       lastPage.meta.hasMore ? lastPage.meta.page + 1 : undefined,
@@ -190,19 +220,14 @@ export default function StoreDetail() {
       lng: Number(preferredLocation.lng),
     });
     setAddress(preferredLocation.address_line);
-  }, [
-    location,
-    savedLocations,
-    selectedLocationId,
-    setAddress,
-    setLocation,
-  ]);
+  }, [location, savedLocations, selectedLocationId, setAddress, setLocation]);
 
   useEffect(() => {
     setCart({});
     setProductCache({});
     setSearch("");
     setSelectedCategoryId(null);
+    setPaymentMethod("CASH");
     setOrderError("");
   }, [id]);
 
@@ -306,7 +331,10 @@ export default function StoreDetail() {
 
           return { product, qty };
         })
-        .filter((item): item is { product: StoreProduct; qty: number } => item !== null),
+        .filter(
+          (item): item is { product: StoreProduct; qty: number } =>
+            item !== null,
+        ),
     [cartItems, productsById],
   );
 
@@ -318,14 +346,18 @@ export default function StoreDetail() {
     [cartProducts],
   );
 
-  const isBelowMinOrder = minOrder > 0 && totalPrice < minOrder && cartItems.length > 0;
+  const isBelowMinOrder =
+    minOrder > 0 && totalPrice < minOrder && cartItems.length > 0;
   const deliveryQuote = useMemo(
     () => calculateDeliveryQuote(deliverySettings, storeLocation, location),
     [deliverySettings, location, storeLocation],
   );
-  const isOutsideDeliveryRadius = location != null && deliveryQuote?.isDeliverable === false;
+  const isOutsideDeliveryRadius =
+    location != null && deliveryQuote?.isDeliverable === false;
   const estimatedDeliveryPrice =
-    location && deliveryQuote?.isDeliverable ? deliveryQuote.deliveryPrice : null;
+    location && deliveryQuote?.isDeliverable
+      ? deliveryQuote.deliveryPrice
+      : null;
   const orderTotal = totalPrice + (estimatedDeliveryPrice ?? 0);
   const shouldShowFloatingCart =
     cartProducts.length > 0 && hasScrolledForFloatingCart && !isSummaryVisible;
@@ -347,8 +379,7 @@ export default function StoreDetail() {
       return {
         title: "GPS manzil",
         subtitle:
-          address ||
-          `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
+          address || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
       };
     }
 
@@ -378,33 +409,61 @@ export default function StoreDetail() {
     }
 
     if (deliveryQuote?.isDeliverable === false) {
-      setOrderError("Tanlangan manzil do'kon yetkazib berish hududidan tashqarida");
+      setOrderError(
+        "Tanlangan manzil do'kon yetkazib berish hududidan tashqarida",
+      );
       return;
     }
 
     if (isBelowMinOrder) {
-      setOrderError(`Minimal buyurtma: ${Number(minOrder).toLocaleString()} so'm`);
+      setOrderError(
+        `Minimal buyurtma: ${Number(minOrder).toLocaleString()} so'm`,
+      );
       return;
     }
 
     try {
+      setIsSubmittingOrder(true);
       const items = cartItems.map(([store_product_id, quantity]) => ({
         store_product_id,
         quantity,
       }));
-      await api.post("/orders", {
-        order_type: "DIRECT",
-        store_id: id,
-        items,
-        delivery_lat: location.lat,
-        delivery_lng: location.lng,
-        delivery_address: address || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
-      });
-      toast.success("Buyurtma muvaffaqiyatli yuborildi!");
+      const order = (
+        await api.post<{ id: string }>("/orders", {
+          order_type: "DIRECT",
+          store_id: id,
+          items,
+          payment_method: paymentMethod,
+          delivery_lat: location.lat,
+          delivery_lng: location.lng,
+          delivery_address:
+            address || `${location.lat.toFixed(6)}, ${location.lng.toFixed(6)}`,
+        })
+      ).data;
+
       setCart({});
+
+      if (paymentMethod === "CLICK") {
+        try {
+          const payment = await getClickPaymentUrl(order.id);
+          window.location.assign(payment.url);
+          return;
+        } catch (paymentError) {
+          toast.error(
+            extractErrorMessage(paymentError) ||
+              "Buyurtma yaratildi, lekin to'lov sahifasi ochilmadi",
+          );
+          navigate(`/mobile/orders/${order.id}`);
+          return;
+        }
+      }
+
+      toast.success("Buyurtma muvaffaqiyatli yuborildi!");
       navigate("/mobile/orders");
     } catch (error) {
       setOrderError(extractErrorMessage(error));
+    } finally {
+      setIsSubmittingOrder(false);
     }
   };
 
@@ -417,22 +476,22 @@ export default function StoreDetail() {
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[1.15rem] bg-primary text-primary-foreground shadow-[0_16px_30px_-18px_rgba(220,38,38,0.8)]">
                 <ShoppingBagIcon className="h-5 w-5" />
               </span>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-semibold text-slate-950">
-                    Savatda {cartProducts.length} tur mahsulot
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Jami: {formatMoney(orderTotal)}
-                  </p>
-                </div>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold text-slate-950">
+                  Savatda {cartProducts.length} tur mahsulot
+                </p>
+                <p className="text-xs text-slate-500">
+                  Jami: {formatMoney(orderTotal)}
+                </p>
               </div>
+            </div>
             <Button
               size="sm"
               className="h-9 rounded-full px-4 text-xs font-semibold"
               onClick={handleOrder}
-              disabled={isBelowMinOrder}
+              disabled={isBelowMinOrder || isSubmittingOrder}
             >
-              Buyurtma
+              {paymentMethod === "CLICK" ? "Online" : "Buyurtma"}
             </Button>
           </div>
 
@@ -477,7 +536,9 @@ export default function StoreDetail() {
                       <button
                         type="button"
                         onClick={() => addToCart(product.id)}
-                        disabled={product.status !== "ACTIVE" || product.stock === 0}
+                        disabled={
+                          product.status !== "ACTIVE" || product.stock === 0
+                        }
                         className={cn(
                           "flex h-7 w-7 items-center justify-center rounded-full text-white transition active:scale-95",
                           product.status !== "ACTIVE" || product.stock === 0
@@ -499,15 +560,25 @@ export default function StoreDetail() {
       <section className="overflow-hidden rounded-[2rem] border border-white/70 bg-white/90 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.35)]">
         <div className="relative h-52 bg-[linear-gradient(135deg,#fff1f2,#f8fbff)]">
           {store?.banner ? (
-            <img src={store.banner} alt={store.name} className="h-full w-full object-cover" />
+            <img
+              src={store.banner}
+              alt={store.name}
+              className="h-full w-full object-cover"
+            />
           ) : (
-            <div className="flex h-full items-center justify-center text-5xl">🏪</div>
+            <div className="flex h-full items-center justify-center text-5xl">
+              🏪
+            </div>
           )}
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-slate-950/70 to-transparent px-5 py-5 text-white">
             <div className="flex items-end gap-4">
               <div className="h-18 w-18 overflow-hidden rounded-[1.35rem] border border-white/40 bg-white shadow-lg">
                 {store?.logo ? (
-                  <img src={store.logo} alt={store.name} className="h-full w-full object-cover" />
+                  <img
+                    src={store.logo}
+                    alt={store.name}
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <span className="flex h-full w-full items-center justify-center text-3xl text-slate-900">
                     🏪
@@ -528,7 +599,9 @@ export default function StoreDetail() {
         <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
             <div className="rounded-[1.5rem] border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-              <p className="font-semibold text-slate-900">{store?.address ?? "Manzil yo'q"}</p>
+              <p className="font-semibold text-slate-900">
+                {store?.address ?? "Manzil yo'q"}
+              </p>
               <p className="mt-1">
                 Minimal buyurtma: {formatMoney(minOrder)} · Yetkazib berish:{" "}
                 {!location
@@ -555,13 +628,14 @@ export default function StoreDetail() {
             <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold text-slate-950">Yetkazib berish nuqtasi</h2>
-                  <p className="text-sm text-slate-500">Tayyor manzilni tanlang yoki GPS ishlating</p>
+                  <h2 className="text-lg font-semibold text-slate-950">
+                    Yetkazib berish nuqtasi
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Tayyor manzilni tanlang yoki GPS ishlating
+                  </p>
                 </div>
-                <Button
-                  variant="outline"
-                  onClick={handleUseGps}
-                >
+                <Button variant="outline" onClick={handleUseGps}>
                   GPS olish
                 </Button>
               </div>
@@ -600,7 +674,8 @@ export default function StoreDetail() {
                   {savedLocations.length > 0 ? (
                     <div className="grid gap-2 sm:grid-cols-2">
                       {savedLocations.map((savedLocation) => {
-                        const isSelected = savedLocation.id === selectedLocationId;
+                        const isSelected =
+                          savedLocation.id === selectedLocationId;
 
                         return (
                           <button
@@ -640,12 +715,13 @@ export default function StoreDetail() {
                     </div>
                   ) : (
                     <div className="rounded-[1.15rem] border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                      Saqlangan manzil yo'q. Direct order uchun
-                      {" "}
-                      <Link to="/mobile/locations" className="font-semibold text-primary">
+                      Saqlangan manzil yo'q. Direct order uchun{" "}
+                      <Link
+                        to="/mobile/locations"
+                        className="font-semibold text-primary"
+                      >
                         locations sahifasida
-                      </Link>
-                      {" "}
+                      </Link>{" "}
                       manzil qo'shing.
                     </div>
                   )}
@@ -659,7 +735,9 @@ export default function StoreDetail() {
             className="rounded-[1.5rem] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#fff5f6)] p-4 lg:sticky lg:top-5"
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-950">Buyurtma xulosasi</h2>
+              <h2 className="text-lg font-semibold text-slate-950">
+                Buyurtma xulosasi
+              </h2>
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                 {cartItems.length} tur
               </span>
@@ -723,7 +801,9 @@ export default function StoreDetail() {
                         <button
                           type="button"
                           onClick={() => addToCart(product.id)}
-                          disabled={product.status !== "ACTIVE" || product.stock === 0}
+                          disabled={
+                            product.status !== "ACTIVE" || product.stock === 0
+                          }
                           className={cn(
                             "flex h-8 w-8 items-center justify-center rounded-full text-white transition active:scale-95",
                             product.status !== "ACTIVE" || product.stock === 0
@@ -742,9 +822,36 @@ export default function StoreDetail() {
 
             {isBelowMinOrder ? (
               <p className="mt-4 rounded-[1.25rem] bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                Minimal buyurtma uchun yana {formatMoney(Number(minOrder) - totalPrice)} qo'shing.
+                Minimal buyurtma uchun yana{" "}
+                {formatMoney(Number(minOrder) - totalPrice)} qo'shing.
               </p>
             ) : null}
+
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-slate-950">
+                To'lov usuli
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                {[
+                  { value: "CASH" as const, label: "Naqd" },
+                  { value: "CLICK" as const, label: "Online" },
+                ].map((method) => (
+                  <button
+                    key={method.value}
+                    type="button"
+                    onClick={() => setPaymentMethod(method.value)}
+                    className={cn(
+                      "rounded-[1rem] border px-3 py-3 text-sm font-semibold transition",
+                      paymentMethod === method.value
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-slate-200 bg-white text-slate-700",
+                    )}
+                  >
+                    {method.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {isOutsideDeliveryRadius ? (
               <p className="mt-4 rounded-[1.25rem] bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -783,9 +890,20 @@ export default function StoreDetail() {
             <Button
               className="mt-4 h-12 w-full rounded-[1.25rem] text-sm font-semibold"
               onClick={handleOrder}
-              disabled={!cartItems.length || isBelowMinOrder || isOutsideDeliveryRadius}
+              disabled={
+                !cartItems.length ||
+                isBelowMinOrder ||
+                isOutsideDeliveryRadius ||
+                isSubmittingOrder
+              }
             >
-              Buyurtma berish
+              {paymentMethod === "CLICK"
+                ? isSubmittingOrder
+                  ? "Yo'naltirilmoqda..."
+                  : "Online to'lovga o'tish"
+                : isSubmittingOrder
+                  ? "Yuborilmoqda..."
+                  : "Buyurtma berish"}
             </Button>
           </div>
         </div>
@@ -794,7 +912,9 @@ export default function StoreDetail() {
       <section className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-semibold text-slate-950">Do'kondagi mahsulotlar</h2>
+            <h2 className="text-lg font-semibold text-slate-950">
+              Do'kondagi mahsulotlar
+            </h2>
             <p className="text-sm text-slate-500">
               Nom bo'yicha qidiring yoki kategoriya bilan saralang
             </p>
@@ -886,15 +1006,23 @@ export default function StoreDetail() {
                   <p className="mb-1 line-clamp-2 min-h-10 text-sm font-semibold text-foreground">
                     {item.product.name}
                   </p>
-                  <p className="font-bold text-primary">{formatMoney(item.price)}</p>
+                  <p className="font-bold text-primary">
+                    {formatMoney(item.price)}
+                  </p>
                   {item.product.category?.name ? (
-                    <p className="mt-1 text-xs text-slate-500">{item.product.category.name}</p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {item.product.category.name}
+                    </p>
                   ) : null}
                   {item.stock <= 5 && item.stock > 0 && (
-                    <p className="mt-1 text-xs text-primary/80">Omborda {item.stock} ta</p>
+                    <p className="mt-1 text-xs text-primary/80">
+                      Omborda {item.stock} ta
+                    </p>
                   )}
                   {item.stock === 0 && (
-                    <p className="mt-1 text-xs font-medium text-red-500">Tugagan</p>
+                    <p className="mt-1 text-xs font-medium text-red-500">
+                      Tugagan
+                    </p>
                   )}
                   <div className="mt-3 flex items-center gap-2">
                     <button
@@ -934,7 +1062,9 @@ export default function StoreDetail() {
               </div>
             ) : null}
 
-            {hasNextPage ? <div ref={loadMoreRef} className="h-4 w-full" /> : null}
+            {hasNextPage ? (
+              <div ref={loadMoreRef} className="h-4 w-full" />
+            ) : null}
           </>
         )}
       </section>

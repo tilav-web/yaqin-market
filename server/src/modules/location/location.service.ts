@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Location } from './location.entity';
 import { CreateLocationDto } from './dto/create-location.dto';
+import { User } from '../user/user.entity';
 
 @Injectable()
 export class LocationService {
@@ -21,7 +22,7 @@ export class LocationService {
   async create(userId: string, dto: CreateLocationDto) {
     const location = this.locationRepo.create({
       ...dto,
-      user: { id: userId } as any,
+      user: { id: userId } as User,
     });
 
     if (dto.is_default) {

@@ -77,8 +77,7 @@ export class StoreProductController {
     @Query('lng') lng: number,
     @Query('radius') radius?: number,
   ) {
-    const normalizedRadius =
-      radius !== undefined ? Number(radius) : undefined;
+    const normalizedRadius = radius !== undefined ? Number(radius) : undefined;
     return this.service.findNearbyByProduct(
       Number(productId),
       Number(lat),
@@ -106,10 +105,7 @@ export class StoreProductController {
   @Delete(':id')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
-  async delete(
-    @Param('id') id: string,
-    @Query('store_id') storeId: string,
-  ) {
+  async delete(@Param('id') id: string, @Query('store_id') storeId: string) {
     return this.service.delete(id, storeId);
   }
 

@@ -3,6 +3,7 @@ import {
   useMemo,
   useReducer,
   useRef,
+  useState,
   type KeyboardEvent,
 } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,6 +19,8 @@ import { authService } from "@/services/auth.service";
 import { getRoleHomePath } from "@/lib/market";
 import { useAuthStore } from "@/stores/auth.store";
 import { persistDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
+import { telegramAuthService } from "@/services/telegram-auth.service";
+import type { TelegramWebAppUser } from "@/interfaces/telegram-auth.interface";
 
 const DEFAULT_OTP_LENGTH = 6;
 
@@ -52,6 +55,17 @@ export default function Auth() {
   const navigate = useNavigate();
   const setMe = useAuthStore((state) => state.setMe);
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
+  const [telegramCheckState, setTelegramCheckState] = useState<{
+    checking: boolean;
+    available: boolean;
+    requiresPhoneVerification: boolean;
+    telegramUser: TelegramWebAppUser | null;
+  }>({
+    checking: false,
+    available: false,
+    requiresPhoneVerification: false,
+    telegramUser: null,
+  });
   const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
   const lastSubmittedOtp = useRef<string | null>(null);
 
@@ -75,6 +89,69 @@ export default function Auth() {
     }
   }, [showOtp]);
 
+  useEffect(() => {
+    const initData = telegramAuthService.getTelegramInitData();
+    if (!initData) {
+      return;
+    }
+
+    window.Telegram?.WebApp?.ready?.();
+    window.Telegram?.WebApp?.expand?.();
+
+    let cancelled = false;
+    setTelegramCheckState({
+      checking: true,
+      available: true,
+      requiresPhoneVerification: false,
+      telegramUser: null,
+    });
+
+    telegramAuthService
+      .createTelegramSession()
+      .then(async (session) => {
+        if (!session || cancelled) return;
+
+        if (session.linked && session.access_token) {
+          const me = await authService.findMe();
+          if (cancelled) return;
+          setMe(me);
+          if (me.role !== "SUPER_ADMIN") {
+            await captureDiscoveryLocation();
+          }
+          toast.success("Telegram orqali tizimga kirildi");
+          navigate(getRoleHomePath(me.role), { replace: true });
+          return;
+        }
+
+        setTelegramCheckState({
+          checking: false,
+          available: true,
+          requiresPhoneVerification: Boolean(
+            session.requires_phone_verification,
+          ),
+          telegramUser: session.telegram_user ?? null,
+        });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Telegram sessiyasini tekshirib bo'lmadi",
+        );
+        setTelegramCheckState({
+          checking: false,
+          available: true,
+          requiresPhoneVerification: true,
+          telegramUser: null,
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [navigate, setMe]);
+
   const handlePhoneChange = (value: string) => {
     const digits = sanitizeDigits(value).slice(0, 9);
     dispatch(authActions.phoneChange(digits));
@@ -94,6 +171,7 @@ export default function Auth() {
     try {
       const result = await authService.sendOtp(phoneDigits);
       dispatch(authActions.submitSuccess(DEFAULT_OTP_LENGTH));
+      toast.success(result.message ?? "Tasdiqlash kodi yuborildi");
       if (result.otp_preview) {
         toast.info(`Test OTP: ${result.otp_preview}`);
       }
@@ -104,6 +182,22 @@ export default function Auth() {
           : "Server bilan aloqa yo'q. Keyinroq qayta urinib ko'ring.";
       dispatch(authActions.submitError(message));
       toast.error(message);
+    }
+  };
+
+  const handleTelegramPhoneRequest = async () => {
+    try {
+      const result = await telegramAuthService.requestTelegramPhoneVerification();
+      toast.success(
+        result.message ??
+          "Telefon tasdiqlash so'rovi Telegram botga yuborildi",
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Telegramga so'rov yuborib bo'lmadi",
+      );
     }
   };
 
@@ -213,6 +307,35 @@ export default function Auth() {
           </div>
 
           <div className="mt-8 space-y-4">
+            {telegramCheckState.available && (
+              <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                <p className="text-sm font-semibold text-slate-950">
+                  {telegramCheckState.checking
+                    ? "Telegram profilingiz tekshirilmoqda..."
+                    : telegramCheckState.requiresPhoneVerification
+                      ? "Telegram orqali kirish uchun telefonni tasdiqlash kerak"
+                      : "Telegram mini-app tayyor"}
+                </p>
+                <p className="mt-2 text-sm text-slate-600">
+                  {telegramCheckState.requiresPhoneVerification
+                    ? telegramCheckState.telegramUser
+                      ? `${telegramCheckState.telegramUser.first_name}, telefonni bot orqali ulaganingizdan keyin mini-app ichida avtomatik kirish ishlaydi.`
+                      : "Bot sizdan Telegram tasdiqlagan telefon raqamini so'raydi."
+                    : "Bog'langan Telegram profilingiz topildi."}
+                </p>
+                {telegramCheckState.requiresPhoneVerification &&
+                  !telegramCheckState.checking && (
+                    <Button
+                      type="button"
+                      className="mt-3 h-11 rounded-xl px-5"
+                      onClick={handleTelegramPhoneRequest}
+                    >
+                      Telegramda telefonni tasdiqlash
+                    </Button>
+                  )}
+              </div>
+            )}
+
             <label className="text-sm font-medium text-foreground">
               Telefon raqam
             </label>

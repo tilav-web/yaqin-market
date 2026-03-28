@@ -7,7 +7,9 @@ import { StoreService } from './store.service';
 import { StoreServiceController } from './store.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Store, StoreDeliverySettings, StoreWorkingHour])],
+  imports: [
+    TypeOrmModule.forFeature([Store, StoreDeliverySettings, StoreWorkingHour]),
+  ],
   controllers: [StoreServiceController],
   providers: [StoreService],
   exports: [StoreService],

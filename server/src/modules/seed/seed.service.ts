@@ -84,8 +84,7 @@ const DEMO_CLUSTER_CENTER = {
 };
 
 function offsetPoint(northMeters: number, eastMeters: number) {
-  const lat =
-    DEMO_CLUSTER_CENTER.lat + northMeters / 111_320;
+  const lat = DEMO_CLUSTER_CENTER.lat + northMeters / 111_320;
   const lng =
     DEMO_CLUSTER_CENTER.lng +
     eastMeters /
@@ -344,7 +343,7 @@ const CUSTOMER_LOCATION_SEEDS: DemoLocationSeed[] = [
     ...offsetPoint(420, -280),
   },
   {
-    label: "Ota-onam",
+    label: 'Ota-onam',
     address_line: "Qarshi shahri, Bunyodkor ko'chasi 9-uy",
     landmark: 'Bolalar maydonchasi roparasida',
     is_default: false,
@@ -519,7 +518,7 @@ const STORE_BLUEPRINTS: StoreBlueprint[] = [
     slug: 'grand-avenue-prime',
     name: 'Grand Avenue Prime',
     ownerPhone: '900000112',
-    address: "Qarshi shahri, Grand avenue 5",
+    address: 'Qarshi shahri, Grand avenue 5',
     northMeters: -3120,
     eastMeters: -820,
     is_prime: true,
@@ -942,19 +941,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
 ];
 
 const STORE_PRICE_FACTORS = [
-  1,
-  1.03,
-  0.98,
-  1.07,
-  0.95,
-  1.05,
-  1.01,
-  0.97,
-  1.11,
-  0.94,
-  1.06,
-  0.99,
-  1.08,
+  1, 1.03, 0.98, 1.07, 0.95, 1.05, 1.01, 0.97, 1.11, 0.94, 1.06, 0.99, 1.08,
   0.96,
 ];
 
@@ -1174,7 +1161,11 @@ export class SeedService {
 
     const customer = usersByPhone.get('900000002');
     if (customer) {
-      await this.seedUserLocations(locationRepo, customer, CUSTOMER_LOCATION_SEEDS);
+      await this.seedUserLocations(
+        locationRepo,
+        customer,
+        CUSTOMER_LOCATION_SEEDS,
+      );
     }
 
     this.logger.log(`Accounts ready: ${usersByPhone.size}`);
@@ -1351,8 +1342,8 @@ export class SeedService {
       location.lat = seed.lat;
       location.lng = seed.lng;
       location.address_line = seed.address_line;
-      location.landmark = (seed.landmark ?? null) as any;
-      location.details = (seed.details ?? null) as any;
+      location.landmark = seed.landmark ?? null;
+      location.details = seed.details ?? null;
       location.is_default = seed.is_default;
 
       await locationRepo.save(location);

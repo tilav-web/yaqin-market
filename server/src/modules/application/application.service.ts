@@ -1,7 +1,15 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
-import { RoleApplication, RoleApplicationStatus, RoleApplicationType } from './role-application.entity';
+import {
+  RoleApplication,
+  RoleApplicationStatus,
+  RoleApplicationType,
+} from './role-application.entity';
 import { User } from '../user/user.entity';
 import { Auth } from '../auth/auth.entity';
 import { Store } from '../store/entities/store.entity';
@@ -33,20 +41,29 @@ export class ApplicationService {
     });
   }
 
-  async submitSellerApplication(userId: string, dto: CreateSellerApplicationDto) {
+  async submitSellerApplication(
+    userId: string,
+    dto: CreateSellerApplicationDto,
+  ) {
     const user = await this.findUserWithAuth(userId);
 
     if (user.auth?.role === AuthRoleEnum.SELLER) {
       throw new BadRequestException("Siz allaqachon seller bo'lgansiz");
     }
 
-    const application = await this.getOrCreateDraft(userId, RoleApplicationType.SELLER);
+    const application = await this.getOrCreateDraft(
+      userId,
+      RoleApplicationType.SELLER,
+    );
 
     Object.assign(application, {
       phone: dto.phone.trim(),
       note: dto.note?.trim() || null,
       store_name: dto.store_name.trim(),
-      owner_name: dto.owner_name?.trim() || [user.first_name, user.last_name].join(' ').trim() || null,
+      owner_name:
+        dto.owner_name?.trim() ||
+        [user.first_name, user.last_name].join(' ').trim() ||
+        null,
       legal_name: dto.legal_name?.trim() || null,
       store_phone: dto.store_phone.trim(),
       store_address: dto.store_address?.trim() || null,
@@ -65,7 +82,10 @@ export class ApplicationService {
     return this.applicationRepo.save(application);
   }
 
-  async submitCourierApplication(userId: string, dto: CreateCourierApplicationDto) {
+  async submitCourierApplication(
+    userId: string,
+    dto: CreateCourierApplicationDto,
+  ) {
     const user = await this.findUserWithAuth(userId);
 
     if (user.auth?.role === AuthRoleEnum.COURIER) {
@@ -81,7 +101,10 @@ export class ApplicationService {
       throw new NotFoundException("Tanlangan do'kon topilmadi");
     }
 
-    const application = await this.getOrCreateDraft(userId, RoleApplicationType.COURIER);
+    const application = await this.getOrCreateDraft(
+      userId,
+      RoleApplicationType.COURIER,
+    );
 
     Object.assign(application, {
       phone: dto.phone.trim(),
@@ -162,20 +185,27 @@ export class ApplicationService {
         const store = await this.storeService.create(
           { role: AuthRoleEnum.SUPER_ADMIN } as Auth,
           {
-            name: application.store_name || `${application.user.first_name} store`,
-            slug: this.buildStoreSlug(application.store_name || application.user.first_name),
+            name:
+              application.store_name || `${application.user.first_name} store`,
+            slug: this.buildStoreSlug(
+              application.store_name || application.user.first_name,
+            ),
             owner_name:
               application.owner_name ||
-              [application.user.first_name, application.user.last_name].join(' ').trim(),
+              [application.user.first_name, application.user.last_name]
+                .join(' ')
+                .trim(),
             legal_name: application.legal_name || undefined,
             phone: application.store_phone || application.phone || '000000000',
             address: application.store_address || undefined,
             lat:
-              application.store_lat !== null && application.store_lat !== undefined
+              application.store_lat !== null &&
+              application.store_lat !== undefined
                 ? Number(application.store_lat)
                 : undefined,
             lng:
-              application.store_lng !== null && application.store_lng !== undefined
+              application.store_lng !== null &&
+              application.store_lng !== undefined
                 ? Number(application.store_lng)
                 : undefined,
             owner_id: application.user_id,
@@ -244,7 +274,7 @@ export class ApplicationService {
     });
 
     if (existing?.status === RoleApplicationStatus.APPROVED) {
-      throw new BadRequestException("Tasdiqlangan ariza qayta yuborilmaydi");
+      throw new BadRequestException('Tasdiqlangan ariza qayta yuborilmaydi');
     }
 
     return existing ?? this.applicationRepo.create({ user_id: userId, type });

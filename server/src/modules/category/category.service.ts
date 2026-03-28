@@ -87,7 +87,8 @@ export class CategoryService {
   async update(id: string, dto: UpdateCategoryDto, newImageFilename?: string) {
     const category = await this.repository.findOne({ where: { id } });
     if (!category) {
-      if (newImageFilename) await this.imageService.deleteImage(newImageFilename);
+      if (newImageFilename)
+        await this.imageService.deleteImage(newImageFilename);
       throw new NotFoundException('Category not found');
     }
 
@@ -100,7 +101,8 @@ export class CategoryService {
       });
 
       if (existing && existing.id !== id) {
-        if (newImageFilename) await this.imageService.deleteImage(newImageFilename);
+        if (newImageFilename)
+          await this.imageService.deleteImage(newImageFilename);
         throw new BadRequestException('Category name or slug already exists');
       }
     }

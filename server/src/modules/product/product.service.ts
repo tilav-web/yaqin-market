@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Brackets, In, Repository } from 'typeorm';
+import { Brackets, In, Repository, type FindOptionsWhere } from 'typeorm';
 import { Product } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
+import { Category } from '../category/category.entity';
+import { Unit } from '../unit/unit.entity';
 
 type ProductCatalogQuery = {
   q?: string;
@@ -27,9 +29,9 @@ export class ProductService {
   ) {}
 
   async findAll(categoryId?: string) {
-    const where: any = {};
+    const where: FindOptionsWhere<Product> = {};
     if (categoryId) {
-      where.category = { id: categoryId };
+      where.category = { id: categoryId } as Category;
     }
 
     return this.productRepo.find({
@@ -46,10 +48,14 @@ export class ProductService {
   }
 
   async findCatalog(query: ProductCatalogQuery = {}) {
-    const page = Number.isFinite(query.page) && Number(query.page) > 0 ? Math.floor(Number(query.page)) : 1;
-    const limit = Number.isFinite(query.limit) && Number(query.limit) > 0
-      ? Math.min(24, Math.floor(Number(query.limit)))
-      : 12;
+    const page =
+      Number.isFinite(query.page) && Number(query.page) > 0
+        ? Math.floor(Number(query.page))
+        : 1;
+    const limit =
+      Number.isFinite(query.limit) && Number(query.limit) > 0
+        ? Math.min(24, Math.floor(Number(query.limit)))
+        : 12;
     const search = query.q?.trim();
 
     const baseQuery = this.productRepo
@@ -124,7 +130,7 @@ export class ProductService {
     }
 
     const items = await this.productRepo.find({
-      where: { id: In(ids) } as any,
+      where: { id: In(ids) },
       relations: [
         'category',
         'unit',
@@ -195,7 +201,10 @@ export class ProductService {
 
     const [total, active, categorized, withUnit] = await Promise.all([
       baseQuery.clone().getCount(),
-      baseQuery.clone().andWhere('product.is_active = :isActive', { isActive: true }).getCount(),
+      baseQuery
+        .clone()
+        .andWhere('product.is_active = :isActive', { isActive: true })
+        .getCount(),
       baseQuery.clone().andWhere('product.category_id IS NOT NULL').getCount(),
       baseQuery.clone().andWhere('product.unit_id IS NOT NULL').getCount(),
     ]);
@@ -235,7 +244,7 @@ export class ProductService {
     }
 
     const items = await this.productRepo.find({
-      where: { id: In(ids) } as any,
+      where: { id: In(ids) },
       relations: [
         'category',
         'unit',
@@ -298,11 +307,11 @@ export class ProductService {
     });
 
     if (dto.unit_id) {
-      product.unit = { id: dto.unit_id } as any;
+      product.unit = { id: dto.unit_id } as Unit;
     }
 
     if (dto.category_id) {
-      product.category = { id: dto.category_id } as any;
+      product.category = { id: dto.category_id } as Category;
     }
 
     return this.productRepo.save(product);
@@ -322,13 +331,15 @@ export class ProductService {
     }
 
     if (data.unit_id !== undefined) {
-      product.unit = data.unit_id ? ({ id: data.unit_id } as any) : null;
+      product.unit = data.unit_id
+        ? ({ id: data.unit_id } as Unit)
+        : (null as unknown as Unit);
     }
 
     if (data.category_id !== undefined) {
       product.category = data.category_id
-        ? ({ id: data.category_id } as any)
-        : null;
+        ? ({ id: data.category_id } as Category)
+        : (null as unknown as Category);
     }
 
     return this.productRepo.save(product);

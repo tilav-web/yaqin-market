@@ -8,6 +8,7 @@ import { Repository } from 'typeorm';
 import { Wallet } from './entities/wallet.entity';
 import { WalletTransaction } from './entities/wallet-transaction.entity';
 import { WalletTransactionTypeEnum } from './enums/wallet-transaction-type.enum';
+import { User } from '../user/user.entity';
 
 @Injectable()
 export class WalletService {
@@ -25,7 +26,7 @@ export class WalletService {
 
     if (!wallet) {
       wallet = this.walletRepo.create({
-        user: { id: userId } as any,
+        user: { id: userId } as User,
         balance: 0,
         frozen_balance: 0,
       });
@@ -50,7 +51,7 @@ export class WalletService {
 
     if (!wallet) {
       wallet = this.walletRepo.create({
-        user: { id: userId } as any,
+        user: { id: userId } as User,
         balance: 0,
         frozen_balance: 0,
       });
