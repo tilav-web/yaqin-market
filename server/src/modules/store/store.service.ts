@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, In, Repository } from 'typeorm';
 import { Store } from './entities/store.entity';
 import { StoreDeliverySettings } from './entities/store-delivery-settings.entity';
 import { StoreWorkingHour, DayOfWeek } from './entities/store-working-hour.entity';
@@ -243,6 +243,106 @@ export class StoreService {
 
     store.is_prime = isPrime;
     return this.storeRepo.save(store);
+  }
+
+  async findAdminCatalog(query: { q?: string; page?: number; limit?: number } = {}) {
+    const page =
+      Number.isFinite(query.page) && Number(query.page) > 0
+        ? Math.floor(Number(query.page))
+        : 1;
+    const limit =
+      Number.isFinite(query.limit) && Number(query.limit) > 0
+        ? Math.min(24, Math.floor(Number(query.limit)))
+        : 10;
+    const search = query.q?.trim();
+
+    const baseQuery = this.storeRepo
+      .createQueryBuilder('store')
+      .leftJoin('store.owner', 'owner');
+
+    if (search) {
+      const normalizedSearch = `%${search.toLowerCase()}%`;
+      baseQuery
+        .andWhere(
+          new Brackets((storeQuery) => {
+            storeQuery
+              .where('LOWER(store.name) LIKE :search')
+              .orWhere('LOWER(store.slug) LIKE :search')
+              .orWhere("LOWER(COALESCE(store.phone, '')) LIKE :search")
+              .orWhere("LOWER(COALESCE(store.address, '')) LIKE :search")
+              .orWhere("LOWER(COALESCE(owner.first_name, '')) LIKE :search")
+              .orWhere("LOWER(COALESCE(owner.last_name, '')) LIKE :search");
+          }),
+        )
+        .setParameter('search', normalizedSearch);
+    }
+
+    const [total, active, prime] = await Promise.all([
+      baseQuery.clone().getCount(),
+      baseQuery
+        .clone()
+        .andWhere('store.is_active = :isActive', { isActive: true })
+        .getCount(),
+      baseQuery
+        .clone()
+        .andWhere('store.is_prime = :isPrime', { isPrime: true })
+        .getCount(),
+    ]);
+
+    const rows = await baseQuery
+      .clone()
+      .select('store.id', 'id')
+      .orderBy('store.createdAt', 'DESC')
+      .offset((page - 1) * limit)
+      .limit(limit)
+      .getRawMany<{ id: string }>();
+
+    const ids = rows.map((row) => row.id).filter(Boolean);
+
+    if (!ids.length) {
+      return {
+        items: [],
+        meta: {
+          page,
+          limit,
+          total,
+          totalPages: total ? Math.ceil(total / limit) : 0,
+          hasMore: false,
+        },
+        summary: {
+          total,
+          active,
+          prime,
+        },
+      };
+    }
+
+    const items = await this.storeRepo.find({
+      where: { id: In(ids) } as any,
+      relations: ['deliverySettings', 'workingHours', 'owner'],
+    });
+
+    const sortOrder = new Map(ids.map((id, index) => [id, index]));
+    items.sort(
+      (left, right) =>
+        (sortOrder.get(left.id) ?? 0) - (sortOrder.get(right.id) ?? 0),
+    );
+
+    return {
+      items: items.map((store) => this.addStoreStatus(store)),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: total ? Math.ceil(total / limit) : 0,
+        hasMore: page * limit < total,
+      },
+      summary: {
+        total,
+        active,
+        prime,
+      },
+    };
   }
 
   async findAll() {

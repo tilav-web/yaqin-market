@@ -179,6 +179,14 @@ export class AuthService {
     };
   }
 
+  async logout(res: Response) {
+    this.clearRefreshCookie(res);
+
+    return {
+      success: true,
+    };
+  }
+
   private signAccessToken(auth: Auth) {
     return this.jwtService.sign(
       {
@@ -209,6 +217,17 @@ export class AuthService {
       sameSite: 'lax',
       path: '/auth/refresh',
       maxAge: 1000 * 60 * 60 * 24 * 30,
+    });
+  }
+
+  private clearRefreshCookie(res: Response) {
+    const isProd = process.env.NODE_ENV === 'production';
+    res.cookie('refresh_token', '', {
+      httpOnly: true,
+      secure: isProd,
+      sameSite: 'lax',
+      path: '/auth/refresh',
+      maxAge: 0,
     });
   }
 

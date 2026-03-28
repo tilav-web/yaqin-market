@@ -21,8 +21,22 @@ export class ProductController {
   constructor(private readonly productService: ProductService) {}
 
   @Get()
-  async findAll(@Query('category_id') categoryId?: number) {
-    return this.productService.findAll(categoryId ? Number(categoryId) : undefined);
+  async findAll(
+    @Query('category_id') categoryId?: string,
+    @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (q !== undefined || page !== undefined || limit !== undefined) {
+      return this.productService.findAdminCatalog({
+        q,
+        categoryId,
+        page: page ? Number(page) : 1,
+        limit: limit ? Number(limit) : 12,
+      });
+    }
+
+    return this.productService.findAll(categoryId);
   }
 
   @Get('catalog')
@@ -34,7 +48,7 @@ export class ProductController {
   ) {
     return this.productService.findCatalog({
       q,
-      categoryId: categoryId ? Number(categoryId) : undefined,
+      categoryId,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 12,
     });

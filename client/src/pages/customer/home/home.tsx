@@ -196,7 +196,7 @@ export default function CustomerHome() {
         await api.get<PaginatedResponse<ProductCatalogItem>>("/products/catalog", {
           params: {
             q: normalizedSearch || undefined,
-            category_id: selectedCategoryId ? Number(selectedCategoryId) : undefined,
+            category_id: selectedCategoryId || undefined,
             page: typeof pageParam === "number" ? pageParam : Number(pageParam ?? 1),
             limit: PRODUCTS_PAGE_SIZE,
           },

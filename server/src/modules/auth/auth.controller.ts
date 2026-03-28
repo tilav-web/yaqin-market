@@ -59,6 +59,11 @@ export class AuthController {
     });
   }
 
+  @Post('logout')
+  async logout(@Res({ passthrough: true }) res: Response) {
+    return this.authService.logout(res);
+  }
+
   private getCookie(req: Request, name: string) {
     const raw = req.headers.cookie;
     if (!raw) return undefined;

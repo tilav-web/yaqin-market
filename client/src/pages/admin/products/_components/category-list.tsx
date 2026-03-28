@@ -28,6 +28,8 @@ import type { ICategory } from "@/interfaces/category.interface";
 export type CategoryListProps = {
   selectedId?: string | null;
   onSelect?: (category: ICategory | null) => void;
+  title?: string;
+  description?: string;
 };
 
 function parseOrderNumber(value: string) {
@@ -46,6 +48,8 @@ function categoryInitialState(selectedId?: string | null) {
 export default function CategoryList({
   selectedId,
   onSelect,
+  title = "Kategoriyalar",
+  description = "Mahsulotlarni filter qilish uchun kategoriya tanlang.",
 }: CategoryListProps) {
   const queryClient = useQueryClient();
   const [state, dispatch] = useReducer(
@@ -213,10 +217,8 @@ export default function CategoryList({
     <section className="rounded-3xl border border-border bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.12),transparent_55%),linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,248,248,0.9))] p-5 shadow-[0_20px_60px_-45px_rgba(239,68,68,0.65)]">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold text-foreground">Kategoriyalar</h3>
-          <p className="text-xs text-muted-foreground">
-            Mahsulotlarni filter qilish uchun kategoriya tanlang.
-          </p>
+          <h3 className="text-base font-semibold text-foreground">{title}</h3>
+          <p className="text-xs text-muted-foreground">{description}</p>
         </div>
       </div>
 

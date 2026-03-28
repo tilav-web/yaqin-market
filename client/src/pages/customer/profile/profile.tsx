@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { api } from "@/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { ArrowRightIcon, MapPin, Wallet2, User2 } from "lucide-react";
+import { ArrowRightIcon, LogOutIcon, MapPin, Wallet2, User2 } from "lucide-react";
+import { authService } from "@/services/auth.service";
+import { useAuthStore } from "@/stores/auth.store";
 
 type MeResponse = {
   id: string;
@@ -16,6 +18,8 @@ type MeResponse = {
 
 export default function CustomerProfile() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const clearMe = useAuthStore((state) => state.clearMe);
   const [profile, setProfile] = useState({ first_name: "", last_name: "" });
   const [editing, setEditing] = useState(false);
 
@@ -51,6 +55,20 @@ export default function CustomerProfile() {
     if (me?.auth?.phone) return `+998 ${me.auth.phone}`;
     return "-";
   }, [me]);
+
+  const logout = useMutation({
+    mutationFn: () => authService.logout(),
+    onSuccess: () => {
+      clearMe();
+      toast.success("Tizimdan chiqildi");
+      navigate("/login", { replace: true });
+    },
+    onError: (error) => {
+      toast.error(error instanceof Error ? error.message : "Logoutda xatolik");
+      clearMe();
+      navigate("/login", { replace: true });
+    },
+  });
 
   return (
     <div className="min-h-screen pb-24">
@@ -146,6 +164,18 @@ export default function CustomerProfile() {
             </div>
             <ArrowRightIcon className="h-4 w-4 text-muted-foreground" />
           </Link>
+        </section>
+
+        <section className="rounded-3xl border border-border bg-card/90 p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.55)]">
+          <Button
+            variant="outline"
+            className="h-12 w-full justify-center rounded-2xl border-destructive/20 text-destructive hover:bg-destructive/5 hover:text-destructive"
+            onClick={() => logout.mutate()}
+            disabled={logout.isPending}
+          >
+            <LogOutIcon className="h-4.5 w-4.5" />
+            {logout.isPending ? "Chiqilmoqda..." : "Tizimdan chiqish"}
+          </Button>
         </section>
       </div>
     </div>

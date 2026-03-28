@@ -5,6 +5,7 @@ import {
   Body,
   UseGuards,
   Param,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
@@ -20,7 +21,26 @@ export class UserController {
   @Get()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SUPER_ADMIN)
-  async findAll() {
+  async findAll(
+    @Query('q') q?: string,
+    @Query('role') role?: AuthRoleEnum,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (
+      q !== undefined ||
+      role !== undefined ||
+      page !== undefined ||
+      limit !== undefined
+    ) {
+      return this.userService.findAdminCatalog({
+        q,
+        role,
+        page: page ? Number(page) : 1,
+        limit: limit ? Number(limit) : 10,
+      });
+    }
+
     return this.userService.findAll();
   }
 

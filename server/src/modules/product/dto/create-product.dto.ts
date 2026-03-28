@@ -5,6 +5,7 @@ import {
   IsNumber,
   IsArray,
   IsObject,
+  IsUUID,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -40,6 +41,6 @@ export class CreateProductDto {
   parent_id?: number;
 
   @IsOptional()
-  @IsNumber()
-  category_id?: number;
+  @IsUUID()
+  category_id?: string;
 }

@@ -1,5 +1,5 @@
 import axios from "axios";
-import { api, setAccessToken } from "@/api/api";
+import { api, clearTokens, setAccessToken } from "@/api/api";
 import type {
   AuthMeResponse,
   SendOtpResponse,
@@ -55,8 +55,19 @@ async function findMe() {
   }
 }
 
+async function logout() {
+  try {
+    await api.post("/auth/logout");
+  } catch (error) {
+    throw new Error(getErrorMessage(error));
+  } finally {
+    clearTokens();
+  }
+}
+
 export const authService = {
   sendOtp,
   verifyOtp,
   findMe,
+  logout,
 };

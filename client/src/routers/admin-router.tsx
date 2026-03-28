@@ -1,11 +1,11 @@
-import type { RouteObject } from "react-router-dom";
+import { Navigate, type RouteObject } from "react-router-dom";
 import AdminLayout from "../layouts/admin-layout";
 import PrivateRoute from "./private-route";
 import AdminDashboard from "../pages/admin/dashboard/dashboard";
 import AdminProducts from "../pages/admin/products/products";
-import AdminCategories from "../pages/admin/categories/categories";
 import AdminStores from "../pages/admin/stores/stores";
 import AdminUsersPage from "../pages/admin/users/users";
+import AdminProfilePage from "../pages/admin/profile/profile";
 
 export const adminRouter: RouteObject[] = [
   {
@@ -26,7 +26,7 @@ export const adminRouter: RouteObject[] = [
       },
       {
         path: "categories",
-        element: <AdminCategories />,
+        element: <Navigate to="/admin/products" replace />,
       },
       {
         path: "stores",
@@ -35,6 +35,10 @@ export const adminRouter: RouteObject[] = [
       {
         path: "users",
         element: <AdminUsersPage />,
+      },
+      {
+        path: "profile",
+        element: <AdminProfilePage />,
       },
     ],
   },

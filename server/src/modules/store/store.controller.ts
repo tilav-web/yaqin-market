@@ -126,7 +126,19 @@ export class StoreServiceController {
   }
 
   @Get()
-  async getAll() {
+  async getAll(
+    @Query('q') q?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    if (q !== undefined || page !== undefined || limit !== undefined) {
+      return this.service.findAdminCatalog({
+        q,
+        page: page ? Number(page) : 1,
+        limit: limit ? Number(limit) : 10,
+      });
+    }
+
     return this.service.findAll();
   }
 }

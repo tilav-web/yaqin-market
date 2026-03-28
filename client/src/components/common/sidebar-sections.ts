@@ -6,6 +6,7 @@ import {
   ShoppingBagIcon,
   StoreIcon,
   TruckIcon,
+  UserRoundIcon,
   Users2Icon,
 } from "lucide-react";
 import type { SidebarSection } from "./app-sidebar";
@@ -16,10 +17,13 @@ export const adminSections: SidebarSection[] = [
     items: [
       { label: "Dashboard", to: "/admin", icon: LayoutGridIcon },
       { label: "Mahsulotlar", to: "/admin/products", icon: BoxesIcon },
-      { label: "Kategoriyalar", to: "/admin/categories", icon: BoxesIcon },
       { label: "Do'konlar", to: "/admin/stores", icon: StoreIcon },
       { label: "Foydalanuvchilar", to: "/admin/users", icon: Users2Icon },
     ],
+  },
+  {
+    label: "Account",
+    items: [{ label: "Profil", to: "/admin/profile", icon: UserRoundIcon }],
   },
 ];
 
