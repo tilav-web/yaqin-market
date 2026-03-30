@@ -331,6 +331,14 @@ const DEMO_ACCOUNTS: DemoAccountSeed[] = [
   ...SELLER_ACCOUNT_SEEDS,
 ];
 
+const PROD_ADMIN_SEED: DemoAccountSeed = {
+  phone: '777422302',
+  role: AuthRoleEnum.SUPER_ADMIN,
+  first_name: 'Shavqiddin',
+  last_name: 'Tilovov',
+  wallet_balance: 0,
+};
+
 const SELLER_NAME_BY_PHONE = new Map(
   SELLER_ACCOUNT_SEEDS.map((seed) => [
     seed.phone,
@@ -965,48 +973,82 @@ export class SeedService {
   constructor(@InjectDataSource() private readonly dataSource: DataSource) {}
 
   async run() {
-    const unitRepo = this.dataSource.getRepository(Unit);
-    const categoryRepo = this.dataSource.getRepository(Category);
-    const productRepo = this.dataSource.getRepository(Product);
-    const productTaxRepo = this.dataSource.getRepository(ProductTax);
     const authRepo = this.dataSource.getRepository(Auth);
     const userRepo = this.dataSource.getRepository(User);
-    const sellerLegalRepo = this.dataSource.getRepository(SellerLegal);
     const walletRepo = this.dataSource.getRepository(Wallet);
-    const locationRepo = this.dataSource.getRepository(Location);
-    const storeRepo = this.dataSource.getRepository(Store);
-    const deliverySettingsRepo = this.dataSource.getRepository(
-      StoreDeliverySettings,
-    );
-    const workingHourRepo = this.dataSource.getRepository(StoreWorkingHour);
-    const storeProductRepo = this.dataSource.getRepository(StoreProduct);
 
-    this.logger.log('Seed started');
-
-    const units = await this.seedUnits(unitRepo);
-    const categories = await this.seedCategories(categoryRepo);
-    const products = await this.seedProducts(
-      productRepo,
-      productTaxRepo,
-      categories,
-      units,
-    );
-    const accounts = await this.seedAccounts(
+    this.logger.log('Production seed started');
+    await this.ensureSuperAdmin(
       authRepo,
       userRepo,
       walletRepo,
-      locationRepo,
+      PROD_ADMIN_SEED,
     );
-    const stores = await this.seedStores(
-      storeRepo,
-      deliverySettingsRepo,
-      workingHourRepo,
-      accounts,
-    );
-    await this.seedSellerLegals(sellerLegalRepo, accounts, stores);
-    await this.seedStoreProducts(storeProductRepo, stores, products);
+    this.logger.log('Production seed completed successfully');
+  }
 
-    this.logger.log('Seed completed successfully');
+  private async ensureSuperAdmin(
+    authRepo: Repository<Auth>,
+    userRepo: Repository<User>,
+    walletRepo: Repository<Wallet>,
+    seed: DemoAccountSeed,
+  ) {
+    let auth = await authRepo.findOne({
+      where: { phone: seed.phone },
+    });
+
+    if (!auth) {
+      auth = authRepo.create({
+        phone: seed.phone,
+        role: AuthRoleEnum.SUPER_ADMIN,
+        is_verified: true,
+      });
+    } else {
+      auth.phone = seed.phone;
+      auth.role = AuthRoleEnum.SUPER_ADMIN;
+      auth.is_verified = true;
+    }
+
+    auth = await authRepo.save(auth);
+
+    let user = await userRepo.findOne({
+      where: { auth: { id: auth.id } },
+    });
+
+    if (!user) {
+      user = userRepo.create({
+        first_name: seed.first_name,
+        last_name: seed.last_name,
+        auth,
+      });
+    } else {
+      user.first_name = seed.first_name;
+      user.last_name = seed.last_name;
+      user.auth = auth;
+    }
+
+    user = await userRepo.save(user);
+
+    let wallet = await walletRepo.findOne({
+      where: { user: { id: user.id } },
+    });
+
+    if (!wallet) {
+      wallet = walletRepo.create({
+        balance: seed.wallet_balance ?? 0,
+        frozen_balance: 0,
+        user,
+      });
+    } else {
+      wallet.balance = seed.wallet_balance ?? wallet.balance ?? 0;
+      wallet.user = user;
+    }
+
+    await walletRepo.save(wallet);
+
+    this.logger.log(
+      `Super admin ready: ${seed.last_name} ${seed.first_name} (${seed.phone})`,
+    );
   }
 
   private async seedUnits(unitRepo: Repository<Unit>) {
