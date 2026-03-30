@@ -95,9 +95,6 @@ export default function Auth() {
       return;
     }
 
-    window.Telegram?.WebApp?.ready?.();
-    window.Telegram?.WebApp?.expand?.();
-
     let cancelled = false;
     setTelegramCheckState({
       checking: true,

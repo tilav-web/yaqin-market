@@ -11,6 +11,8 @@ import { StartCommand } from './commands/start.command';
 import { ContactEvent } from './events/contact.event';
 import { WebAppDataEvent } from './events/web-app-data.event';
 
+type BotMode = 'disabled' | 'polling' | 'webhook';
+
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BotService.name);
@@ -33,18 +35,30 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.setupHandlers();
-    await this.bot.api.setMyCommands([
-      { command: 'start', description: 'Botni ishga tushirish' },
-      { command: 'help', description: 'Yordam' },
-    ]);
+    try {
+      this.setupHandlers();
+      await this.bot.api.setMyCommands([
+        { command: 'start', description: 'Botni ishga tushirish' },
+        { command: 'help', description: 'Yordam' },
+      ]);
 
-    if (this.isDevelopmentMode()) {
-      await this.startPollingMode();
-      return;
+      const botMode = this.resolveBotMode();
+      if (botMode === 'disabled') {
+        this.logger.warn('Telegram bot is disabled by TELEGRAM_BOT_MODE');
+        return;
+      }
+
+      if (botMode === 'polling') {
+        await this.startPollingMode();
+        return;
+      }
+
+      await this.startWebhookMode();
+    } catch (error) {
+      this.logger.error(
+        `Telegram bot initialization failed, app will continue without bot: ${String(error)}`,
+      );
     }
-
-    await this.startWebhookMode();
   }
 
   getBot() {
@@ -56,15 +70,26 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   isReady() {
-    return Boolean(this.bot && this.webhookCallback);
+    return Boolean(this.bot && (this.bot.isRunning() || this.webhookCallback));
   }
 
   getWebhookSecret() {
     return this.configService.get<string>('TELEGRAM_WEBHOOK_SECRET') ?? '';
   }
 
-  private isDevelopmentMode() {
-    return this.configService.get<string>('NODE_ENV') === 'development';
+  private resolveBotMode(): BotMode {
+    const configuredMode = this.configService
+      .get<string>('TELEGRAM_BOT_MODE')
+      ?.trim()
+      .toLowerCase();
+
+    if (configuredMode === 'disabled') return 'disabled';
+    if (configuredMode === 'polling') return 'polling';
+    if (configuredMode === 'webhook') return 'webhook';
+
+    return this.configService.get<string>('NODE_ENV') === 'development'
+      ? 'polling'
+      : 'webhook';
   }
 
   private async startPollingMode() {
@@ -72,19 +97,23 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.webhookCallback = undefined;
-    await this.bot.api.deleteWebhook({ drop_pending_updates: true });
+    try {
+      this.webhookCallback = undefined;
+      await this.bot.api.deleteWebhook({ drop_pending_updates: true });
 
-    const pollingOptions: PollingOptions = {
-      drop_pending_updates: true,
-      onStart: () => {
-        this.logger.log('Telegram bot started in polling mode');
-      },
-    };
+      const pollingOptions: PollingOptions = {
+        drop_pending_updates: true,
+        onStart: () => {
+          this.logger.log('Telegram bot started in polling mode');
+        },
+      };
 
-    void this.bot.start(pollingOptions).catch((error: unknown) => {
-      this.logger.error(`Failed to start polling bot: ${String(error)}`);
-    });
+      void this.bot.start(pollingOptions).catch((error: unknown) => {
+        this.logger.error(`Failed to start polling bot: ${String(error)}`);
+      });
+    } catch (error) {
+      this.logger.error(`Failed to initialize polling mode: ${String(error)}`);
+    }
   }
 
   private async startWebhookMode() {
@@ -92,25 +121,35 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.webhookCallback = webhookCallback(this.bot, 'express');
+    try {
+      this.webhookCallback = webhookCallback(this.bot, 'express');
 
-    const webhookUrl = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');
-    const webhookSecret = this.configService.get<string>(
-      'TELEGRAM_WEBHOOK_SECRET',
-    );
-    if (!webhookUrl) {
-      this.logger.warn(
-        'TELEGRAM_WEBHOOK_URL not set, webhook mode is disabled',
+      const webhookUrl = this.configService.get<string>('TELEGRAM_WEBHOOK_URL');
+      const webhookSecret = this.configService.get<string>(
+        'TELEGRAM_WEBHOOK_SECRET',
       );
-      return;
+      if (!webhookUrl) {
+        this.logger.warn(
+          'TELEGRAM_WEBHOOK_URL not set, webhook mode is disabled',
+        );
+        return;
+      }
+
+      await this.bot.api.setWebhook(webhookUrl, {
+        drop_pending_updates: true,
+        secret_token: webhookSecret || undefined,
+      });
+
+      this.logger.log(`Telegram webhook successfully set to: ${webhookUrl}`);
+    } catch (error) {
+      this.logger.error(
+        `Failed to register Telegram webhook, app will continue without webhook bot: ${String(error)}`,
+      );
+      this.logger.warn(
+        'If DNS is not ready yet, set TELEGRAM_BOT_MODE=polling temporarily.',
+      );
+      this.webhookCallback = undefined;
     }
-
-    await this.bot.api.setWebhook(webhookUrl, {
-      drop_pending_updates: true,
-      secret_token: webhookSecret || undefined,
-    });
-
-    this.logger.log(`Telegram webhook successfully set to: ${webhookUrl}`);
   }
 
   private setupHandlers() {

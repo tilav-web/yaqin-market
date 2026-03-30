@@ -49,6 +49,14 @@
 }
 
 :root {
+  --tg-safe-top: env(safe-area-inset-top, 0px);
+  --tg-safe-right: env(safe-area-inset-right, 0px);
+  --tg-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tg-safe-left: env(safe-area-inset-left, 0px);
+  --tg-content-safe-top: var(--tg-safe-top);
+  --tg-content-safe-right: var(--tg-safe-right);
+  --tg-content-safe-bottom: var(--tg-safe-bottom);
+  --tg-content-safe-left: var(--tg-safe-left);
   --background: oklch(0.993 0.007 18);
   --foreground: oklch(0.205 0.012 20);
   --card: oklch(0.998 0.004 18);
@@ -121,11 +129,20 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body,
+  #root {
+    min-height: 100dvh;
+  }
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
+  }
+  html.telegram-mini-app,
+  body.telegram-mini-app {
+    overscroll-behavior-y: none;
   }
 }
 
