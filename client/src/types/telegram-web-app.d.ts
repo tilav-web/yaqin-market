@@ -33,6 +33,7 @@ declare global {
     | "fullscreenFailed"
     | "safeAreaChanged"
     | "contentSafeAreaChanged"
+    | "contactRequested"
     | "activated"
     | "deactivated";
 
@@ -50,6 +51,7 @@ declare global {
     ready?: () => void;
     expand?: () => void;
     requestFullscreen?: () => void;
+    requestContact?: (callback?: (shared: boolean) => void) => void;
     exitFullscreen?: () => void;
     lockOrientation?: () => void;
     unlockOrientation?: () => void;

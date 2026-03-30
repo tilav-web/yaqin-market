@@ -15,6 +15,7 @@ import {
   User2,
 } from "lucide-react";
 import { authService } from "@/services/auth.service";
+import { telegramAuthService } from "@/services/telegram-auth.service";
 import type { AuthMeResponse } from "@/interfaces/auth.interface";
 import type { RoleApplication, RoleApplicationStatus } from "@/interfaces/application.interface";
 import { getRoleLabel } from "@/lib/market";
@@ -95,6 +96,7 @@ export default function CustomerProfile() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const authMe = useAuthStore((state) => state.me);
+  const sessionSource = useAuthStore((state) => state.sessionSource);
   const setMe = useAuthStore((state) => state.setMe);
   const clearMe = useAuthStore((state) => state.clearMe);
   const [profile, setProfile] = useState({ first_name: "", last_name: "" });
@@ -180,6 +182,8 @@ export default function CustomerProfile() {
   const hasSellerAccess = authMe?.role === "SELLER";
   const hasCourierAccess = authMe?.role === "COURIER";
   const isCustomerOnly = authMe?.role === "CUSTOMER" || !authMe?.role;
+  const shouldHideLogout =
+    sessionSource === "telegram" && telegramAuthService.hasTelegramInitData();
 
   return (
     <div className="min-h-screen pb-24">
@@ -336,17 +340,19 @@ export default function CustomerProfile() {
           </>
         ) : null}
 
-        <section className="rounded-3xl border border-border bg-card/90 p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.55)]">
-          <Button
-            variant="outline"
-            className="h-12 w-full justify-center rounded-2xl border-destructive/20 text-destructive hover:bg-destructive/5 hover:text-destructive"
-            onClick={() => logout.mutate()}
-            disabled={logout.isPending}
-          >
-            <LogOutIcon className="h-4.5 w-4.5" />
-            {logout.isPending ? "Chiqilmoqda..." : "Tizimdan chiqish"}
-          </Button>
-        </section>
+        {!shouldHideLogout ? (
+          <section className="rounded-3xl border border-border bg-card/90 p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.55)]">
+            <Button
+              variant="outline"
+              className="h-12 w-full justify-center rounded-2xl border-destructive/20 text-destructive hover:bg-destructive/5 hover:text-destructive"
+              onClick={() => logout.mutate()}
+              disabled={logout.isPending}
+            >
+              <LogOutIcon className="h-4.5 w-4.5" />
+              {logout.isPending ? "Chiqilmoqda..." : "Tizimdan chiqish"}
+            </Button>
+          </section>
+        ) : null}
       </div>
     </div>
   );

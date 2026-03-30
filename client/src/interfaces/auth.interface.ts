@@ -1,6 +1,8 @@
 import type { AuthRole } from "@/types/auth-role.type";
 import type { User } from "@/interfaces/user.interface";
 
+export type AuthSessionSource = "phone" | "telegram";
+
 export interface SendOtpResponse {
   success: boolean;
   message?: string;

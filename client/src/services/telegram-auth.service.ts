@@ -25,6 +25,10 @@ function hasTelegramInitData() {
   return Boolean(getTelegramInitData());
 }
 
+function getTelegramWebApp() {
+  return window.Telegram?.WebApp ?? null;
+}
+
 async function createTelegramSession() {
   const initData = getTelegramInitData();
   if (!initData) return null;
@@ -72,9 +76,82 @@ async function requestTelegramPhoneVerification() {
   }
 }
 
+async function requestContactFromMiniApp() {
+  const webApp = getTelegramWebApp();
+  const requestContact = webApp?.requestContact;
+  if (!webApp?.initData || !requestContact) {
+    return false;
+  }
+
+  return await new Promise<boolean>((resolve) => {
+    let settled = false;
+
+    const finalize = (result: boolean) => {
+      if (settled) return;
+      settled = true;
+      webApp.offEvent?.("contactRequested", handleContactRequested);
+      window.clearTimeout(timeoutId);
+      resolve(result);
+    };
+
+    const handleContactRequested = (payload?: unknown) => {
+      const status =
+        typeof payload === "object" &&
+        payload !== null &&
+        "status" in payload &&
+        typeof payload.status === "string"
+          ? payload.status
+          : null;
+
+      if (status === "sent") {
+        finalize(true);
+        return;
+      }
+
+      if (status === "cancelled") {
+        finalize(false);
+      }
+    };
+
+    const timeoutId = window.setTimeout(() => finalize(false), 15000);
+
+    webApp.onEvent?.("contactRequested", handleContactRequested);
+
+    try {
+      requestContact((shared) => finalize(Boolean(shared)));
+    } catch {
+      finalize(false);
+    }
+  });
+}
+
+async function waitForLinkedTelegramSession({
+  attempts = 6,
+  delayMs = 1500,
+}: {
+  attempts?: number;
+  delayMs?: number;
+} = {}) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const session = await createTelegramSession();
+    if (session?.linked && session.access_token) {
+      return session;
+    }
+
+    if (attempt < attempts - 1) {
+      await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+    }
+  }
+
+  return null;
+}
+
 export const telegramAuthService = {
+  getTelegramWebApp,
   getTelegramInitData,
   hasTelegramInitData,
   createTelegramSession,
   requestTelegramPhoneVerification,
+  requestContactFromMiniApp,
+  waitForLinkedTelegramSession,
 };

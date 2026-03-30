@@ -54,6 +54,7 @@ function captureDiscoveryLocation() {
 export default function Auth() {
   const navigate = useNavigate();
   const setMe = useAuthStore((state) => state.setMe);
+  const setSessionSource = useAuthStore((state) => state.setSessionSource);
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
   const [telegramCheckState, setTelegramCheckState] = useState<{
     checking: boolean;
@@ -112,6 +113,7 @@ export default function Auth() {
           const me = await authService.findMe();
           if (cancelled) return;
           setMe(me);
+          setSessionSource("telegram");
           if (me.role !== "SUPER_ADMIN") {
             await captureDiscoveryLocation();
           }
@@ -147,7 +149,7 @@ export default function Auth() {
     return () => {
       cancelled = true;
     };
-  }, [navigate, setMe]);
+  }, [navigate, setMe, setSessionSource]);
 
   const handlePhoneChange = (value: string) => {
     const digits = sanitizeDigits(value).slice(0, 9);
@@ -184,6 +186,31 @@ export default function Auth() {
 
   const handleTelegramPhoneRequest = async () => {
     try {
+      const sharedFromMiniApp =
+        await telegramAuthService.requestContactFromMiniApp();
+
+      if (sharedFromMiniApp) {
+        toast.success("Telefon raqami Telegram orqali yuborildi");
+
+        const session = await telegramAuthService.waitForLinkedTelegramSession();
+        if (session?.linked && session.access_token) {
+          const me = await authService.findMe();
+          setMe(me);
+          setSessionSource("telegram");
+          if (me.role !== "SUPER_ADMIN") {
+            await captureDiscoveryLocation();
+          }
+          toast.success("Telegram orqali tizimga kirildi");
+          navigate(getRoleHomePath(me.role), { replace: true });
+          return;
+        }
+
+        toast.message(
+          "Telefon yuborildi. Agar avtologin kechiksa, tugmani yana bir marta bosib ko'ring.",
+        );
+        return;
+      }
+
       const result = await telegramAuthService.requestTelegramPhoneVerification();
       toast.success(
         result.message ??
@@ -210,6 +237,7 @@ export default function Auth() {
       await authService.verifyOtp(phoneDigits, otpValue);
       const me = await authService.findMe();
       setMe(me);
+      setSessionSource("phone");
       if (me.role !== "SUPER_ADMIN") {
         await captureDiscoveryLocation();
       }
@@ -316,8 +344,8 @@ export default function Auth() {
                 <p className="mt-2 text-sm text-slate-600">
                   {telegramCheckState.requiresPhoneVerification
                     ? telegramCheckState.telegramUser
-                      ? `${telegramCheckState.telegramUser.first_name}, telefonni bot orqali ulaganingizdan keyin mini-app ichida avtomatik kirish ishlaydi.`
-                      : "Bot sizdan Telegram tasdiqlagan telefon raqamini so'raydi."
+                      ? `${telegramCheckState.telegramUser.first_name}, telefonni shu oynaning o'zidan yuborishingiz yoki bot orqali ulashingiz mumkin.`
+                      : "Telefonni shu oynadan yuboring yoki bot orqali tasdiqlang."
                     : "Bog'langan Telegram profilingiz topildi."}
                 </p>
                 {telegramCheckState.requiresPhoneVerification &&
@@ -327,7 +355,7 @@ export default function Auth() {
                       className="mt-3 h-11 rounded-xl px-5"
                       onClick={handleTelegramPhoneRequest}
                     >
-                      Telegramda telefonni tasdiqlash
+                      Telefon raqamni yuborish
                     </Button>
                   )}
               </div>
