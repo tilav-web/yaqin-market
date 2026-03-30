@@ -12,13 +12,30 @@ import {
   type Response,
 } from 'express';
 
+function extractOriginsFromEnvValue(value: string | undefined): string[] {
+  if (!value) return [];
+
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .flatMap((item) => {
+      try {
+        return [new URL(item).origin];
+      } catch {
+        return [];
+      }
+    });
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const logger = new Logger('HTTP');
-  const configuredOrigins = (process.env.CLIENT_URL ?? '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
+  const configuredOrigins = [
+    ...extractOriginsFromEnvValue(process.env.CLIENT_URL),
+    ...extractOriginsFromEnvValue(process.env.PUBLIC_APP_URL),
+    ...extractOriginsFromEnvValue(process.env.TELEGRAM_WEBAPP_URL),
+  ];
   const defaultOrigins = [
     'http://localhost',
     'http://127.0.0.1',
@@ -28,6 +45,9 @@ async function bootstrap() {
     'http://127.0.0.1:5173',
     'http://localhost:4173',
     'http://127.0.0.1:4173',
+    'https://yaqin-market.uz',
+    'https://www.yaqin-market.uz',
+    'https://api.yaqin-market.uz',
   ];
   const allowedOrigins = new Set([...defaultOrigins, ...configuredOrigins]);
 
@@ -91,7 +111,14 @@ async function bootstrap() {
     },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'Accept', 'Origin'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Origin',
+      'X-Telegram-Init-Data',
+      'X-Requested-With',
+    ],
     optionsSuccessStatus: 204,
   });
 
