@@ -18,12 +18,16 @@ import { CreateCourierApplicationDto } from './dto/create-courier-application.dt
 import { ReviewApplicationDto } from './dto/review-application.dto';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import { StoreService } from '../store/store.service';
+import { SellerLegal } from './seller-legal.entity';
+import { SellerLegalDto } from './dto/seller-legal.dto';
 
 @Injectable()
 export class ApplicationService {
   constructor(
     @InjectRepository(RoleApplication)
     private readonly applicationRepo: Repository<RoleApplication>,
+    @InjectRepository(SellerLegal)
+    private readonly sellerLegalRepo: Repository<SellerLegal>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
     @InjectRepository(Auth)
@@ -36,7 +40,7 @@ export class ApplicationService {
   async getMyApplications(userId: string) {
     return this.applicationRepo.find({
       where: { user_id: userId },
-      relations: ['requestedStore', 'approvedStore'],
+      relations: ['requestedStore', 'approvedStore', 'sellerLegal'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -55,6 +59,7 @@ export class ApplicationService {
       userId,
       RoleApplicationType.SELLER,
     );
+    const sellerLegal = await this.upsertSellerLegal(userId, dto.legal);
 
     Object.assign(application, {
       phone: dto.phone.trim(),
@@ -65,6 +70,7 @@ export class ApplicationService {
         [user.first_name, user.last_name].join(' ').trim() ||
         null,
       legal_name: dto.legal_name?.trim() || null,
+      seller_legal_id: sellerLegal.id,
       store_phone: dto.store_phone.trim(),
       store_address: dto.store_address?.trim() || null,
       store_lat: dto.store_lat ?? null,
@@ -78,6 +84,10 @@ export class ApplicationService {
       reviewed_by_user_id: null,
       rejection_reason: null,
     });
+
+    if (!application.legal_name) {
+      application.legal_name = sellerLegal.official_name;
+    }
 
     return this.applicationRepo.save(application);
   }
@@ -132,7 +142,7 @@ export class ApplicationService {
   async getSellerApplications() {
     return this.applicationRepo.find({
       where: { type: RoleApplicationType.SELLER },
-      relations: ['user', 'user.auth', 'approvedStore'],
+      relations: ['user', 'user.auth', 'approvedStore', 'sellerLegal'],
       order: { createdAt: 'DESC' },
     });
   }
@@ -195,7 +205,10 @@ export class ApplicationService {
               [application.user.first_name, application.user.last_name]
                 .join(' ')
                 .trim(),
-            legal_name: application.legal_name || undefined,
+            legal_name:
+              application.sellerLegal?.official_name ||
+              application.legal_name ||
+              undefined,
             phone: application.store_phone || application.phone || '000000000',
             address: application.store_address || undefined,
             lat:
@@ -212,6 +225,11 @@ export class ApplicationService {
           },
         );
         application.approved_store_id = store.id;
+        if (application.seller_legal_id) {
+          await this.sellerLegalRepo.update(application.seller_legal_id, {
+            store_id: store.id,
+          });
+        }
       }
     }
 
@@ -289,5 +307,29 @@ export class ApplicationService {
       .slice(0, 40);
 
     return `${base || 'store'}-${Date.now().toString().slice(-6)}`;
+  }
+
+  private async upsertSellerLegal(userId: string, dto: SellerLegalDto) {
+    let sellerLegal = await this.sellerLegalRepo.findOne({
+      where: { user_id: userId },
+    });
+
+    if (!sellerLegal) {
+      sellerLegal = this.sellerLegalRepo.create({ user_id: userId });
+    }
+
+    Object.assign(sellerLegal, {
+      type: dto.type,
+      official_name: dto.official_name.trim(),
+      tin: dto.tin?.trim() || null,
+      reg_no: dto.reg_no?.trim() || null,
+      reg_address: dto.reg_address?.trim() || null,
+      bank_name: dto.bank_name?.trim() || null,
+      bank_account: dto.bank_account?.trim() || null,
+      license_no: dto.license_no?.trim() || null,
+      license_until: dto.license_until?.trim() || null,
+    });
+
+    return this.sellerLegalRepo.save(sellerLegal);
   }
 }

@@ -5,6 +5,8 @@ import { Product } from './product.entity';
 import { CreateProductDto } from './dto/create-product.dto';
 import { Category } from '../category/category.entity';
 import { Unit } from '../unit/unit.entity';
+import { ProductTax } from './product-tax.entity';
+import { ProductTaxDto } from './dto/product-tax.dto';
 
 type ProductCatalogQuery = {
   q?: string;
@@ -19,6 +21,7 @@ type ProductAdminCatalogSummary = {
   inactive: number;
   categorized: number;
   withUnit: number;
+  withTax: number;
 };
 
 @Injectable()
@@ -26,6 +29,8 @@ export class ProductService {
   constructor(
     @InjectRepository(Product)
     private readonly productRepo: Repository<Product>,
+    @InjectRepository(ProductTax)
+    private readonly productTaxRepo: Repository<ProductTax>,
   ) {}
 
   async findAll(categoryId?: string) {
@@ -39,9 +44,11 @@ export class ProductService {
       relations: [
         'category',
         'unit',
+        'tax',
         'children',
         'children.category',
         'children.unit',
+        'children.tax',
       ],
       order: { createdAt: 'DESC' },
     });
@@ -134,9 +141,11 @@ export class ProductService {
       relations: [
         'category',
         'unit',
+        'tax',
         'children',
         'children.category',
         'children.unit',
+        'children.tax',
       ],
     });
 
@@ -174,6 +183,7 @@ export class ProductService {
       .createQueryBuilder('product')
       .leftJoin('product.category', 'category')
       .leftJoin('product.unit', 'unit')
+      .leftJoin('product.tax', 'tax')
       .leftJoin('product.parent', 'parent');
 
     if (query.categoryId) {
@@ -199,7 +209,7 @@ export class ProductService {
       baseQuery.setParameter('search', normalizedSearch);
     }
 
-    const [total, active, categorized, withUnit] = await Promise.all([
+    const [total, active, categorized, withUnit, withTax] = await Promise.all([
       baseQuery.clone().getCount(),
       baseQuery
         .clone()
@@ -207,6 +217,7 @@ export class ProductService {
         .getCount(),
       baseQuery.clone().andWhere('product.category_id IS NOT NULL').getCount(),
       baseQuery.clone().andWhere('product.unit_id IS NOT NULL').getCount(),
+      baseQuery.clone().andWhere('tax.id IS NOT NULL').getCount(),
     ]);
 
     const rows = await baseQuery
@@ -227,6 +238,7 @@ export class ProductService {
       inactive: Math.max(total - active, 0),
       categorized,
       withUnit,
+      withTax,
     };
 
     if (!ids.length) {
@@ -248,10 +260,12 @@ export class ProductService {
       relations: [
         'category',
         'unit',
+        'tax',
         'parent',
         'children',
         'children.category',
         'children.unit',
+        'children.tax',
       ],
     });
 
@@ -281,10 +295,12 @@ export class ProductService {
       relations: [
         'category',
         'unit',
+        'tax',
         'parent',
         'children',
         'children.category',
         'children.unit',
+        'children.tax',
       ],
     });
 
@@ -298,8 +314,8 @@ export class ProductService {
   async create(dto: CreateProductDto) {
     const product = this.productRepo.create({
       slug: dto.slug?.trim() || this.slugify(dto.name),
-      name: dto.name,
-      description: dto.description,
+      name: dto.name.trim(),
+      description: dto.description?.trim() || null,
       images: dto.images || [],
       attributes: dto.attributes,
       is_active: dto.is_active ?? true,
@@ -314,17 +330,49 @@ export class ProductService {
       product.category = { id: dto.category_id } as Category;
     }
 
-    return this.productRepo.save(product);
+    const savedProduct = await this.productRepo.save(product);
+    await this.syncProductTax(savedProduct.id, dto.tax);
+
+    return this.findById(savedProduct.id);
   }
 
   async update(id: number, data: Partial<CreateProductDto>) {
-    const product = await this.productRepo.findOne({ where: { id } });
+    const product = await this.productRepo.findOne({
+      where: { id },
+      relations: ['tax'],
+    });
 
     if (!product) {
       throw new NotFoundException('Product not found');
     }
 
-    Object.assign(product, data);
+    if (data.slug !== undefined) {
+      product.slug = data.slug?.trim() || product.slug;
+    }
+
+    if (data.name !== undefined) {
+      product.name = data.name.trim();
+    }
+
+    if (data.description !== undefined) {
+      product.description = data.description?.trim() || null;
+    }
+
+    if (data.images !== undefined) {
+      product.images = data.images;
+    }
+
+    if (data.attributes !== undefined) {
+      product.attributes = data.attributes;
+    }
+
+    if (data.is_active !== undefined) {
+      product.is_active = data.is_active;
+    }
+
+    if (data.parent_id !== undefined) {
+      product.parent_id = data.parent_id ?? null;
+    }
 
     if (data.name && !data.slug) {
       product.slug = this.slugify(data.name);
@@ -342,7 +390,12 @@ export class ProductService {
         : (null as unknown as Category);
     }
 
-    return this.productRepo.save(product);
+    await this.productRepo.save(product);
+    if (data.tax !== undefined) {
+      await this.syncProductTax(id, data.tax);
+    }
+
+    return this.findById(id);
   }
 
   private slugify(value: string) {
@@ -352,5 +405,77 @@ export class ProductService {
       .replace(/[^a-z0-9\s-]/g, '')
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-');
+  }
+
+  private async syncProductTax(
+    productId: number,
+    taxDto?: ProductTaxDto,
+  ): Promise<void> {
+    if (taxDto === undefined) {
+      return;
+    }
+
+    const normalized = this.normalizeProductTax(taxDto);
+    const existing = await this.productTaxRepo.findOne({
+      where: { product_id: productId },
+    });
+
+    if (!normalized) {
+      if (existing) {
+        await this.productTaxRepo.remove(existing);
+      }
+      return;
+    }
+
+    const tax =
+      existing ??
+      this.productTaxRepo.create({
+        product_id: productId,
+      });
+
+    Object.assign(tax, normalized);
+    await this.productTaxRepo.save(tax);
+  }
+
+  private normalizeProductTax(
+    dto?: ProductTaxDto,
+  ): Omit<
+    ProductTax,
+    'id' | 'product' | 'product_id' | 'createdAt' | 'updatedAt'
+  > | null {
+    if (!dto) {
+      return null;
+    }
+
+    const normalized = {
+      mxik_code: dto.mxik_code?.trim() || null,
+      barcode: dto.barcode?.trim() || null,
+      package_code: dto.package_code?.trim() || null,
+      tiftn_code: dto.tiftn_code?.trim() || null,
+      vat_percent:
+        dto.vat_percent !== undefined && dto.vat_percent !== null
+          ? Number(dto.vat_percent)
+          : null,
+      mark_required: Boolean(dto.mark_required),
+      origin_country: dto.origin_country?.trim() || null,
+      maker_name: dto.maker_name?.trim() || null,
+      cert_no: dto.cert_no?.trim() || null,
+      made_on: dto.made_on?.trim() || null,
+      expires_on: dto.expires_on?.trim() || null,
+    };
+
+    const hasValue = Object.entries(normalized).some(([key, value]) => {
+      if (key === 'mark_required') {
+        return value === true;
+      }
+
+      if (typeof value === 'number') {
+        return Number.isFinite(value);
+      }
+
+      return value !== null && value !== '';
+    });
+
+    return hasValue ? normalized : null;
   }
 }

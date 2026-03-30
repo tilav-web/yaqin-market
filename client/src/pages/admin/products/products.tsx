@@ -5,7 +5,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { BoxesIcon, PackageCheckIcon, SearchIcon, SparklesIcon } from "lucide-react";
+import { BoxesIcon, PackageCheckIcon, SearchIcon, ShieldCheckIcon, SparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/api/api";
 import {
@@ -16,7 +16,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { PaginatedResponse } from "@/interfaces/market.interface";
+import type { PaginatedResponse, ProductTaxInfo } from "@/interfaces/market.interface";
 import { extractErrorMessage } from "@/lib/market";
 import CategoryList from "./_components/category-list";
 
@@ -29,6 +29,7 @@ type Product = {
   unit?: { id: number; name: string; short_name?: string | null } | null;
   parent?: { id: number; name: string } | null;
   children?: { id: number }[];
+  tax?: ProductTaxInfo | null;
   is_active: boolean;
   createdAt: string;
 };
@@ -50,6 +51,7 @@ type ProductCatalogSummary = {
   inactive: number;
   categorized: number;
   withUnit: number;
+  withTax: number;
 };
 
 type ProductCatalogResponse = PaginatedResponse<Product> & {
@@ -101,6 +103,17 @@ export default function Products() {
     description: "",
     category_id: "",
     unit_id: "",
+    mxik_code: "",
+    barcode: "",
+    package_code: "",
+    tiftn_code: "",
+    vat_percent: "12",
+    mark_required: "",
+    origin_country: "O'zbekiston",
+    maker_name: "",
+    cert_no: "",
+    made_on: "",
+    expires_on: "",
   });
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim();
@@ -151,7 +164,26 @@ export default function Products() {
     inactive: 0,
     categorized: 0,
     withUnit: 0,
+    withTax: 0,
   };
+
+  const hasTaxFormValues = useMemo(
+    () =>
+      [
+        form.mxik_code,
+        form.barcode,
+        form.package_code,
+        form.tiftn_code,
+        form.vat_percent,
+        form.mark_required,
+        form.origin_country,
+        form.maker_name,
+        form.cert_no,
+        form.made_on,
+        form.expires_on,
+      ].some((value) => value.trim() !== ""),
+    [form],
+  );
 
   const topCategories = useMemo(() => {
     const counts = new Map<string, { name: string; total: number }>();
@@ -197,11 +229,46 @@ export default function Products() {
           description: form.description.trim() || undefined,
           category_id: form.category_id || undefined,
           unit_id: form.unit_id ? Number(form.unit_id) : undefined,
+          tax: hasTaxFormValues
+            ? {
+                mxik_code: form.mxik_code.trim() || undefined,
+                barcode: form.barcode.trim() || undefined,
+                package_code: form.package_code.trim() || undefined,
+                tiftn_code: form.tiftn_code.trim() || undefined,
+                vat_percent: form.vat_percent ? Number(form.vat_percent) : undefined,
+                mark_required:
+                  form.mark_required === ""
+                    ? undefined
+                    : form.mark_required === "true",
+                origin_country: form.origin_country.trim() || undefined,
+                maker_name: form.maker_name.trim() || undefined,
+                cert_no: form.cert_no.trim() || undefined,
+                made_on: form.made_on || undefined,
+                expires_on: form.expires_on || undefined,
+              }
+            : undefined,
         })
       ).data,
     onSuccess: () => {
       toast.success("Mahsulot yaratildi");
-      setForm({ name: "", slug: "", description: "", category_id: "", unit_id: "" });
+      setForm({
+        name: "",
+        slug: "",
+        description: "",
+        category_id: "",
+        unit_id: "",
+        mxik_code: "",
+        barcode: "",
+        package_code: "",
+        tiftn_code: "",
+        vat_percent: "12",
+        mark_required: "",
+        origin_country: "O'zbekiston",
+        maker_name: "",
+        cert_no: "",
+        made_on: "",
+        expires_on: "",
+      });
       queryClient.invalidateQueries({ queryKey: ["admin", "products", "catalog"] });
     },
     onError: (error) => {
@@ -226,6 +293,7 @@ export default function Products() {
         <AdminInfoPill label="Faol" value={summary.active} />
         <AdminInfoPill label="Kategoriyali" value={summary.categorized} />
         <AdminInfoPill label="Birlik biriktirilgan" value={summary.withUnit} />
+        <AdminInfoPill label="Soliq profili bor" value={summary.withTax} />
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
@@ -237,66 +305,176 @@ export default function Products() {
             <div>
               <h2 className="text-lg font-semibold text-slate-950">Yangi mahsulot yaratish</h2>
               <p className="mt-1 text-sm leading-6 text-slate-500">
-                Nom, kategoriya va birlikni biriktirib, sellerlar uchun tayyor katalogga
-                mahsulot qo'shing.
+                Katalog ma'lumoti va soliq/compliance ma'lumotini bitta oqimda saqlang.
               </p>
             </div>
           </div>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <Input
-              placeholder="Mahsulot nomi"
-              value={form.name}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, name: event.target.value }))
-              }
-            />
-            <Input
-              placeholder="Slug"
-              value={form.slug}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, slug: event.target.value }))
-              }
-            />
-            <select
-              value={form.category_id}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, category_id: event.target.value }))
-              }
-              className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none"
-            >
-              <option value="">Kategoriya tanlang</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={form.unit_id}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, unit_id: event.target.value }))
-              }
-              className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none"
-            >
-              <option value="">Birlik tanlang</option>
-              {units.map((unit) => (
-                <option key={unit.id} value={unit.id}>
-                  {unit.name}
-                  {unit.short_name ? ` (${unit.short_name})` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div className="mt-5 grid gap-4 xl:grid-cols-2">
+            <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/88 p-4">
+              <div className="mb-4">
+                <p className="text-sm font-semibold text-slate-950">Katalog ma'lumoti</p>
+                <p className="text-sm text-slate-500">
+                  Foydalanuvchiga ko'rinadigan asosiy mahsulot ma'lumoti.
+                </p>
+              </div>
 
-          <textarea
-            value={form.description}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, description: event.target.value }))
-            }
-            placeholder="Qisqa tavsif"
-            className="mt-3 min-h-[110px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-          />
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input
+                  placeholder="Mahsulot nomi"
+                  value={form.name}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, name: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="Slug"
+                  value={form.slug}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, slug: event.target.value }))
+                  }
+                />
+                <select
+                  value={form.category_id}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, category_id: event.target.value }))
+                  }
+                  className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none"
+                >
+                  <option value="">Kategoriya tanlang</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={form.unit_id}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, unit_id: event.target.value }))
+                  }
+                  className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none"
+                >
+                  <option value="">Birlik tanlang</option>
+                  {units.map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.name}
+                      {unit.short_name ? ` (${unit.short_name})` : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <textarea
+                value={form.description}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, description: event.target.value }))
+                }
+                placeholder="Qisqa tavsif"
+                className="mt-3 min-h-[110px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+              />
+            </div>
+
+            <div className="rounded-[1.6rem] border border-primary/10 bg-[linear-gradient(180deg,rgba(254,242,242,0.8),rgba(255,255,255,0.94))] p-4">
+              <div className="mb-4 flex items-center gap-3">
+                <span className="flex h-10 w-10 items-center justify-center rounded-[1rem] bg-primary/10 text-primary">
+                  <ShieldCheckIcon className="h-4.5 w-4.5" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold text-slate-950">Soliq va compliance</p>
+                  <p className="text-sm text-slate-500">
+                    MXIK, barcode, QQS va markirovka kabi maydonlar.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <Input
+                  placeholder="MXIK kodi"
+                  value={form.mxik_code}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, mxik_code: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="Barcode"
+                  value={form.barcode}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, barcode: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="Qadoq kodi"
+                  value={form.package_code}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, package_code: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="TIF TN kodi"
+                  value={form.tiftn_code}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, tiftn_code: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="QQS foizi"
+                  value={form.vat_percent}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, vat_percent: event.target.value }))
+                  }
+                />
+                <select
+                  value={form.mark_required}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, mark_required: event.target.value }))
+                  }
+                  className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none"
+                >
+                  <option value="">Markirovka holati</option>
+                  <option value="true">Majburiy</option>
+                  <option value="false">Majburiy emas</option>
+                </select>
+                <Input
+                  placeholder="Ishlab chiqarilgan davlat"
+                  value={form.origin_country}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, origin_country: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="Ishlab chiqaruvchi"
+                  value={form.maker_name}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, maker_name: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="Sertifikat raqami"
+                  value={form.cert_no}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, cert_no: event.target.value }))
+                  }
+                />
+                <div className="grid gap-3 md:grid-cols-2 md:col-span-2">
+                  <Input
+                    type="date"
+                    value={form.made_on}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, made_on: event.target.value }))
+                    }
+                  />
+                  <Input
+                    type="date"
+                    value={form.expires_on}
+                    onChange={(event) =>
+                      setForm((current) => ({ ...current, expires_on: event.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <Button
@@ -307,7 +485,7 @@ export default function Products() {
               {createProduct.isPending ? "Saqlanmoqda..." : "Mahsulot yaratish"}
             </Button>
             <p className="text-sm text-slate-500">
-              Kategoriya boshqaruvi shu sahifaning pastidagi blokda turadi.
+              Mahsulot va unga tegishli soliq profili bitta request bilan saqlanadi.
             </p>
           </div>
         </AdminSurface>
@@ -338,9 +516,9 @@ export default function Products() {
               </div>
               <div className="rounded-[1.2rem] border border-white/14 bg-white/8 px-4 py-3">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/60">
-                  Hozir yuklangan
+                  Soliq profili bor
                 </p>
-                <p className="mt-2 text-lg font-semibold text-white">{visibleProducts.length}</p>
+                <p className="mt-2 text-lg font-semibold text-white">{summary.withTax}</p>
               </div>
             </div>
           </div>
@@ -506,6 +684,34 @@ export default function Products() {
                     <p className="mt-2 text-sm leading-6 text-slate-600">
                       {product.description?.trim() || "Qisqa tavsif hali kiritilmagan."}
                     </p>
+                  </div>
+
+                  <div className="mt-4 rounded-[1.2rem] border border-primary/10 bg-primary/[0.04] px-4 py-3">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary/70">
+                      Soliq profili
+                    </p>
+                    {product.tax ? (
+                      <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                        <span className="rounded-full border border-primary/10 bg-white px-3 py-1 text-slate-700">
+                          MXIK: {product.tax.mxik_code || "-"}
+                        </span>
+                        <span className="rounded-full border border-primary/10 bg-white px-3 py-1 text-slate-700">
+                          QQS: {product.tax.vat_percent ?? "-"}%
+                        </span>
+                        <span className="rounded-full border border-primary/10 bg-white px-3 py-1 text-slate-700">
+                          {product.tax.mark_required ? "Markirovka kerak" : "Markirovka shart emas"}
+                        </span>
+                        {product.tax.barcode ? (
+                          <span className="rounded-full border border-primary/10 bg-white px-3 py-1 text-slate-700">
+                            Barcode: {product.tax.barcode}
+                          </span>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="mt-2 text-sm text-slate-500">
+                        Hali soliq profili biriktirilmagan.
+                      </p>
+                    )}
                   </div>
 
                   <div className="mt-4 flex items-center justify-between text-sm text-slate-500">

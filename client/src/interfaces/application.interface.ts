@@ -3,6 +3,21 @@ import type { StoreSummary } from "./market.interface";
 
 export type RoleApplicationType = "SELLER" | "COURIER";
 export type RoleApplicationStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type SellerLegalType = "LEGAL_ENTITY" | "SOLE_PROPRIETOR" | "SELF_EMPLOYED";
+
+export interface SellerLegal {
+  id: string;
+  type: SellerLegalType;
+  official_name: string;
+  tin?: string | null;
+  reg_no?: string | null;
+  reg_address?: string | null;
+  bank_name?: string | null;
+  bank_account?: string | null;
+  license_no?: string | null;
+  license_until?: string | null;
+  store_id?: string | null;
+}
 
 export interface RoleApplication {
   id: string;
@@ -26,6 +41,7 @@ export interface RoleApplication {
   reviewed_at?: string | null;
   createdAt: string;
   updatedAt: string;
+  sellerLegal?: SellerLegal | null;
   requestedStore?: StoreSummary | null;
   approvedStore?: StoreSummary | null;
   user?: {

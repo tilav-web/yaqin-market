@@ -47,6 +47,21 @@ export interface ProductImage {
   is_main: boolean;
 }
 
+export interface ProductTaxInfo {
+  id?: string;
+  mxik_code?: string | null;
+  barcode?: string | null;
+  package_code?: string | null;
+  tiftn_code?: string | null;
+  vat_percent?: number | string | null;
+  mark_required?: boolean;
+  origin_country?: string | null;
+  maker_name?: string | null;
+  cert_no?: string | null;
+  made_on?: string | null;
+  expires_on?: string | null;
+}
+
 export interface SavedLocation {
   id: string;
   label: string;
@@ -89,6 +104,7 @@ export interface ProductCatalogItem {
     name: string;
     short_name?: string | null;
   } | null;
+  tax?: ProductTaxInfo | null;
 }
 
 export interface StoreProduct {

@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Store } from '../store/entities/store.entity';
+import { SellerLegal } from './seller-legal.entity';
 
 export enum RoleApplicationType {
   SELLER = 'SELLER',
@@ -57,6 +58,15 @@ export class RoleApplication {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   legal_name: string | null;
+
+  @ManyToOne(() => SellerLegal, (sellerLegal) => sellerLegal.applications, {
+    nullable: true,
+  })
+  @JoinColumn({ name: 'seller_legal_id' })
+  sellerLegal: SellerLegal | null;
+
+  @Column({ nullable: true })
+  seller_legal_id: string | null;
 
   @Column({ type: 'varchar', length: 32, nullable: true })
   store_phone: string | null;

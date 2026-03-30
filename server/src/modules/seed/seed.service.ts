@@ -1,6 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
+import {
+  SellerLegal,
+  SellerLegalType,
+} from '../application/seller-legal.entity';
 import { Auth } from '../auth/auth.entity';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import { User } from '../user/user.entity';
@@ -9,6 +13,7 @@ import { Location } from '../location/location.entity';
 import { Category } from '../category/category.entity';
 import { Unit } from '../unit/unit.entity';
 import { Product } from '../product/product.entity';
+import { ProductTax } from '../product/product-tax.entity';
 import { Store } from '../store/entities/store.entity';
 import { StoreDeliverySettings } from '../store/entities/store-delivery-settings.entity';
 import {
@@ -98,6 +103,14 @@ function offsetPoint(northMeters: number, eastMeters: number) {
 
 function buildStorePhone(index: number) {
   return `7530${String(10101 + index).padStart(5, '0')}`;
+}
+
+function buildSellerTin(phone: string) {
+  return `30${phone.slice(-7)}`;
+}
+
+function buildBankAccount(phone: string) {
+  return `20208000${phone.slice(-9)}0001`;
 }
 
 const STORE_LOGOS = [
@@ -955,8 +968,10 @@ export class SeedService {
     const unitRepo = this.dataSource.getRepository(Unit);
     const categoryRepo = this.dataSource.getRepository(Category);
     const productRepo = this.dataSource.getRepository(Product);
+    const productTaxRepo = this.dataSource.getRepository(ProductTax);
     const authRepo = this.dataSource.getRepository(Auth);
     const userRepo = this.dataSource.getRepository(User);
+    const sellerLegalRepo = this.dataSource.getRepository(SellerLegal);
     const walletRepo = this.dataSource.getRepository(Wallet);
     const locationRepo = this.dataSource.getRepository(Location);
     const storeRepo = this.dataSource.getRepository(Store);
@@ -970,7 +985,12 @@ export class SeedService {
 
     const units = await this.seedUnits(unitRepo);
     const categories = await this.seedCategories(categoryRepo);
-    const products = await this.seedProducts(productRepo, categories, units);
+    const products = await this.seedProducts(
+      productRepo,
+      productTaxRepo,
+      categories,
+      units,
+    );
     const accounts = await this.seedAccounts(
       authRepo,
       userRepo,
@@ -983,6 +1003,7 @@ export class SeedService {
       workingHourRepo,
       accounts,
     );
+    await this.seedSellerLegals(sellerLegalRepo, accounts, stores);
     await this.seedStoreProducts(storeProductRepo, stores, products);
 
     this.logger.log('Seed completed successfully');
@@ -1028,12 +1049,13 @@ export class SeedService {
 
   private async seedProducts(
     productRepo: Repository<Product>,
+    productTaxRepo: Repository<ProductTax>,
     categories: Map<string, Category>,
     units: Map<string, Unit>,
   ) {
     const result = new Map<string, Product>();
 
-    for (const seed of PRODUCT_SEEDS) {
+    for (const [index, seed] of PRODUCT_SEEDS.entries()) {
       const category = categories.get(seed.categorySlug);
       const unit = units.get(seed.unitName);
 
@@ -1071,7 +1093,9 @@ export class SeedService {
         product.parent_id = null;
       }
 
-      result.set(seed.slug, await productRepo.save(product));
+      const savedProduct = await productRepo.save(product);
+      await this.upsertProductTax(productTaxRepo, savedProduct, seed, index);
+      result.set(seed.slug, savedProduct);
     }
 
     for (const seed of PRODUCT_SEEDS) {
@@ -1247,6 +1271,50 @@ export class SeedService {
     return storesBySlug;
   }
 
+  private async seedSellerLegals(
+    sellerLegalRepo: Repository<SellerLegal>,
+    accounts: Map<string, User>,
+    stores: Map<string, Store>,
+  ) {
+    for (const seed of STORE_SEEDS) {
+      const user = accounts.get(seed.ownerPhone);
+      const store = stores.get(seed.slug);
+
+      if (!user || !store) {
+        continue;
+      }
+
+      let legal = await sellerLegalRepo.findOne({
+        where: { user_id: user.id },
+      });
+
+      if (!legal) {
+        legal = sellerLegalRepo.create({
+          user_id: user.id,
+        });
+      }
+
+      legal.store_id = store.id;
+      legal.type = seed.is_prime
+        ? SellerLegalType.LEGAL_ENTITY
+        : SellerLegalType.SOLE_PROPRIETOR;
+      legal.official_name = seed.legal_name;
+      legal.tin = buildSellerTin(seed.ownerPhone);
+      legal.reg_no = `GUV-${seed.ownerPhone.slice(-6)}`;
+      legal.reg_address = seed.address;
+      legal.bank_name = 'Agrobank Qarshi filiali';
+      legal.bank_account = buildBankAccount(seed.ownerPhone);
+      legal.license_no = seed.is_prime
+        ? `LIC-${seed.ownerPhone.slice(-5)}`
+        : null;
+      legal.license_until = seed.is_prime ? '2028-12-31' : null;
+
+      await sellerLegalRepo.save(legal);
+    }
+
+    this.logger.log('Seller legal profiles ready');
+  }
+
   private async seedStoreProducts(
     storeProductRepo: Repository<StoreProduct>,
     stores: Map<string, Store>,
@@ -1348,5 +1416,46 @@ export class SeedService {
 
       await locationRepo.save(location);
     }
+  }
+
+  private async upsertProductTax(
+    productTaxRepo: Repository<ProductTax>,
+    product: Product,
+    seed: ProductSeed,
+    index: number,
+  ) {
+    let tax = await productTaxRepo.findOne({
+      where: { product_id: Number(product.id) },
+    });
+
+    if (!tax) {
+      tax = productTaxRepo.create({
+        product_id: Number(product.id),
+      });
+    }
+
+    const requiresMark =
+      seed.categorySlug === 'ichimliklar' ||
+      seed.categorySlug === 'shirinlik-va-snack';
+
+    tax.mxik_code = `10${String(410000 + index).padStart(6, '0')}`;
+    tax.barcode = `478${String(1000000000 + index).padStart(10, '0')}`;
+    tax.package_code = `PK-${seed.slug.toUpperCase().slice(0, 14)}`;
+    tax.tiftn_code =
+      seed.categorySlug === 'uy-rozgor'
+        ? '3402209000'
+        : seed.categorySlug === 'ichimliklar'
+          ? '2202991900'
+          : '2106909809';
+    tax.vat_percent = 12;
+    tax.mark_required = requiresMark;
+    tax.origin_country = "O'zbekiston";
+    tax.maker_name = `${seed.name} ishlab chiqaruvchisi`;
+    tax.cert_no = `CERT-${String(index + 1).padStart(4, '0')}`;
+    tax.made_on = '2026-03-01';
+    tax.expires_on =
+      seed.categorySlug === 'uy-rozgor' ? '2028-03-01' : '2026-12-31';
+
+    await productTaxRepo.save(tax);
   }
 }

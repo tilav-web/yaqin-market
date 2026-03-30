@@ -2,9 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Auth } from '../auth/auth.entity';
+import { SellerLegal } from '../application/seller-legal.entity';
 import { Category } from '../category/category.entity';
 import { Location } from '../location/location.entity';
 import { Product } from '../product/product.entity';
+import { ProductTax } from '../product/product-tax.entity';
 import { StoreProduct } from '../store-product/store-product.entity';
 import { StoreDeliverySettings } from '../store/entities/store-delivery-settings.entity';
 import { StoreWorkingHour } from '../store/entities/store-working-hour.entity';
@@ -37,12 +39,14 @@ import { SeedService } from './seed.service';
           database: config.get<string>('POSTGRES_DB') ?? 'postgres',
           entities: [
             Auth,
+            SellerLegal,
             User,
             Wallet,
             Location,
             Category,
             Unit,
             Product,
+            ProductTax,
             Store,
             StoreDeliverySettings,
             StoreWorkingHour,

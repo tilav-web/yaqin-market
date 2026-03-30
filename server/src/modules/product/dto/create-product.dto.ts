@@ -6,7 +6,10 @@ import {
   IsArray,
   IsObject,
   IsUUID,
+  ValidateNested,
 } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ProductTaxDto } from './product-tax.dto';
 
 export class CreateProductDto {
   @IsOptional()
@@ -43,4 +46,9 @@ export class CreateProductDto {
   @IsOptional()
   @IsUUID()
   category_id?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => ProductTaxDto)
+  tax?: ProductTaxDto;
 }

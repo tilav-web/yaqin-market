@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { FileCheckIcon, StoreIcon, UserRoundIcon } from "lucide-react";
+import { FileCheckIcon, LandmarkIcon, StoreIcon, UserRoundIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/api/api";
 import {
@@ -10,6 +10,19 @@ import {
 import { Button } from "@/components/ui/button";
 import type { RoleApplication } from "@/interfaces/application.interface";
 import { extractErrorMessage, normalizePhone } from "@/lib/market";
+
+function getSellerTypeLabel(type?: string | null) {
+  switch (type) {
+    case "LEGAL_ENTITY":
+      return "Yuridik shaxs";
+    case "SOLE_PROPRIETOR":
+      return "YTT";
+    case "SELF_EMPLOYED":
+      return "O'zini o'zi band qilgan";
+    default:
+      return "-";
+  }
+}
 
 export default function AdminApplicationsPage() {
   const queryClient = useQueryClient();
@@ -113,12 +126,49 @@ export default function AdminApplicationsPage() {
                     <p className="font-semibold text-slate-950">
                       {application.owner_name || "Mas'ul shaxs"}
                     </p>
-                    <p className="mt-1">{application.legal_name || "Yuridik nom kiritilmagan"}</p>
+                    <p className="mt-1">
+                      {application.sellerLegal?.official_name ||
+                        application.legal_name ||
+                        "Yuridik nom kiritilmagan"}
+                    </p>
                     <p className="mt-2">{application.store_address || "Manzil kiritilmagan"}</p>
                     {application.note ? <p className="mt-2 text-slate-500">{application.note}</p> : null}
                     {application.rejection_reason ? (
                       <p className="mt-2 text-rose-600">{application.rejection_reason}</p>
                     ) : null}
+                  </div>
+
+                  <div className="mt-4 rounded-[1.2rem] border border-primary/10 bg-primary/[0.04] px-4 py-3 text-sm text-slate-600">
+                    <div className="flex items-center gap-2 text-slate-950">
+                      <LandmarkIcon className="h-4 w-4 text-primary" />
+                      <p className="font-semibold">Yuridik profil</p>
+                    </div>
+                    <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                      <p>
+                        <span className="text-slate-400">Turi:</span>{" "}
+                        {getSellerTypeLabel(application.sellerLegal?.type)}
+                      </p>
+                      <p>
+                        <span className="text-slate-400">STIR:</span>{" "}
+                        {application.sellerLegal?.tin ?? "-"}
+                      </p>
+                      <p>
+                        <span className="text-slate-400">Guvohnoma:</span>{" "}
+                        {application.sellerLegal?.reg_no ?? "-"}
+                      </p>
+                      <p>
+                        <span className="text-slate-400">Bank:</span>{" "}
+                        {application.sellerLegal?.bank_name ?? "-"}
+                      </p>
+                      <p className="sm:col-span-2">
+                        <span className="text-slate-400">Hisob:</span>{" "}
+                        {application.sellerLegal?.bank_account ?? "-"}
+                      </p>
+                      <p className="sm:col-span-2">
+                        <span className="text-slate-400">Ro'yxat manzili:</span>{" "}
+                        {application.sellerLegal?.reg_address ?? "-"}
+                      </p>
+                    </div>
                   </div>
 
                   {application.status === "PENDING" ? (

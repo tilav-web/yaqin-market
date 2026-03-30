@@ -4,6 +4,7 @@ import {
   PrimaryGeneratedColumn,
   ManyToOne,
   OneToMany,
+  OneToOne,
   CreateDateColumn,
   UpdateDateColumn,
   JoinColumn,
@@ -11,6 +12,7 @@ import {
 import { Category } from '../category/category.entity';
 import { Unit } from '../unit/unit.entity';
 import { StoreProduct } from '../store-product/store-product.entity';
+import { ProductTax } from './product-tax.entity';
 
 @Entity('products')
 export class Product {
@@ -57,6 +59,9 @@ export class Product {
 
   @OneToMany(() => StoreProduct, (sp) => sp.product)
   storeProducts: StoreProduct[];
+
+  @OneToOne(() => ProductTax, (tax) => tax.product)
+  tax: ProductTax | null;
 
   @CreateDateColumn()
   createdAt: Date;

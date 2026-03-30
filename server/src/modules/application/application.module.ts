@@ -7,10 +7,11 @@ import { User } from '../user/user.entity';
 import { Auth } from '../auth/auth.entity';
 import { Store } from '../store/entities/store.entity';
 import { StoreModule } from '../store/store.module';
+import { SellerLegal } from './seller-legal.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([RoleApplication, User, Auth, Store]),
+    TypeOrmModule.forFeature([RoleApplication, SellerLegal, User, Auth, Store]),
     StoreModule,
   ],
   controllers: [ApplicationController],
