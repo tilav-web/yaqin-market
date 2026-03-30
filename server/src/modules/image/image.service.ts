@@ -6,9 +6,11 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as fs from 'fs/promises';
 import * as fsSync from 'fs';
+import { createRequire } from 'node:module';
 import * as path from 'path';
-import sharp from 'sharp';
 import { UploadFolderEnum } from './enums/upload-folder.enum';
+
+const nodeRequire = createRequire(__filename);
 
 interface MulterMemoryFile {
   buffer: Buffer;
@@ -24,6 +26,7 @@ export class ImageService {
   private readonly logger = new Logger(ImageService.name);
   private readonly uploadPath: string;
   private readonly serverUrl: string;
+  private sharpModulePromise?: Promise<SharpLike | null>;
 
   constructor(private readonly configService: ConfigService) {
     this.uploadPath = path.resolve(process.cwd(), 'uploads');
@@ -53,11 +56,19 @@ export class ImageService {
     await fs.mkdir(targetFolder, { recursive: true });
 
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-    const fileName = `${uniqueSuffix}.webp`;
+    const sharpModule = await this.getSharpModule();
+    const fileExtension = sharpModule
+      ? '.webp'
+      : this.resolveFallbackExtension(file.originalname, file.mimetype);
+    const fileName = `${uniqueSuffix}${fileExtension}`;
     const filePath = path.join(targetFolder, fileName);
 
     try {
-      await sharp(file.buffer).webp({ quality: 80 }).toFile(filePath);
+      if (sharpModule) {
+        await sharpModule(file.buffer).webp({ quality: 80 }).toFile(filePath);
+      } else {
+        await fs.writeFile(filePath, file.buffer);
+      }
 
       this.logger.log(`Rasm saqlandi: ${folder}/${fileName}`);
 
@@ -102,4 +113,52 @@ export class ImageService {
       this.logger.error(`Rasmni o'chirishda xato: ${imageUrl}`, stack);
     }
   }
+
+  private async getSharpModule(): Promise<SharpLike | null> {
+    if (!this.sharpModulePromise) {
+      this.sharpModulePromise = Promise.resolve()
+        .then(() => {
+          const requiredModule = nodeRequire('sharp') as
+            | SharpLike
+            | { default?: SharpLike };
+          return (
+            (typeof requiredModule === 'function'
+              ? requiredModule
+              : requiredModule.default) ?? null
+          );
+        })
+        .catch((error: unknown) => {
+          const message =
+            error instanceof Error ? error.message : 'unknown sharp error';
+          this.logger.warn(
+            `Sharp ishlamadi, fallback original fayl saqlanadi: ${message}`,
+          );
+          return null;
+        });
+    }
+
+    return this.sharpModulePromise;
+  }
+
+  private resolveFallbackExtension(
+    originalName: string,
+    mimeType: string,
+  ): string {
+    const originalExtension = path.extname(originalName).toLowerCase();
+    if (/^\.[a-z0-9]{2,5}$/i.test(originalExtension)) {
+      return originalExtension;
+    }
+
+    if (mimeType === 'image/png') return '.png';
+    if (mimeType === 'image/webp') return '.webp';
+    if (mimeType === 'image/gif') return '.gif';
+
+    return '.jpg';
+  }
 }
+
+type SharpLike = (input?: Buffer) => {
+  webp: (options?: { quality?: number }) => {
+    toFile: (outputPath: string) => Promise<unknown>;
+  };
+};
