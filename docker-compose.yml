@@ -3,10 +3,8 @@ services:
     image: postgres:16-alpine
     container_name: yaqin-market-postgres
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-yaqin_market}
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+    env_file:
+      - ./server/.env
     healthcheck:
       test:
         [
@@ -25,8 +23,8 @@ services:
     image: redis:7-alpine
     container_name: yaqin-market-redis
     restart: unless-stopped
-    environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-password}
+    env_file:
+      - ./server/.env
     command:
       [
         "sh",
