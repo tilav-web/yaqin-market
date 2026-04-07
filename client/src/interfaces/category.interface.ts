@@ -1,6 +1,8 @@
+import type { TName } from '@/lib/i18n';
+
 export interface ICategory {
   id: string;
-  name: string;
+  name: TName;
   slug: string;
   image?: string | null;
   order_number: number;

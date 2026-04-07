@@ -25,6 +25,8 @@ import type {
 } from "@/interfaces/market.interface";
 import { calculateDeliveryQuote, formatMoney } from "@/lib/market";
 import { useBroadcastCartStore } from "@/stores/broadcast-cart.store";
+import { t } from "@/lib/i18n";
+import { useLang } from "@/context/lang.context";
 
 type PromoTone = "prime" | "nearby" | "rated" | "value";
 
@@ -137,6 +139,7 @@ function ProductFeedSkeleton() {
 }
 
 export default function CustomerHome() {
+  const { lang, setLang } = useLang();
   const [search, setSearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [activeProduct, setActiveProduct] = useState<ProductCatalogItem | null>(null);
@@ -385,6 +388,12 @@ export default function CustomerHome() {
             </button>
 
             <div className="flex items-center gap-2">
+              <button
+                onClick={() => setLang(lang === "uz" ? "ru" : "uz")}
+                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                {lang === "uz" ? "RU" : "UZ"}
+              </button>
               <Button
                 variant="outline"
                 size="sm"
@@ -459,7 +468,7 @@ export default function CustomerHome() {
                       : "border-slate-200 bg-white text-slate-700 hover:border-primary/15 hover:text-primary"
                   }`}
                 >
-                  {category.name}
+                  {t(category.name, lang)}
                 </button>
               ))}
             </div>
@@ -590,7 +599,7 @@ export default function CustomerHome() {
                         {product.images?.[0]?.url ? (
                           <img
                             src={product.images[0].url}
-                            alt={product.name}
+                            alt={t(product.name, lang)}
                             className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
                           />
                         ) : (
@@ -601,7 +610,7 @@ export default function CustomerHome() {
 
                         {product.category?.name ? (
                           <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
-                            {product.category.name}
+                            {t(product.category.name, lang)}
                           </span>
                         ) : null}
 
@@ -614,10 +623,10 @@ export default function CustomerHome() {
 
                       <div className="mt-3">
                         <p className="line-clamp-2 min-h-10 text-sm font-semibold text-slate-950">
-                          {product.name}
+                          {t(product.name, lang)}
                         </p>
                         <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
-                          {product.description ?? product.category?.name ?? "Mahsulot tafsiloti"}
+                          {t(product.description, lang) || t(product.category?.name, lang) || "Mahsulot tafsiloti"}
                         </p>
                         <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
                           {childCount > 0 ? "Variant tanlash" : "Savatga qo'shish"}

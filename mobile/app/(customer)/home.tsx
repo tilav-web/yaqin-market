@@ -17,6 +17,8 @@ import { Colors, Spacing, Typography, Radius, Shadow } from '../../src/theme';
 import { useLocation } from '../../src/hooks/useLocation';
 import { storesApi } from '../../src/api/stores';
 import { productsApi, categoriesApi } from '../../src/api/products';
+import { t } from '../../src/i18n';
+import { useLangStore } from '../../src/store/lang.store';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -59,7 +61,7 @@ function PrimeStoreCard({ store, onPress }: { store: any; onPress: () => void })
   );
 }
 
-function ProductCard({ product, onPress }: { product: any; onPress: () => void }) {
+function ProductCard({ product, onPress, lang: cardLang }: { product: any; onPress: () => void; lang?: import('../../src/i18n').Lang }) {
   const img = product.images?.[0]?.url;
   return (
     <TouchableOpacity style={productStyles.card} onPress={onPress} activeOpacity={0.85}>
@@ -71,7 +73,7 @@ function ProductCard({ product, onPress }: { product: any; onPress: () => void }
         </View>
       )}
       <View style={productStyles.info}>
-        <Text style={productStyles.name} numberOfLines={2}>{product.name}</Text>
+        <Text style={productStyles.name} numberOfLines={2}>{t(product.name, cardLang)}</Text>
         {product.store_products?.[0] && (
           <Text style={productStyles.price}>
             {Number(product.store_products[0].price).toLocaleString()} so'm
@@ -85,6 +87,8 @@ function ProductCard({ product, onPress }: { product: any; onPress: () => void }
 export default function HomeScreen() {
   const router = useRouter();
   const { lat, lng, address, permissionGranted } = useLocation();
+  const lang = useLangStore((s) => s.lang);
+  const setLang = useLangStore((s) => s.setLang);
 
   const {
     data: primeStores,
@@ -122,13 +126,22 @@ export default function HomeScreen() {
             📍 {address ?? (permissionGranted ? 'Joylashuv aniqlanmoqda...' : 'Joylashuvga ruxsat bering')}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.broadcastBtn}
-          onPress={() => router.push('/(customer)/broadcast-cart')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.broadcastBtnText}>📢 Umumiy buyurtma</Text>
-        </TouchableOpacity>
+        <View style={styles.headerRight}>
+          <TouchableOpacity
+            style={styles.langToggle}
+            onPress={() => setLang(lang === 'uz' ? 'ru' : 'uz')}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.langToggleText}>{lang === 'uz' ? 'UZ' : 'RU'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.broadcastBtn}
+            onPress={() => router.push('/(customer)/broadcast-cart')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.broadcastBtnText}>📢 Umumiy buyurtma</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <ScrollView
@@ -190,7 +203,7 @@ export default function HomeScreen() {
                       style={styles.categoryImage}
                     />
                   )}
-                  <Text style={styles.categoryName}>{item.name}</Text>
+                  <Text style={styles.categoryName}>{t(item.name, lang)}</Text>
                 </TouchableOpacity>
               )}
             />
@@ -211,6 +224,7 @@ export default function HomeScreen() {
                 <ProductCard
                   key={product.id}
                   product={product}
+                  lang={lang}
                   onPress={() =>
                     router.push({
                       pathname: '/(customer)/product/[id]',
@@ -244,6 +258,26 @@ const styles = StyleSheet.create({
     ...Typography.caption,
     color: 'rgba(255,255,255,0.85)',
     maxWidth: 180,
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  langToggle: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    minWidth: 36,
+    alignItems: 'center',
+  },
+  langToggleText: {
+    ...Typography.buttonSmall,
+    color: Colors.white,
+    fontWeight: '700',
   },
   broadcastBtn: {
     backgroundColor: 'rgba(255,255,255,0.2)',

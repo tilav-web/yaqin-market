@@ -28,4 +28,16 @@ export const storesApi = {
 
   setActive: (id: string, is_active: boolean) =>
     apiClient.put(`/stores/${id}/active`, { is_active }).then((r) => r.data),
+
+  subscribe: (storeId: string) =>
+    apiClient.post(`/stores/${storeId}/subscribe`).then((r) => r.data),
+
+  unsubscribe: (storeId: string) =>
+    apiClient.delete(`/stores/${storeId}/subscribe`).then((r) => r.data),
+
+  isSubscribed: (storeId: string) =>
+    apiClient.get(`/stores/${storeId}/subscribed`).then((r) => r.data),
+
+  getMySubscriptions: () =>
+    apiClient.get('/stores/subscriptions/my').then((r) => r.data),
 };

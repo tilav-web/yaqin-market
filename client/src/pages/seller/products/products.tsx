@@ -4,10 +4,12 @@ import { api } from "@/api/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { t, type TName } from "@/lib/i18n";
+import { useLang } from "@/context/lang.context";
 
 interface Product {
   id: number;
-  name: string;
+  name: TName;
   slug: string;
   images: { url: string; is_main: boolean }[];
 }
@@ -27,6 +29,7 @@ interface SellerStoreOption {
 }
 
 export default function SellerProducts() {
+  const { lang } = useLang();
   const queryClient = useQueryClient();
   const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
   const [price, setPrice] = useState("");
@@ -107,7 +110,7 @@ export default function SellerProducts() {
               <option value="">Mahsulotni tanlang</option>
               {availableProducts.map((product: Product) => (
                 <option key={product.id} value={product.id}>
-                  {product.name}
+                  {t(product.name, lang)}
                 </option>
               ))}
             </select>
@@ -172,7 +175,7 @@ export default function SellerProducts() {
                   </div>
                   <div>
                     <p className="font-medium text-foreground">
-                      {item.product.name}
+                      {t(item.product.name, lang)}
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {Number(item.price).toLocaleString()} so'm · omborda {item.stock} ta

@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useReducer } from "react";
+import { useLang } from "@/context/lang.context";
+import { t } from "@/lib/i18n";
 import {
   useMutation,
   useQuery,
@@ -52,6 +54,7 @@ export default function CategoryList({
   description = "Mahsulotlarni filter qilish uchun kategoriya tanlang.",
 }: CategoryListProps) {
   const queryClient = useQueryClient();
+  const { lang } = useLang();
   const [state, dispatch] = useReducer(
     categoryListReducer,
     selectedId,
@@ -260,17 +263,17 @@ export default function CategoryList({
                   {category.image ? (
                     <img
                       src={category.image}
-                      alt={category.name}
+                      alt={t(category.name, lang)}
                       className="h-10 w-10 rounded-full border border-border object-cover"
                     />
                   ) : (
                     <div className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-muted text-sm font-semibold text-muted-foreground">
-                      {category.name?.charAt(0)?.toUpperCase() ?? "C"}
+                      {t(category.name, lang)?.charAt(0)?.toUpperCase() ?? "C"}
                     </div>
                   )}
                 </div>
                 <p className="mt-2 line-clamp-1 text-sm font-semibold text-foreground">
-                  {category.name}
+                  {t(category.name, lang)}
                 </p>
               </button>
 
@@ -317,17 +320,22 @@ export default function CategoryList({
             <div className="flex gap-4 items-start">
               <div className="space-y-1.5 flex-1">
                 <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
-                  Nomi
+                  Nomi (UZ)
                 </label>
                 <input
-                  value={state.form.name}
-                  onChange={(event) =>
-                    dispatch(
-                      categoryListActions.setField("name", event.target.value),
-                    )
-                  }
+                  value={state.form.name.uz}
+                  onChange={(e) => dispatch(categoryListActions.setNameField("uz", e.target.value))}
                   className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
-                  placeholder="Masalan: Ichimliklar"
+                  placeholder="Ichimliklar"
+                />
+                <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 mt-1 block">
+                  Nomi (RU)
+                </label>
+                <input
+                  value={state.form.name.ru}
+                  onChange={(e) => dispatch(categoryListActions.setNameField("ru", e.target.value))}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-1.5 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
+                  placeholder="Напитки"
                 />
               </div>
               <div className="space-y-1.5 flex-1">

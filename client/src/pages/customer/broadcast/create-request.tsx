@@ -9,8 +9,11 @@ import LocationPickerMap from "@/components/maps/location-picker-map";
 import { useDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
 import type { ProductCatalogItem } from "@/interfaces/market.interface";
 import { extractErrorMessage } from "@/lib/market";
+import { t } from "@/lib/i18n";
+import { useLang } from "@/context/lang.context";
 
 export default function CreateBroadcastRequestPage() {
+  const { lang } = useLang();
   const navigate = useNavigate();
   const { location, setLocation, radiusKm, setRadiusKm, address, setAddress, requestCurrentLocation } =
     useDiscoveryPreferences();
@@ -33,8 +36,8 @@ export default function CreateBroadcastRequestPage() {
   const filteredProducts = useMemo(() => {
     if (!search.trim()) return products;
     const term = search.toLowerCase();
-    return products.filter((product) => product.name.toLowerCase().includes(term));
-  }, [products, search]);
+    return products.filter((product) => t(product.name, lang).toLowerCase().includes(term));
+  }, [products, search, lang]);
 
   const selectedProducts = useMemo(
     () =>
@@ -173,9 +176,9 @@ export default function CreateBroadcastRequestPage() {
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="font-medium text-slate-900">{product.name}</p>
+                        <p className="font-medium text-slate-900">{t(product.name, lang)}</p>
                         <p className="text-sm text-slate-500">
-                          {product.category?.name ?? "Kategoriya yo'q"}
+                          {t(product.category?.name, lang) || "Kategoriya yo'q"}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -233,16 +236,16 @@ export default function CreateBroadcastRequestPage() {
                 {product.images?.[0]?.url ? (
                   <img
                     src={product.images[0].url}
-                    alt={product.name}
+                    alt={t(product.name, lang)}
                     className="h-full w-full object-cover"
                   />
                 ) : (
                   <span className="text-4xl">📦</span>
                 )}
               </div>
-              <p className="mt-3 font-medium text-slate-900">{product.name}</p>
+              <p className="mt-3 font-medium text-slate-900">{t(product.name, lang)}</p>
               <p className="mt-1 text-sm text-slate-500">
-                {product.category?.name ?? "Kategoriya yo'q"}
+                {t(product.category?.name, lang) || "Kategoriya yo'q"}
               </p>
               <div className="mt-4 flex items-center justify-between">
                 <button

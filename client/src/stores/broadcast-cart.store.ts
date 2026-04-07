@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { ProductCatalogItem } from "@/interfaces/market.interface";
+import { t } from "@/lib/i18n";
 
 export type BroadcastCartItem = {
   productId: number;
@@ -30,15 +31,16 @@ function toCartItem(
   parent?: ProductCatalogItem | null,
   quantity: number = 1,
 ): BroadcastCartItem {
+  const lang = 'uz';
   return {
     productId: normalizeProductId(product.id),
-    name: product.name,
+    name: t(product.name, lang),
     image: product.images?.[0]?.url ?? parent?.images?.[0]?.url ?? null,
-    categoryName: product.category?.name ?? parent?.category?.name ?? null,
-    description: product.description ?? parent?.description ?? null,
+    categoryName: t(product.category?.name ?? parent?.category?.name, lang) || null,
+    description: t(product.description ?? parent?.description, lang) || null,
     quantity,
     parentId: parent ? normalizeProductId(parent.id) : null,
-    parentName: parent?.name ?? null,
+    parentName: parent ? t(parent.name, lang) : null,
   };
 }
 

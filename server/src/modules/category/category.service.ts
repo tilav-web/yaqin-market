@@ -59,14 +59,12 @@ export class CategoryService {
   }
 
   async create(dto: CreateCategoryDto, imageFilename?: string) {
-    const slug = dto.slug?.trim() || this.slugify(dto.name);
+    const slug = dto.slug?.trim() || this.slugify(dto.name.uz);
 
-    const existing = await this.repository.findOne({
-      where: [{ name: dto.name }, { slug }],
-    });
+    const existing = await this.repository.findOne({ where: { slug } });
     if (existing) {
       if (imageFilename) await this.imageService.deleteImage(imageFilename);
-      throw new BadRequestException('Category name or slug already exists');
+      throw new BadRequestException('Category slug already exists');
     }
 
     const category = this.repository.create({
@@ -92,18 +90,15 @@ export class CategoryService {
       throw new NotFoundException('Category not found');
     }
 
-    if (dto.name || dto.slug) {
+    if (dto.slug) {
       const existing = await this.repository.findOne({
-        where: [
-          dto.name ? { name: dto.name } : undefined,
-          dto.slug ? { slug: dto.slug } : undefined,
-        ].filter(Boolean) as { name?: string; slug?: string }[],
+        where: { slug: dto.slug },
       });
 
       if (existing && existing.id !== id) {
         if (newImageFilename)
           await this.imageService.deleteImage(newImageFilename);
-        throw new BadRequestException('Category name or slug already exists');
+        throw new BadRequestException('Category slug already exists');
       }
     }
 

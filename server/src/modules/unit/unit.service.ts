@@ -11,7 +11,7 @@ export class UnitService {
   ) {}
 
   async findAll() {
-    return this.unitRepo.find({ order: { name: 'ASC' } });
+    return this.unitRepo.find();
   }
 
   async findById(id: number) {
@@ -24,7 +24,7 @@ export class UnitService {
     return unit;
   }
 
-  async create(data: { name: string; short_name?: string }) {
+  async create(data: { name: { uz: string; ru: string }; short_name?: { uz: string; ru: string } }) {
     const unit = this.unitRepo.create(data);
     return this.unitRepo.save(unit);
   }

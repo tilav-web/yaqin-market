@@ -7,14 +7,15 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Product } from '../product/product.entity';
+import { TranslatableString } from 'src/common/types/translatable';
 
 @Entity('categories')
 export class Category {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'varchar', length: 100, unique: true })
-  name: string;
+  @Column({ type: 'jsonb' })
+  name: TranslatableString;
 
   @Column({ type: 'varchar', unique: true })
   slug: string; // URL uchun (masalan: "shirinliklar-va-pishiriqlar")

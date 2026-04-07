@@ -5,6 +5,7 @@ import { StoreProduct, StoreProductStatus } from './store-product.entity';
 import { CreateStoreProductDto } from './dto/create-store-product.dto';
 import { UpdateStoreProductDto } from './dto/update-store-product.dto';
 import { Store } from '../store/entities/store.entity';
+import { StoreSubscriptionService } from '../store/store-subscription.service';
 
 type StoreProductCatalogQuery = {
   storeId: string;
@@ -39,6 +40,9 @@ export class StoreProductService {
   constructor(
     @InjectRepository(StoreProduct)
     private readonly repo: Repository<StoreProduct>,
+    @InjectRepository(Store)
+    private readonly storeRepo: Repository<Store>,
+    private readonly subscriptionService: StoreSubscriptionService,
   ) {}
 
   async create(storeId: string, dto: CreateStoreProductDto) {
@@ -60,7 +64,17 @@ export class StoreProductService {
       status: this.resolveStatus(dto.price, stock),
     });
 
-    return this.repo.save(storeProduct);
+    const saved = await this.repo.save(storeProduct);
+
+    // Obunachilarga bildirishnoma yuborish (background)
+    const store = await this.storeRepo.findOne({ where: { id: storeId }, relations: ['storeProducts', 'storeProducts.product'] });
+    if (store) {
+      const sp = await this.repo.findOne({ where: { id: saved.id }, relations: ['product'] });
+      const productName = sp?.product?.name?.uz ?? 'Yangi mahsulot';
+      this.subscriptionService.notifySubscribers(storeId, store.name, productName).catch(() => {});
+    }
+
+    return saved;
   }
 
   async findByStore(storeId: string, includeInactive: boolean = false) {
@@ -114,10 +128,10 @@ export class StoreProductService {
         .andWhere(
           new Brackets((catalogQuery) => {
             catalogQuery
-              .where('LOWER(product.name) LIKE :search')
-              .orWhere("LOWER(COALESCE(product.description, '')) LIKE :search")
+              .where("LOWER(product.name->>'uz') LIKE :search")
+              .orWhere("LOWER(product.name->>'ru') LIKE :search")
               .orWhere('LOWER(product.slug) LIKE :search')
-              .orWhere("LOWER(COALESCE(category.name, '')) LIKE :search");
+              .orWhere("LOWER(COALESCE(category.name->>'uz', '')) LIKE :search");
           }),
         )
         .setParameter('search', normalizedSearch);

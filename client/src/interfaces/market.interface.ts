@@ -1,3 +1,5 @@
+import type { TName } from '@/lib/i18n';
+
 export interface DeliverySettings {
   id?: string;
   min_order_amount: number;
@@ -87,9 +89,9 @@ export interface PaginatedResponse<T> {
 
 export interface ProductCatalogItem {
   id: number;
-  name: string;
+  name: TName;
   slug: string;
-  description?: string | null;
+  description?: TName | null;
   images: ProductImage[];
   attributes?: Record<string, unknown> | null;
   is_active: boolean;
@@ -97,12 +99,12 @@ export interface ProductCatalogItem {
   children?: ProductCatalogItem[];
   category?: {
     id: string;
-    name: string;
+    name: TName;
   } | null;
   unit?: {
     id: number;
-    name: string;
-    short_name?: string | null;
+    name: TName;
+    short_name?: TName | null;
   } | null;
   tax?: ProductTaxInfo | null;
 }
@@ -221,4 +223,45 @@ export interface BroadcastRequest {
   items: BroadcastRequestItem[];
   offers: BroadcastOffer[];
   my_offer?: BroadcastOffer | null;
+}
+
+export type ConversationType = 'ORDER' | 'BROADCAST' | 'STORE_INQUIRY';
+
+export interface ChatUser {
+  id: string;
+  first_name: string;
+  last_name: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  read_at: string | null;
+  createdAt: string;
+  sender?: ChatUser;
+}
+
+export interface Conversation {
+  id: string;
+  type: ConversationType;
+  reference_id: string | null;
+  buyer_id: string;
+  seller_id: string;
+  last_message_preview: string | null;
+  last_message_at: string | null;
+  unread_buyer: number;
+  unread_seller: number;
+  buyer?: ChatUser;
+  seller?: ChatUser;
+  createdAt: string;
+}
+
+export interface StoreSubscription {
+  id: string;
+  store_id: string;
+  user_id: string;
+  store?: StoreSummary;
+  createdAt: string;
 }

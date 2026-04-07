@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { useParams } from "react-router-dom";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
+import { MessageCircleIcon } from "lucide-react";
 import { api } from "@/api/api";
 import StatusPill from "@/components/common/status-pill";
 import { Button } from "@/components/ui/button";
-import type { OrderSummary } from "@/interfaces/market.interface";
+import type { Conversation, OrderSummary } from "@/interfaces/market.interface";
 import { getClickPaymentUrl } from "@/services/payment.service";
 import {
   extractErrorMessage,
@@ -17,7 +18,24 @@ import {
 
 export default function CustomerOrderDetailPage() {
   const { id } = useParams();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isPaying, setIsPaying] = useState(false);
+
+  const startChat = useMutation({
+    mutationFn: async (orderId: string) =>
+      (
+        await api.post<Conversation>("/conversations", {
+          type: "ORDER",
+          reference_id: orderId,
+        })
+      ).data,
+    onSuccess: (conv) => {
+      queryClient.invalidateQueries({ queryKey: ["conversations", "my"] });
+      navigate(`/mobile/chat/${conv.id}`);
+    },
+    onError: (error) => toast.error(extractErrorMessage(error)),
+  });
 
   const { data: order } = useQuery({
     queryKey: ["order", id],
@@ -59,10 +77,20 @@ export default function CustomerOrderDetailPage() {
               {formatDateTime(order.createdAt)}
             </p>
           </div>
-          <StatusPill
-            status={order.status}
-            label={getOrderStatusLabel(order.status)}
-          />
+          <div className="flex items-center gap-2">
+            <StatusPill
+              status={order.status}
+              label={getOrderStatusLabel(order.status)}
+            />
+            <button
+              onClick={() => startChat.mutate(order.id)}
+              disabled={startChat.isPending}
+              className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+            >
+              <MessageCircleIcon className="h-3.5 w-3.5" />
+              Do'kon bilan chat
+            </button>
+          </div>
         </div>
 
         <div className="mt-5 grid gap-3 md:grid-cols-3">

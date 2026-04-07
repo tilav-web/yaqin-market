@@ -1,16 +1,17 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
 import { Product } from '../product/product.entity';
+import { TranslatableString } from 'src/common/types/translatable';
 
 @Entity('units')
 export class Unit {
-  @PrimaryGeneratedColumn('increment') // ID raqam bo'lgani qulay
+  @PrimaryGeneratedColumn('increment')
   id: number;
 
-  @Column({ unique: true })
-  name: string; // Masalan: "dona", "kg", "litr"
+  @Column({ type: 'jsonb' })
+  name: TranslatableString; // Masalan: { uz: "dona", ru: "штука" }
 
-  @Column({ nullable: true })
-  short_name: string; // Masalan: "d.", "kg.", "l."
+  @Column({ type: 'jsonb', nullable: true })
+  short_name: TranslatableString | null; // Masalan: { uz: "d.", ru: "шт." }
 
   @OneToMany(() => Product, (product) => product.unit)
   products: Product[];

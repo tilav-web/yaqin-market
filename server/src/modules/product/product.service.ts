@@ -88,10 +88,10 @@ export class ProductService {
         .andWhere(
           new Brackets((childQuery) => {
             childQuery
-              .where('LOWER(child.name) LIKE :search')
-              .orWhere("LOWER(COALESCE(child.description, '')) LIKE :search")
+              .where("LOWER(child.name->>'uz') LIKE :search")
+              .orWhere("LOWER(child.name->>'ru') LIKE :search")
               .orWhere('LOWER(child.slug) LIKE :search')
-              .orWhere("LOWER(COALESCE(childCategory.name, '')) LIKE :search");
+              .orWhere("LOWER(COALESCE(childCategory.name->>'uz', '')) LIKE :search");
           }),
         )
         .getQuery();
@@ -100,10 +100,10 @@ export class ProductService {
         .andWhere(
           new Brackets((productQuery) => {
             productQuery
-              .where('LOWER(product.name) LIKE :search')
-              .orWhere("LOWER(COALESCE(product.description, '')) LIKE :search")
+              .where("LOWER(product.name->>'uz') LIKE :search")
+              .orWhere("LOWER(product.name->>'ru') LIKE :search")
               .orWhere('LOWER(product.slug) LIKE :search')
-              .orWhere("LOWER(COALESCE(category.name, '')) LIKE :search")
+              .orWhere("LOWER(COALESCE(category.name->>'uz', '')) LIKE :search")
               .orWhere(`EXISTS ${childSearchSubQuery}`);
           }),
         )
@@ -197,13 +197,12 @@ export class ProductService {
       baseQuery.andWhere(
         new Brackets((productQuery) => {
           productQuery
-            .where('LOWER(product.name) LIKE :search')
-            .orWhere("LOWER(COALESCE(product.description, '')) LIKE :search")
+            .where("LOWER(product.name->>'uz') LIKE :search")
+            .orWhere("LOWER(product.name->>'ru') LIKE :search")
             .orWhere('LOWER(product.slug) LIKE :search')
-            .orWhere("LOWER(COALESCE(category.name, '')) LIKE :search")
-            .orWhere("LOWER(COALESCE(unit.name, '')) LIKE :search")
-            .orWhere("LOWER(COALESCE(unit.short_name, '')) LIKE :search")
-            .orWhere("LOWER(COALESCE(parent.name, '')) LIKE :search");
+            .orWhere("LOWER(COALESCE(category.name->>'uz', '')) LIKE :search")
+            .orWhere("LOWER(COALESCE(unit.name->>'uz', '')) LIKE :search")
+            .orWhere("LOWER(COALESCE(parent.name->>'uz', '')) LIKE :search");
         }),
       );
       baseQuery.setParameter('search', normalizedSearch);
@@ -313,9 +312,9 @@ export class ProductService {
 
   async create(dto: CreateProductDto) {
     const product = this.productRepo.create({
-      slug: dto.slug?.trim() || this.slugify(dto.name),
-      name: dto.name.trim(),
-      description: dto.description?.trim() || null,
+      slug: dto.slug?.trim() || this.slugify(dto.name.uz),
+      name: dto.name,
+      description: dto.description || null,
       images: dto.images || [],
       attributes: dto.attributes,
       is_active: dto.is_active ?? true,
@@ -351,11 +350,11 @@ export class ProductService {
     }
 
     if (data.name !== undefined) {
-      product.name = data.name.trim();
+      product.name = data.name;
     }
 
     if (data.description !== undefined) {
-      product.description = data.description?.trim() || null;
+      product.description = data.description || null;
     }
 
     if (data.images !== undefined) {
@@ -375,7 +374,7 @@ export class ProductService {
     }
 
     if (data.name && !data.slug) {
-      product.slug = this.slugify(data.name);
+      product.slug = this.slugify(data.name.uz);
     }
 
     if (data.unit_id !== undefined) {

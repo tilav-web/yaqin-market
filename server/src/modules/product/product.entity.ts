@@ -13,6 +13,7 @@ import { Category } from '../category/category.entity';
 import { Unit } from '../unit/unit.entity';
 import { StoreProduct } from '../store-product/store-product.entity';
 import { ProductTax } from './product-tax.entity';
+import { TranslatableString } from 'src/common/types/translatable';
 
 @Entity('products')
 export class Product {
@@ -22,11 +23,11 @@ export class Product {
   @Column({ unique: true })
   slug: string;
 
-  @Column()
-  name: string;
+  @Column({ type: 'jsonb' })
+  name: TranslatableString;
 
-  @Column({ type: 'text', nullable: true })
-  description: string | null;
+  @Column({ type: 'jsonb', nullable: true })
+  description: TranslatableString | null;
 
   @ManyToOne(() => Unit, (unit) => unit.products, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'unit_id' })

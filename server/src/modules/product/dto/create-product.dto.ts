@@ -1,5 +1,4 @@
 import {
-  IsString,
   IsOptional,
   IsBoolean,
   IsNumber,
@@ -10,18 +9,20 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ProductTaxDto } from './product-tax.dto';
+import { TranslatableStringDto } from 'src/common/dto/translatable.dto';
 
 export class CreateProductDto {
   @IsOptional()
-  @IsString()
   slug?: string;
 
-  @IsString()
-  name: string;
+  @ValidateNested()
+  @Type(() => TranslatableStringDto)
+  name: TranslatableStringDto;
 
   @IsOptional()
-  @IsString()
-  description?: string;
+  @ValidateNested()
+  @Type(() => TranslatableStringDto)
+  description?: TranslatableStringDto;
 
   @IsOptional()
   @IsNumber()

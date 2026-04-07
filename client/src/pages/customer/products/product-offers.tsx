@@ -9,8 +9,11 @@ import EmptyState from "@/components/common/empty-state";
 import { useDiscoveryPreferences } from "@/hooks/use-discovery-preferences";
 import { formatMoney } from "@/lib/market";
 import type { ProductCatalogItem, StoreProduct } from "@/interfaces/market.interface";
+import { t } from "@/lib/i18n";
+import { useLang } from "@/context/lang.context";
 
 export default function ProductOffersPage() {
+  const { lang } = useLang();
   const { productId } = useParams();
   const { location, requestCurrentLocation } = useDiscoveryPreferences();
 
@@ -82,7 +85,7 @@ export default function ProductOffersPage() {
             {productImage ? (
               <img
                 src={productImage}
-                alt={product?.name ?? "Mahsulot"}
+                alt={t(product?.name, lang) || "Mahsulot"}
                 className="h-full w-full object-cover"
               />
             ) : (
@@ -94,7 +97,7 @@ export default function ProductOffersPage() {
 
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-semibold text-slate-950">
-              {product?.name ?? "Mahsulot narxlari"}
+              {t(product?.name, lang) || "Mahsulot narxlari"}
             </h1>
 
             <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto pb-1">
@@ -103,7 +106,7 @@ export default function ProductOffersPage() {
               </div>
               {product?.category?.name ? (
                 <div className="inline-flex shrink-0 items-center rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
-                  {product.category.name}
+                  {t(product.category.name, lang)}
                 </div>
               ) : null}
             </div>

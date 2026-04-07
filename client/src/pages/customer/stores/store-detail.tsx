@@ -1,8 +1,11 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  BellIcon,
+  BellOffIcon,
   ChevronUpIcon,
+  MessageCircleIcon,
   MinusIcon,
   PlusIcon,
   SearchIcon,
@@ -23,6 +26,8 @@ import {
   getDeliveryPolicySummary,
   formatMoney,
 } from "@/lib/market";
+import { t } from "@/lib/i18n";
+import { useLang } from "@/context/lang.context";
 import type {
   PaginatedResponse,
   SavedLocation,
@@ -47,8 +52,10 @@ function StoreProductCardSkeleton() {
 }
 
 export default function StoreDetail() {
+  const { lang } = useLang();
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { location, setLocation, address, setAddress, requestCurrentLocation } =
     useDiscoveryPreferences();
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -142,6 +149,33 @@ export default function StoreDetail() {
     queryFn: async () => (await api.get<StoreSummary>(`/stores/${id}`)).data,
     enabled: !!id,
     staleTime: 60000,
+  });
+
+  const { data: isSubscribed = false } = useQuery({
+    queryKey: ["store", id, "subscribed"],
+    queryFn: async () =>
+      (await api.get<{ subscribed: boolean }>(`/stores/${id}/subscribed`)).data
+        .subscribed,
+    enabled: !!id,
+    staleTime: 30000,
+  });
+
+  const subscribeMutation = useMutation({
+    mutationFn: async () => api.post(`/stores/${id}/subscribe`),
+    onSuccess: () => {
+      queryClient.setQueryData(["store", id, "subscribed"], true);
+      toast.success("Do'konga obuna bo'ldingiz");
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
+  });
+
+  const unsubscribeMutation = useMutation({
+    mutationFn: async () => api.delete(`/stores/${id}/subscribe`),
+    onSuccess: () => {
+      queryClient.setQueryData(["store", id, "subscribed"], false);
+      toast.success("Obunadan chiqildingiz");
+    },
+    onError: () => toast.error("Xatolik yuz berdi"),
   });
 
   const { data: storeCategories = [] } = useQuery({
@@ -506,7 +540,7 @@ export default function StoreDetail() {
                     {product.product.images?.[0]?.url ? (
                       <img
                         src={product.product.images[0].url}
-                        alt={product.product.name}
+                        alt={t(product.product.name, lang)}
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -517,7 +551,7 @@ export default function StoreDetail() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-slate-950">
-                      {product.product.name}
+                      {t(product.product.name, lang)}
                     </p>
                     <p className="truncate text-xs text-slate-500">
                       {formatMoney(product.price)}
@@ -585,12 +619,36 @@ export default function StoreDetail() {
                   </span>
                 )}
               </div>
-              <div>
+              <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-semibold">{store?.name}</h1>
                 <p className="mt-1 text-sm text-white/80">
                   ⭐ {Number(store?.rating ?? 0).toFixed(1)} ·{" "}
                   {store?.is_open ? "Hozir ochiq" : "Hozir yopiq"}
                 </p>
+              </div>
+              <div className="flex shrink-0 flex-col gap-2">
+                <button
+                  onClick={() =>
+                    isSubscribed
+                      ? unsubscribeMutation.mutate()
+                      : subscribeMutation.mutate()
+                  }
+                  disabled={subscribeMutation.isPending || unsubscribeMutation.isPending}
+                  className="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/25 disabled:opacity-60"
+                >
+                  {isSubscribed ? (
+                    <><BellOffIcon className="h-3.5 w-3.5" />Obunani bekor qilish</>
+                  ) : (
+                    <><BellIcon className="h-3.5 w-3.5" />Obuna bo'lish</>
+                  )}
+                </button>
+                <button
+                  onClick={() => navigate(`/mobile/chat?store_id=${id}&store_name=${encodeURIComponent(store?.name ?? "")}`)}
+                  className="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/25"
+                >
+                  <MessageCircleIcon className="h-3.5 w-3.5" />
+                  Xabar yozish
+                </button>
               </div>
             </div>
           </div>
@@ -762,7 +820,7 @@ export default function StoreDetail() {
                             {product.product.images?.[0]?.url ? (
                               <img
                                 src={product.product.images[0].url}
-                                alt={product.product.name}
+                                alt={t(product.product.name, lang)}
                                 className="h-full w-full object-cover"
                               />
                             ) : (
@@ -773,7 +831,7 @@ export default function StoreDetail() {
                           </div>
                           <div className="min-w-0">
                             <p className="truncate font-medium text-slate-900">
-                              {product.product.name}
+                              {t(product.product.name, lang)}
                             </p>
                             <p className="text-sm text-slate-500">
                               {qty} x {formatMoney(product.price)}
@@ -967,7 +1025,7 @@ export default function StoreDetail() {
                     : "border-slate-200 bg-white text-slate-700 hover:border-primary/15 hover:text-primary",
                 )}
               >
-                {category.name}
+                {t(category.name, lang)}
               </button>
             ))}
           </div>
@@ -996,7 +1054,7 @@ export default function StoreDetail() {
                     {item.product.images?.[0]?.url ? (
                       <img
                         src={item.product.images[0].url}
-                        alt={item.product.name}
+                        alt={t(item.product.name, lang)}
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -1004,14 +1062,14 @@ export default function StoreDetail() {
                     )}
                   </div>
                   <p className="mb-1 line-clamp-2 min-h-10 text-sm font-semibold text-foreground">
-                    {item.product.name}
+                    {t(item.product.name, lang)}
                   </p>
                   <p className="font-bold text-primary">
                     {formatMoney(item.price)}
                   </p>
                   {item.product.category?.name ? (
                     <p className="mt-1 text-xs text-slate-500">
-                      {item.product.category.name}
+                      {t(item.product.category.name, lang)}
                     </p>
                   ) : null}
                   {item.stock <= 5 && item.stock > 0 && (

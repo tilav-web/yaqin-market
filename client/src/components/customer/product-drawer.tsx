@@ -10,6 +10,8 @@ import {
 } from "@/components/ui/sheet";
 import type { ProductCatalogItem } from "@/interfaces/market.interface";
 import { useBroadcastCartStore } from "@/stores/broadcast-cart.store";
+import { t } from "@/lib/i18n";
+import { useLang } from "@/context/lang.context";
 
 type ProductDrawerProps = {
   open: boolean;
@@ -26,6 +28,7 @@ export default function ProductDrawer({
   product,
   onOpenChange,
 }: ProductDrawerProps) {
+  const { lang } = useLang();
   const cartItems = useBroadcastCartStore((state) => state.items);
   const addProduct = useBroadcastCartStore((state) => state.addProduct);
   const updateQuantity = useBroadcastCartStore((state) => state.updateQuantity);
@@ -48,7 +51,7 @@ export default function ProductDrawer({
       >
         <SheetHeader className="border-b border-slate-200 px-4 pb-4">
           <SheetTitle className="text-lg font-semibold text-slate-950">
-            {product?.name ?? "Mahsulot"}
+            {t(product?.name, lang) || "Mahsulot"}
           </SheetTitle>
           <SheetDescription className="text-sm text-slate-500">
             Variant tanlang va savatga qo'shing
@@ -70,7 +73,7 @@ export default function ProductDrawer({
                     {variant.images?.[0]?.url || product?.images?.[0]?.url ? (
                       <img
                         src={variant.images?.[0]?.url ?? product?.images?.[0]?.url}
-                        alt={variant.name}
+                        alt={t(variant.name, lang)}
                         className="h-full w-full object-cover"
                       />
                     ) : (
@@ -81,9 +84,9 @@ export default function ProductDrawer({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-950">{variant.name}</p>
+                    <p className="text-sm font-semibold text-slate-950">{t(variant.name, lang)}</p>
                     <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
-                      {variant.description ?? product?.description ?? "Variant tafsiloti"}
+                      {t(variant.description, lang) || t(product?.description, lang) || "Variant tafsiloti"}
                     </p>
 
                     {variant.attributes ? (

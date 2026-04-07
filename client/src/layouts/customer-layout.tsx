@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
-import { HomeIcon, ShoppingBagIcon, SendIcon, UserIcon } from "lucide-react";
+import { HomeIcon, MessageCircleIcon, ShoppingBagIcon, SendIcon, UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type CustomerTab = "home" | "requests" | "orders" | "profile";
+type CustomerTab = "home" | "requests" | "orders" | "chat" | "profile";
 
 const tabs: Array<{
   key: CustomerTab;
@@ -14,6 +14,7 @@ const tabs: Array<{
   { key: "home", label: "Asosiy", to: "/mobile", icon: HomeIcon },
   { key: "requests", label: "So'rovlar", to: "/mobile/requests", icon: SendIcon },
   { key: "orders", label: "Buyurtmalar", to: "/mobile/orders", icon: ShoppingBagIcon },
+  { key: "chat", label: "Xabarlar", to: "/mobile/chat", icon: MessageCircleIcon },
   { key: "profile", label: "Profil", to: "/mobile/profile", icon: UserIcon },
 ];
 
@@ -29,6 +30,10 @@ export default function CustomerLayout() {
 
     if (path.startsWith("/mobile/orders")) {
       return "orders";
+    }
+
+    if (path.startsWith("/mobile/chat")) {
+      return "chat";
     }
 
     if (
@@ -48,7 +53,7 @@ export default function CustomerLayout() {
 
       <nav className="fixed inset-x-0 bottom-0 z-30 px-4 pb-[max(env(safe-area-inset-bottom),1rem)]">
         <div className="mx-auto max-w-xl rounded-[2rem] border border-white/70 bg-white/88 p-2 shadow-[0_24px_70px_-30px_rgba(15,23,42,0.28)] backdrop-blur-xl">
-          <div className="grid grid-cols-4 gap-1.5">
+          <div className="grid grid-cols-5 gap-1">
             {tabs.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.key;

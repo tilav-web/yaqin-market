@@ -1,7 +1,8 @@
 import type { ICategory } from "@/interfaces/category.interface";
+import type { TName } from "@/lib/i18n";
 
 export type CategoryFormState = {
-  name: string;
+  name: TName;
   slug: string;
   image: string | File;
   order_number: string;
@@ -21,11 +22,12 @@ export type CategoryListAction =
   | { type: "OPEN_CREATE" }
   | { type: "OPEN_EDIT"; payload: { category: ICategory } }
   | { type: "CLOSE_DIALOG" }
-  | { type: "SET_FIELD"; payload: { key: keyof CategoryFormState; value: string | boolean | File } }
+  | { type: "SET_FIELD"; payload: { key: keyof CategoryFormState; value: string | boolean | File | TName } }
+  | { type: "SET_NAME_FIELD"; payload: { lang: keyof TName; value: string } }
   | { type: "RESET_FORM" };
 
 export const emptyCategoryForm: CategoryFormState = {
-  name: "",
+  name: { uz: "", ru: "" },
   slug: "",
   image: "",
   order_number: "0",
@@ -59,6 +61,10 @@ export const categoryListActions = {
     payload: { key, value },
   }),
   resetForm: (): CategoryListAction => ({ type: "RESET_FORM" }),
+  setNameField: (lang: keyof TName, value: string): CategoryListAction => ({
+    type: "SET_NAME_FIELD",
+    payload: { lang, value },
+  }),
 };
 
 export function categoryListReducer(
@@ -84,7 +90,7 @@ export function categoryListReducer(
         dialogMode: "edit",
         editingId: category.id,
         form: {
-          name: category.name ?? "",
+          name: typeof category.name === 'object' ? category.name : { uz: String(category.name ?? ""), ru: "" },
           slug: category.slug ?? "",
           image: category.image ?? "",
           order_number: String(category.order_number ?? 0),
@@ -106,6 +112,14 @@ export function categoryListReducer(
         form: {
           ...state.form,
           [action.payload.key]: action.payload.value,
+        },
+      };
+    case "SET_NAME_FIELD":
+      return {
+        ...state,
+        form: {
+          ...state.form,
+          name: { ...state.form.name, [action.payload.lang]: action.payload.value },
         },
       };
     case "RESET_FORM":

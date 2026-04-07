@@ -6,12 +6,14 @@ import { clearTokens } from "@/api/api";
 import { useAuthStore } from "@/stores/auth.store";
 import { cn } from "@/lib/utils";
 import { getRoleHomePath, getRoleLabel, normalizePhone } from "@/lib/market";
+import { useLang } from "@/context/lang.context";
 
 export default function AppHeader() {
   const navigate = useNavigate();
   const location = useLocation();
   const me = useAuthStore((state) => state.me);
   const clearMe = useAuthStore((state) => state.clearMe);
+  const { lang, setLang } = useLang();
   const homePath = getRoleHomePath(me?.role);
   const sectionLabel = location.pathname
     .split("/")
@@ -56,6 +58,12 @@ export default function AppHeader() {
           <span className="h-3 w-px bg-border" />
           <span className="text-foreground">{normalizePhone(me?.phone)}</span>
         </div>
+        <button
+          onClick={() => setLang(lang === "uz" ? "ru" : "uz")}
+          className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs font-semibold text-foreground transition hover:bg-muted"
+        >
+          {lang === "uz" ? "RU" : "UZ"}
+        </button>
         <Button variant="outline" size="sm" onClick={handleLogout}>
           <LogOutIcon />
           Chiqish

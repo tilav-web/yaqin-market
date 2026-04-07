@@ -17,7 +17,7 @@ export class UnitController {
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SUPER_ADMIN)
-  async create(@Body() data: { name: string; short_name?: string }) {
+  async create(@Body() data: { name: { uz: string; ru: string }; short_name?: { uz: string; ru: string } }) {
     return this.unitService.create(data);
   }
 }

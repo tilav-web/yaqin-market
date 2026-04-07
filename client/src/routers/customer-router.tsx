@@ -14,6 +14,8 @@ import CustomerRequestsPage from "../pages/customer/requests/requests";
 import BroadcastRequestDetailPage from "../pages/customer/requests/request-detail";
 import ApplySellerPage from "../pages/customer/profile/apply-seller";
 import ApplyCourierPage from "../pages/customer/profile/apply-courier";
+import ConversationsPage from "../pages/customer/chat/conversations";
+import ChatMessagesPage from "../pages/customer/chat/messages";
 
 export const customerRouter: RouteObject[] = [
   {
@@ -83,6 +85,14 @@ export const customerRouter: RouteObject[] = [
       {
         path: "profile/apply-courier",
         element: <ApplyCourierPage />,
+      },
+      {
+        path: "chat",
+        element: <ConversationsPage />,
+      },
+      {
+        path: "chat/:id",
+        element: <ChatMessagesPage />,
       },
     ],
   },

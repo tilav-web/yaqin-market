@@ -18,16 +18,18 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PaginatedResponse, ProductTaxInfo } from "@/interfaces/market.interface";
 import { extractErrorMessage } from "@/lib/market";
+import { t, type TName } from "@/lib/i18n";
+import { useLang } from "@/context/lang.context";
 import CategoryList from "./_components/category-list";
 
 type Product = {
   id: number;
-  name: string;
+  name: TName;
   slug: string;
-  description?: string | null;
-  category?: { id: string; name: string } | null;
-  unit?: { id: number; name: string; short_name?: string | null } | null;
-  parent?: { id: number; name: string } | null;
+  description?: TName | null;
+  category?: { id: string; name: TName } | null;
+  unit?: { id: number; name: TName; short_name?: TName | null } | null;
+  parent?: { id: number; name: TName } | null;
   children?: { id: number }[];
   tax?: ProductTaxInfo | null;
   is_active: boolean;
@@ -36,13 +38,13 @@ type Product = {
 
 type Category = {
   id: string;
-  name: string;
+  name: TName;
 };
 
 type Unit = {
   id: number;
-  name: string;
-  short_name?: string | null;
+  name: TName;
+  short_name?: TName | null;
 };
 
 type ProductCatalogSummary = {
@@ -94,13 +96,16 @@ function ProductCardSkeleton() {
 
 export default function Products() {
   const queryClient = useQueryClient();
+  const { lang } = useLang();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [form, setForm] = useState({
-    name: "",
+    nameUz: "",
+    nameRu: "",
     slug: "",
-    description: "",
+    descriptionUz: "",
+    descriptionRu: "",
     category_id: "",
     unit_id: "",
     mxik_code: "",
@@ -186,7 +191,7 @@ export default function Products() {
   );
 
   const topCategories = useMemo(() => {
-    const counts = new Map<string, { name: string; total: number }>();
+    const counts = new Map<string, { name: TName; total: number }>();
 
     for (const product of visibleProducts) {
       if (!product.category?.id || !product.category?.name) continue;
@@ -224,9 +229,11 @@ export default function Products() {
     mutationFn: async () =>
       (
         await api.post("/products", {
-          name: form.name.trim(),
+          name: { uz: form.nameUz.trim(), ru: form.nameRu.trim() },
           slug: form.slug.trim() || undefined,
-          description: form.description.trim() || undefined,
+          description: (form.descriptionUz.trim() || form.descriptionRu.trim())
+            ? { uz: form.descriptionUz.trim(), ru: form.descriptionRu.trim() }
+            : undefined,
           category_id: form.category_id || undefined,
           unit_id: form.unit_id ? Number(form.unit_id) : undefined,
           tax: hasTaxFormValues
@@ -252,9 +259,11 @@ export default function Products() {
     onSuccess: () => {
       toast.success("Mahsulot yaratildi");
       setForm({
-        name: "",
+        nameUz: "",
+        nameRu: "",
         slug: "",
-        description: "",
+        descriptionUz: "",
+        descriptionRu: "",
         category_id: "",
         unit_id: "",
         mxik_code: "",
@@ -276,8 +285,9 @@ export default function Products() {
     },
   });
 
-  const selectedCategoryName =
+  const selectedCategoryRaw =
     categories.find((category) => category.id === selectedCategoryId)?.name ?? null;
+  const selectedCategoryName = selectedCategoryRaw ? t(selectedCategoryRaw, lang) : null;
 
   return (
     <div className="space-y-6">
@@ -321,10 +331,17 @@ export default function Products() {
 
               <div className="grid gap-3 md:grid-cols-2">
                 <Input
-                  placeholder="Mahsulot nomi"
-                  value={form.name}
+                  placeholder="Mahsulot nomi (UZ)"
+                  value={form.nameUz}
                   onChange={(event) =>
-                    setForm((current) => ({ ...current, name: event.target.value }))
+                    setForm((current) => ({ ...current, nameUz: event.target.value }))
+                  }
+                />
+                <Input
+                  placeholder="Название товара (RU)"
+                  value={form.nameRu}
+                  onChange={(event) =>
+                    setForm((current) => ({ ...current, nameRu: event.target.value }))
                   }
                 />
                 <Input
@@ -344,7 +361,7 @@ export default function Products() {
                   <option value="">Kategoriya tanlang</option>
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
-                      {category.name}
+                      {t(category.name, lang)}
                     </option>
                   ))}
                 </select>
@@ -358,20 +375,28 @@ export default function Products() {
                   <option value="">Birlik tanlang</option>
                   {units.map((unit) => (
                     <option key={unit.id} value={unit.id}>
-                      {unit.name}
-                      {unit.short_name ? ` (${unit.short_name})` : ""}
+                      {t(unit.name, lang)}
+                      {unit.short_name ? ` (${t(unit.short_name, lang)})` : ""}
                     </option>
                   ))}
                 </select>
               </div>
 
               <textarea
-                value={form.description}
+                value={form.descriptionUz}
                 onChange={(event) =>
-                  setForm((current) => ({ ...current, description: event.target.value }))
+                  setForm((current) => ({ ...current, descriptionUz: event.target.value }))
                 }
-                placeholder="Qisqa tavsif"
-                className="mt-3 min-h-[110px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+                placeholder="Qisqa tavsif (UZ)"
+                className="mt-3 min-h-[80px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
+              />
+              <textarea
+                value={form.descriptionRu}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, descriptionRu: event.target.value }))
+                }
+                placeholder="Краткое описание (RU)"
+                className="mt-2 min-h-[80px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
               />
             </div>
 
@@ -480,7 +505,7 @@ export default function Products() {
             <Button
               className="rounded-full px-5"
               onClick={() => createProduct.mutate()}
-              disabled={!form.name.trim() || createProduct.isPending}
+              disabled={!form.nameUz.trim() || createProduct.isPending}
             >
               {createProduct.isPending ? "Saqlanmoqda..." : "Mahsulot yaratish"}
             </Button>
@@ -538,12 +563,12 @@ export default function Products() {
 
             <div className="mt-4 space-y-3">
               {topCategories.length ? (
-                topCategories.map((category) => (
+                topCategories.map((category, idx) => (
                   <div
-                    key={category.name}
+                    key={idx}
                     className="flex items-center justify-between rounded-[1.1rem] border border-slate-200 bg-slate-50 px-4 py-3"
                   >
-                    <span className="text-sm font-medium text-slate-700">{category.name}</span>
+                    <span className="text-sm font-medium text-slate-700">{t(category.name, lang)}</span>
                     <span className="text-sm font-semibold text-slate-950">
                       {category.total} ta
                     </span>
@@ -637,11 +662,11 @@ export default function Products() {
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex min-w-0 items-start gap-3">
                       <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-primary/8 text-sm font-semibold text-primary">
-                        {(product.name?.[0] ?? "P").toUpperCase()}
+                        {(t(product.name, lang)?.[0] ?? "P").toUpperCase()}
                       </span>
                       <div className="min-w-0">
                         <p className="truncate text-base font-semibold text-slate-950">
-                          {product.name}
+                          {t(product.name, lang)}
                         </p>
                         <p className="truncate text-sm text-slate-500">{product.slug}</p>
                       </div>
@@ -660,10 +685,12 @@ export default function Products() {
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                      {product.category?.name ?? "Kategoriya yo'q"}
+                      {product.category ? t(product.category.name, lang) : "Kategoriya yo'q"}
                     </span>
                     <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-                      {product.unit?.short_name ?? product.unit?.name ?? "Birlik yo'q"}
+                      {product.unit
+                        ? (t(product.unit.short_name, lang) || t(product.unit.name, lang))
+                        : "Birlik yo'q"}
                     </span>
                     {product.parent ? (
                       <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -682,7 +709,7 @@ export default function Products() {
                       Tavsif
                     </p>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                      {product.description?.trim() || "Qisqa tavsif hali kiritilmagan."}
+                      {t(product.description, lang)?.trim() || "Qisqa tavsif hali kiritilmagan."}
                     </p>
                   </div>
 

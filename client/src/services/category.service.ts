@@ -1,9 +1,10 @@
 import axios from "axios";
 import { api } from "@/api/api";
 import type { ICategory } from "@/interfaces/category.interface";
+import type { TName } from "@/lib/i18n";
 
 export type CreateCategoryPayload = {
-  name: string;
+  name: TName;
   slug?: string;
   image?: string | File;
   order_number?: number;
@@ -11,7 +12,7 @@ export type CreateCategoryPayload = {
 };
 
 export type UpdateCategoryPayload = {
-  name?: string;
+  name?: TName;
   slug?: string;
   image?: string | File;
   order_number?: number;
@@ -36,13 +37,12 @@ function createFormData(payload: Record<string, unknown>): FormData {
   const formData = new FormData();
   Object.entries(payload).forEach(([key, value]) => {
     if (value !== undefined && value !== null) {
-      if (key === "image" && typeof value === "string") {
-        // If image is a string (URL), we don't necessarily need to send it back as a file
-        // But if the server expects a file, we might just skip it or send it as is.
-        // For now, let's only append if it's a File or if we want to update the URL (though server handles files)
+      if (value instanceof File) {
         formData.append(key, value);
+      } else if (typeof value === "object") {
+        formData.append(key, JSON.stringify(value));
       } else {
-        formData.append(key, value instanceof File ? value : String(value));
+        formData.append(key, String(value));
       }
     }
   });

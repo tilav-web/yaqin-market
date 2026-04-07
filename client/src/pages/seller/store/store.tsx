@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import type { RoleApplication } from "@/interfaces/application.interface";
 import { getDeliveryPolicySummary } from "@/lib/market";
 import { cn } from "@/lib/utils";
+import { t, type TName } from "@/lib/i18n";
+import { useLang } from "@/context/lang.context";
 
 interface StoreDeliverySettings {
   min_order_amount: number;
@@ -45,7 +47,7 @@ interface StoreProduct {
   id: string;
   product: {
     id: number;
-    name: string;
+    name: TName;
     images: { url: string; is_main: boolean }[];
   };
   price: number;
@@ -55,6 +57,7 @@ interface StoreProduct {
 }
 
 export default function SellerStore() {
+  const { lang } = useLang();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [storeForm, setStoreForm] = useState({
@@ -471,7 +474,7 @@ export default function SellerStore() {
                   {item.product.images?.[0]?.url ? (
                     <img
                       src={item.product.images[0].url}
-                      alt={item.product.name}
+                      alt={t(item.product.name, lang)}
                       className="h-full w-full object-cover"
                     />
                   ) : (
@@ -482,7 +485,7 @@ export default function SellerStore() {
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-foreground">
-                    {item.product.name}
+                    {t(item.product.name, lang)}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     Holat: {item.status}
