@@ -18,8 +18,10 @@ export default function ConversationsPage() {
 
   const { data: conversations = [], isLoading } = useQuery({
     queryKey: ["conversations", "my"],
-    queryFn: async () =>
-      (await api.get<Conversation[]>("/conversations")).data,
+    queryFn: async () => {
+      const data = (await api.get<Conversation[]>("/conversations")).data;
+      return Array.isArray(data) ? data : [];
+    },
     staleTime: 30000,
   });
 

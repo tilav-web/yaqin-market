@@ -186,7 +186,7 @@ export default function CustomerProfile() {
     sessionSource === "telegram" && telegramAuthService.hasTelegramInitData();
 
   return (
-    <div className="min-h-screen pb-24">
+    <div className="min-h-screen pb-36">
       <div className="space-y-5 p-4">
         <section className="rounded-3xl border border-border bg-card/90 p-5 shadow-[0_18px_50px_-42px_rgba(15,23,42,0.55)]">
           <div className="flex items-center justify-between">

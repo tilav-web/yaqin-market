@@ -20,6 +20,7 @@ import { BotModule } from './modules/bot/bot.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { AppInitModule } from './modules/app-init/app-init.module';
 
 @Module({
   imports: [
@@ -68,6 +69,7 @@ import { ChatModule } from './modules/chat/chat.module';
     HealthModule,
     NotificationModule,
     ChatModule,
+    AppInitModule,
   ],
 })
 export class AppModule {}

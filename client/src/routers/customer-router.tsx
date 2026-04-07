@@ -1,6 +1,6 @@
 import { Navigate, type RouteObject } from "react-router-dom";
 import CustomerLayout from "../layouts/customer-layout";
-import PrivateRoute from "./private-route";
+import AuthRequiredRoute from "./auth-required-route";
 import CustomerHome from "../pages/customer/home/home";
 import StoreDetail from "../pages/customer/stores/store-detail";
 import CustomerOrders from "../pages/customer/orders/orders";
@@ -17,83 +17,41 @@ import ApplyCourierPage from "../pages/customer/profile/apply-courier";
 import ConversationsPage from "../pages/customer/chat/conversations";
 import ChatMessagesPage from "../pages/customer/chat/messages";
 
+import type { ReactElement } from "react";
+
+// Faqat auth talab qiladigan route larni Auth bilan o'raymiz
+function auth(element: ReactElement) {
+  return <AuthRequiredRoute>{element}</AuthRequiredRoute>;
+}
+
 export const customerRouter: RouteObject[] = [
   {
     path: "/mobile",
-    element: (
-      <PrivateRoute roles={["CUSTOMER", "SELLER", "COURIER"]}>
-        <CustomerLayout />
-      </PrivateRoute>
-    ),
+    // Layout o'zi ochiq — auth shart emas
+    element: <CustomerLayout />,
     children: [
-      {
-        index: true,
-        element: <CustomerHome />,
-      },
-      {
-        path: "stores/:id",
-        element: <StoreDetail />,
-      },
-      {
-        path: "orders",
-        element: <CustomerOrders />,
-      },
-      {
-        path: "orders/:id",
-        element: <CustomerOrderDetailPage />,
-      },
-      {
-        path: "products/:productId",
-        element: <ProductOffersPage />,
-      },
-      {
-        path: "broadcast/new",
-        element: <CreateBroadcastRequestPage />,
-      },
-      {
-        path: "requests",
-        element: <CustomerRequestsPage />,
-      },
-      {
-        path: "requests/:id",
-        element: <BroadcastRequestDetailPage />,
-      },
-      {
-        path: "profile",
-        element: <CustomerProfile />,
-      },
-      {
-        path: "locations",
-        element: <CustomerLocationsPage />,
-      },
-      {
-        path: "wallet",
-        element: <CustomerWalletPage />,
-      },
-      {
-        path: "profile/seller-store",
-        element: <Navigate to="/mobile/seller/store" replace />,
-      },
-      {
-        path: "profile/courier-orders",
-        element: <Navigate to="/mobile/courier/orders" replace />,
-      },
-      {
-        path: "profile/apply-seller",
-        element: <ApplySellerPage />,
-      },
-      {
-        path: "profile/apply-courier",
-        element: <ApplyCourierPage />,
-      },
-      {
-        path: "chat",
-        element: <ConversationsPage />,
-      },
-      {
-        path: "chat/:id",
-        element: <ChatMessagesPage />,
-      },
+      // === PUBLIC ===
+      { index: true, element: <CustomerHome /> },
+      { path: "stores/:id", element: <StoreDetail /> },
+      { path: "products/:productId", element: <ProductOffersPage /> },
+
+      // === AUTH REQUIRED ===
+      { path: "orders", element: auth(<CustomerOrders />) },
+      { path: "orders/:id", element: auth(<CustomerOrderDetailPage />) },
+      { path: "broadcast/new", element: auth(<CreateBroadcastRequestPage />) },
+      { path: "requests", element: auth(<CustomerRequestsPage />) },
+      { path: "requests/:id", element: auth(<BroadcastRequestDetailPage />) },
+      { path: "profile", element: auth(<CustomerProfile />) },
+      { path: "locations", element: auth(<CustomerLocationsPage />) },
+      { path: "wallet", element: auth(<CustomerWalletPage />) },
+      { path: "chat", element: auth(<ConversationsPage />) },
+      { path: "chat/:id", element: auth(<ChatMessagesPage />) },
+      { path: "profile/apply-seller", element: auth(<ApplySellerPage />) },
+      { path: "profile/apply-courier", element: auth(<ApplyCourierPage />) },
+
+      // Redirects
+      { path: "profile/seller-store", element: <Navigate to="/mobile/seller/store" replace /> },
+      { path: "profile/courier-orders", element: <Navigate to="/mobile/courier/orders" replace /> },
     ],
   },
 ];

@@ -11,7 +11,7 @@ import {
   SearchIcon,
   ShoppingBagIcon,
 } from "lucide-react";
-import { api } from "@/api/api";
+import { api, getAccessToken } from "@/api/api";
 import EmptyState from "@/components/common/empty-state";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -56,6 +56,7 @@ export default function StoreDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const isLoggedIn = Boolean(getAccessToken());
   const { location, setLocation, address, setAddress, requestCurrentLocation } =
     useDiscoveryPreferences();
   const [cart, setCart] = useState<Record<string, number>>({});
@@ -628,11 +629,13 @@ export default function StoreDetail() {
               </div>
               <div className="flex shrink-0 flex-col gap-2">
                 <button
-                  onClick={() =>
-                    isSubscribed
-                      ? unsubscribeMutation.mutate()
-                      : subscribeMutation.mutate()
-                  }
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      navigate(`/login?returnTo=/mobile/stores/${id}`);
+                      return;
+                    }
+                    isSubscribed ? unsubscribeMutation.mutate() : subscribeMutation.mutate();
+                  }}
                   disabled={subscribeMutation.isPending || unsubscribeMutation.isPending}
                   className="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/25 disabled:opacity-60"
                 >
@@ -643,7 +646,13 @@ export default function StoreDetail() {
                   )}
                 </button>
                 <button
-                  onClick={() => navigate(`/mobile/chat?store_id=${id}&store_name=${encodeURIComponent(store?.name ?? "")}`)}
+                  onClick={() => {
+                    if (!isLoggedIn) {
+                      navigate(`/login?returnTo=/mobile/chat?store_id=${id}&store_name=${encodeURIComponent(store?.name ?? "")}`);
+                      return;
+                    }
+                    navigate(`/mobile/chat?store_id=${id}&store_name=${encodeURIComponent(store?.name ?? "")}`);
+                  }}
                   className="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/25"
                 >
                   <MessageCircleIcon className="h-3.5 w-3.5" />

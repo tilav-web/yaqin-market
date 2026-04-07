@@ -6,7 +6,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,8 @@ function captureDiscoveryLocation() {
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get("returnTo");
   const setMe = useAuthStore((state) => state.setMe);
   const setSessionSource = useAuthStore((state) => state.setSessionSource);
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
@@ -118,7 +120,7 @@ export default function Auth() {
             await captureDiscoveryLocation();
           }
           toast.success("Telegram orqali tizimga kirildi");
-          navigate(getRoleHomePath(me.role), { replace: true });
+          navigate(returnTo && returnTo.startsWith("/mobile") ? returnTo : getRoleHomePath(me.role), { replace: true });
           return;
         }
 
@@ -201,7 +203,7 @@ export default function Auth() {
             await captureDiscoveryLocation();
           }
           toast.success("Telegram orqali tizimga kirildi");
-          navigate(getRoleHomePath(me.role), { replace: true });
+          navigate(returnTo && returnTo.startsWith("/mobile") ? returnTo : getRoleHomePath(me.role), { replace: true });
           return;
         }
 
@@ -242,7 +244,7 @@ export default function Auth() {
         await captureDiscoveryLocation();
       }
       toast.success("Tizimga muvaffaqiyatli kirdingiz");
-      navigate(getRoleHomePath(me.role), { replace: true });
+      navigate(returnTo && returnTo.startsWith("/mobile") ? returnTo : getRoleHomePath(me.role), { replace: true });
     } catch (error) {
       const message =
         error instanceof Error
