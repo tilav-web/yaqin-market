@@ -14,10 +14,14 @@ import { RolesGuard } from '../auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import { User } from './user.entity';
+import { NotificationService } from '../notification/notification.service';
 
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly notificationService: NotificationService,
+  ) {}
 
   @Get()
   @UseGuards(AuthGuard, RolesGuard)
@@ -58,6 +62,15 @@ export class UserController {
     @Body() data: { first_name?: string; last_name?: string },
   ) {
     return this.userService.updateProfile(user.id, data);
+  }
+
+  @Put('me/fcm-token')
+  @UseGuards(AuthGuard)
+  async updateFcmToken(
+    @UserDecorator() user: User,
+    @Body('fcm_token') token: string,
+  ) {
+    return this.notificationService.saveFcmToken(user.id, token);
   }
 
   @Put(':id/role')

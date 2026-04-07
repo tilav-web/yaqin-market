@@ -15,7 +15,9 @@ import { BroadcastOffer } from './entities/broadcast-offer.entity';
 import { BroadcastOfferItem } from './entities/broadcast-offer-item.entity';
 import { RolesGuard } from '../auth/guard/roles.guard';
 import { Auth } from '../auth/auth.entity';
+import { User } from '../user/user.entity';
 import { BroadcastGateway } from './broadcast.gateway';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -32,11 +34,13 @@ import { BroadcastGateway } from './broadcast.gateway';
       StoreProduct,
       Product,
       Auth,
+      User,
       BroadcastRequest,
       BroadcastRequestItem,
       BroadcastOffer,
       BroadcastOfferItem,
     ]),
+    NotificationModule,
   ],
   controllers: [OrderController],
   providers: [OrderService, RolesGuard, BroadcastGateway],

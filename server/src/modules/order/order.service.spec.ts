@@ -26,6 +26,7 @@ describe('OrderService payment guards', () => {
     const service = new OrderService(
       {} as DataSource,
       {} as BroadcastGateway,
+      { sendToUser: jest.fn(), sendToUsers: jest.fn() } as any,
       orderRepo as unknown as Repository<Order>,
       {} as Repository<OrderItem>,
       {} as Repository<Store>,

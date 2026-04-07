@@ -196,6 +196,7 @@ export class AuthService {
     return {
       success: true,
       access_token: accessToken,
+      refresh_token: refreshToken,
       userId: auth.user?.id ?? null,
     };
   }
@@ -233,6 +234,7 @@ export class AuthService {
     return {
       success: true,
       access_token: newAccessToken,
+      refresh_token: newRefreshToken,
     };
   }
 

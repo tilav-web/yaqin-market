@@ -41,6 +41,20 @@ export class User {
   @OneToMany(() => Store, (store) => store.owner)
   stores: Store[];
 
+  // FCM push notification token (mobile)
+  @Column({ type: 'varchar', nullable: true })
+  fcm_token: string | null;
+
+  // Courier real-time location
+  @Column({ type: 'decimal', precision: 10, scale: 8, nullable: true })
+  current_lat: number | null;
+
+  @Column({ type: 'decimal', precision: 11, scale: 8, nullable: true })
+  current_lng: number | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  last_location_update: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

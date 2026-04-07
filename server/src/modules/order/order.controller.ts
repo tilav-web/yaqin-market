@@ -210,6 +210,27 @@ export class OrderController {
     return this.orderService.acceptOrder(id, this.getManagedStoreId(user));
   }
 
+  @Post(':id/accept-items')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
+  async acceptOrderItems(
+    @Param('id') id: string,
+    @Body('item_ids') itemIds: string[],
+    @UserDecorator() user: User,
+  ) {
+    return this.orderService.acceptOrderItems(
+      id,
+      this.getManagedStoreId(user),
+      itemIds,
+    );
+  }
+
+  @Get(':id/courier-location')
+  @UseGuards(AuthGuard)
+  async getCourierLocation(@Param('id') id: string) {
+    return this.orderService.getCourierLocation(id);
+  }
+
   @Post(':id/ready')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)

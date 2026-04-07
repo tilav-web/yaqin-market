@@ -51,12 +51,11 @@ export class AuthController {
   @Post('refresh')
   async refresh(
     @Req() req: Request,
+    @Body('refresh_token') bodyToken: string,
     @Res({ passthrough: true }) res: Response,
   ) {
-    return this.authService.refreshAccessToken({
-      refreshToken: this.getCookie(req, 'refresh_token'),
-      res,
-    });
+    const refreshToken = bodyToken || this.getCookie(req, 'refresh_token');
+    return this.authService.refreshAccessToken({ refreshToken, res });
   }
 
   @Post('logout')

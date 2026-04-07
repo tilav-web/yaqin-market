@@ -9,6 +9,12 @@ import { Order } from './order.entity';
 import { Product } from '../../product/product.entity';
 import { StoreProduct } from '../../store-product/store-product.entity';
 
+export enum OrderItemStatus {
+  PENDING = 'PENDING',
+  ACCEPTED = 'ACCEPTED',
+  REJECTED = 'REJECTED',
+}
+
 @Entity('order_items')
 export class OrderItem {
   @PrimaryGeneratedColumn('uuid')
@@ -49,4 +55,11 @@ export class OrderItem {
 
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   total_price: number;
+
+  @Column({
+    type: 'enum',
+    enum: OrderItemStatus,
+    default: OrderItemStatus.PENDING,
+  })
+  status: OrderItemStatus;
 }
