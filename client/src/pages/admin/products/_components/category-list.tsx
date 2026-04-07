@@ -141,12 +141,12 @@ export default function CategoryList({
   };
 
   const handleCreate = () => {
-    if (!state.form.name.trim()) {
+    if (!state.form.name.uz.trim()) {
       toast.error("Kategoriya nomini kiriting");
       return;
     }
     createMutation.mutate({
-      name: state.form.name.trim(),
+      name: state.form.name,
       slug: state.form.slug.trim() || undefined,
       image: state.form.image,
       order_number: parseOrderNumber(state.form.order_number),
@@ -156,7 +156,7 @@ export default function CategoryList({
 
   const handleUpdate = () => {
     if (!state.editingId) return;
-    if (!state.form.name.trim()) {
+    if (!state.form.name.uz.trim()) {
       toast.error("Kategoriya nomini kiriting");
       return;
     }

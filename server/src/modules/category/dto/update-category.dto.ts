@@ -1,5 +1,6 @@
-import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { IsBoolean, IsInt, IsOptional, IsString, Min, ValidateNested } from 'class-validator';
 import { Type, Transform, type TransformFnParams } from 'class-transformer';
+import { TranslatableStringDto } from 'src/common/dto/translatable.dto';
 
 function normalizeBoolean({ value }: TransformFnParams): unknown {
   if (value === 'true' || value === true) return true;
@@ -9,8 +10,9 @@ function normalizeBoolean({ value }: TransformFnParams): unknown {
 
 export class UpdateCategoryDto {
   @IsOptional()
-  @IsString()
-  name?: string;
+  @ValidateNested()
+  @Type(() => TranslatableStringDto)
+  name?: TranslatableStringDto;
 
   @IsOptional()
   @IsString()

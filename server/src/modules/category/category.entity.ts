@@ -7,7 +7,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Product } from '../product/product.entity';
-import { TranslatableString } from 'src/common/types/translatable';
+import type { TranslatableString } from 'src/common/types/translatable';
 
 @Entity('categories')
 export class Category {

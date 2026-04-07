@@ -196,7 +196,7 @@ export class OrderService {
         orderItems.push({
           order_id: savedOrder.id,
           product_id: storeProduct.product_id,
-          product_name: product?.name ?? 'Mahsulot',
+          product_name: product?.name?.uz ?? 'Mahsulot',
           product_image: product?.images?.[0]?.url,
           store_product_id: storeProduct.id,
           quantity: item.quantity,
@@ -302,7 +302,7 @@ export class OrderService {
         await queryRunner.manager.save(OrderItem, {
           order_id: savedOrder.id,
           product_id: storeProduct.product_id,
-          product_name: product?.name ?? 'Mahsulot',
+          product_name: product?.name?.uz ?? 'Mahsulot',
           product_image: product?.images?.[0]?.url,
           store_product_id: storeProduct.id,
           quantity: item.quantity,
@@ -381,7 +381,7 @@ export class OrderService {
       items.push({
         order_id: orderId,
         product_id: storeProduct.product_id,
-        product_name: storeProduct.product.name,
+        product_name: storeProduct.product.name?.uz ?? 'Mahsulot',
         product_image: storeProduct.product.images?.[0]?.url,
         store_product_id: storeProduct.id,
         quantity: item.quantity,
@@ -822,7 +822,7 @@ export class OrderService {
       return this.broadcastRequestItemRepo.create({
         request_id: savedRequest.id,
         product_id: product.id,
-        product_name: product.name,
+        product_name: product.name?.uz ?? 'Mahsulot',
         quantity: item.quantity,
       });
     });

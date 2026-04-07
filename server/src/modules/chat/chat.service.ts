@@ -47,7 +47,7 @@ export class ChatService {
         relations: ['seller'],
       });
       if (!offer) throw new NotFoundException('Broadcast offer not found');
-      sellerId = offer.seller?.id ?? offer.seller_id;
+      sellerId = offer.seller?.id ?? offer.seller_id ?? undefined;
     }
 
     if (!sellerId) throw new BadRequestException('seller_id required');
@@ -56,7 +56,7 @@ export class ChatService {
     const existing = await this.convRepo.findOne({
       where: {
         type: dto.type,
-        reference_id: dto.reference_id ?? null,
+        reference_id: dto.reference_id ?? undefined,
         buyer_id: buyerId,
         seller_id: sellerId,
       },

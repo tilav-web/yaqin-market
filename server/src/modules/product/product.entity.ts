@@ -13,7 +13,7 @@ import { Category } from '../category/category.entity';
 import { Unit } from '../unit/unit.entity';
 import { StoreProduct } from '../store-product/store-product.entity';
 import { ProductTax } from './product-tax.entity';
-import { TranslatableString } from 'src/common/types/translatable';
+import type { TranslatableString } from 'src/common/types/translatable';
 
 @Entity('products')
 export class Product {
