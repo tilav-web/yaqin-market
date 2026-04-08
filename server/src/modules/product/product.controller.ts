@@ -121,7 +121,7 @@ export class ProductController {
     if (index >= 0 && index < images.length) {
       const removed = images.splice(index, 1)[0];
       if (removed?.url) {
-        await this.imageService.removeImage(removed.url).catch(() => {});
+        await this.imageService.deleteImage(removed.url).catch(() => {});
       }
     }
 
