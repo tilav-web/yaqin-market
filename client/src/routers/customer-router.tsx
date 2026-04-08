@@ -16,6 +16,10 @@ import ApplySellerPage from "../pages/customer/profile/apply-seller";
 import ApplyCourierPage from "../pages/customer/profile/apply-courier";
 import ConversationsPage from "../pages/customer/chat/conversations";
 import ChatMessagesPage from "../pages/customer/chat/messages";
+import HelpPage from "../pages/customer/help/help";
+import AboutPage from "../pages/customer/about/about";
+import EditProfilePage from "../pages/customer/profile/edit-profile";
+import StoresMapPage from "../pages/customer/stores/stores-map";
 
 import type { ReactElement } from "react";
 
@@ -48,6 +52,12 @@ export const customerRouter: RouteObject[] = [
       { path: "chat/:id", element: auth(<ChatMessagesPage />) },
       { path: "profile/apply-seller", element: auth(<ApplySellerPage />) },
       { path: "profile/apply-courier", element: auth(<ApplyCourierPage />) },
+      { path: "profile/edit", element: auth(<EditProfilePage />) },
+      { path: "stores-map", element: <StoresMapPage /> },
+
+      // === PUBLIC INFO ===
+      { path: "help", element: <HelpPage /> },
+      { path: "about", element: <AboutPage /> },
 
       // Redirects
       { path: "profile/seller-store", element: <Navigate to="/mobile/seller/store" replace /> },

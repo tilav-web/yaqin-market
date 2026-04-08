@@ -228,6 +228,18 @@ export default function ProfileScreen() {
           label: tr('my_broadcast'), sub: tr('my_broadcast_sub'),
           onPress: () => router.push('/(customer)/broadcast-cart'),
         },
+        {
+          icon: 'chatbubbles-outline', color: '#00897B', bg: '#E0F2F1',
+          label: lang === 'ru' ? 'Сообщения' : 'Xabarlar',
+          sub: lang === 'ru' ? 'Переписки с магазинами' : "Do'konlar bilan yozishmalar",
+          onPress: () => router.push('/(customer)/chat'),
+        },
+        {
+          icon: 'wallet-outline', color: '#9C27B0', bg: '#F3E5F5',
+          label: lang === 'ru' ? 'Кошелёк' : 'Hamyon',
+          sub: lang === 'ru' ? 'Баланс и транзакции' : 'Balans va tranzaksiyalar',
+          onPress: () => router.push('/(customer)/wallet'),
+        },
       ],
     },
     {
