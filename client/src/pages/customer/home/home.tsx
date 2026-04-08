@@ -32,10 +32,12 @@ import { useLang } from "@/context/lang.context";
 const PRODUCTS_PAGE_SIZE = 12;
 const STORE_INSERT_EVERY = 8;
 
+const API_URL = import.meta.env.VITE_API_URL ?? "";
+
 function imageUrl(path?: string | null) {
   if (!path) return null;
   if (path.startsWith("http")) return path;
-  return path;
+  return `${API_URL}/${path}`;
 }
 
 /* ── Skeleton ──────────────────────────────────────────────────────────────── */
@@ -43,7 +45,7 @@ function imageUrl(path?: string | null) {
 function ProductCardSkeleton() {
   return (
     <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
-      <Skeleton className="aspect-square w-full" />
+      <Skeleton className="aspect-[4/3] w-full" />
       <div className="space-y-2 p-3">
         <Skeleton className="h-3.5 w-4/5 rounded" />
         <Skeleton className="h-4 w-1/2 rounded" />
@@ -232,41 +234,39 @@ export default function CustomerHome() {
 
   return (
     <div className="min-h-screen bg-gray-50 pb-32">
-      {/* ── Header (red, rounded bottom) ─────────────────────────────────── */}
-      <header className="bg-red-600 px-4 pb-4 pt-3 text-white rounded-b-[1.75rem]">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0 flex-1">
-            <button
-              type="button"
-              onClick={() => requestCurrentLocation().catch(() => undefined)}
-              className="flex items-center gap-1 text-white/85"
-            >
-              <MapPinIcon className="h-3.5 w-3.5 shrink-0" />
-              <span className="truncate text-xs">
-                {location ? tr("location_ready") : tr("location_detecting")}
-              </span>
-              <ChevronDownIcon className="h-3.5 w-3.5 shrink-0" />
-            </button>
-            <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight">
-              Yaqin Market
-            </h1>
-          </div>
+      {/* ── Header + Search (single red block) ───────────────────────────── */}
+      <header className="bg-red-600 px-4 pb-5 pt-3 text-white rounded-b-[1.75rem]">
+        {/* Top row: location + logo + lang */}
+        <div className="flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={() => requestCurrentLocation().catch(() => undefined)}
+            className="flex items-center gap-1 text-white/80 hover:text-white transition"
+          >
+            <MapPinIcon className="h-3.5 w-3.5 shrink-0" />
+            <span className="truncate text-xs max-w-[180px]">
+              {location ? tr("location_ready") : tr("location_detecting")}
+            </span>
+            <ChevronDownIcon className="h-3.5 w-3.5 shrink-0" />
+          </button>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setLang(lang === "uz" ? "ru" : "uz")}
-              className="rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/30"
-            >
-              {lang === "uz" ? "RU" : "UZ"}
-            </button>
-          </div>
+          <button
+            onClick={() => setLang(lang === "uz" ? "ru" : "uz")}
+            className="rounded-full border border-white/30 bg-white/15 px-3 py-1 text-xs font-bold text-white transition hover:bg-white/25"
+          >
+            {lang.toUpperCase()}
+          </button>
         </div>
-      </header>
 
-      {/* ── Search bar area (continues red bg with rounded bottom) ────── */}
-      <div className="bg-red-600 px-4 pb-5 rounded-b-[1.75rem] -mt-1">
-        <div className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 shadow-md">
-          <SearchIcon className="h-4.5 w-4.5 text-gray-400" />
+        {/* Brand */}
+        <div className="flex items-center gap-2.5 mt-1 mb-3">
+          <img src="/logo-mobile.png" alt="Yaqin Market" className="h-8 w-8 rounded-lg" />
+          <h1 className="text-xl font-extrabold tracking-tight">Yaqin Market</h1>
+        </div>
+
+        {/* Search bar */}
+        <div className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 shadow-md">
+          <SearchIcon className="h-4 w-4 text-gray-400" />
           <input
             type="text"
             placeholder={tr("search_placeholder")}
@@ -281,7 +281,7 @@ export default function CustomerHome() {
             <MapIcon className="h-4 w-4 text-red-600" />
           </Link>
         </div>
-      </div>
+      </header>
 
       <div className="space-y-4 px-4 pt-4">
         {/* ── Promo Banner (broadcast order) ──────────────────────────────── */}
@@ -389,10 +389,10 @@ export default function CustomerHome() {
                       <img
                         src={imageUrl(img)!}
                         alt={t(product.name)}
-                        className="aspect-square w-full object-cover"
+                        className="aspect-[4/3] w-full object-cover"
                       />
                     ) : (
-                      <div className="flex aspect-square w-full items-center justify-center bg-gray-100">
+                      <div className="flex aspect-[4/3] w-full items-center justify-center bg-gray-100">
                         <ShoppingBagIcon className="h-9 w-9 text-red-200" />
                       </div>
                     )}
