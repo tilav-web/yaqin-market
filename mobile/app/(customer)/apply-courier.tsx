@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { apiClient } from '../../src/api/client';
+import { useAuthStore } from '../../src/store/auth.store';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -20,9 +21,15 @@ const TRANSPORT_TYPES = [
 
 export default function ApplyCourierScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const [transport, setTransport] = useState('');
   const [form, setForm] = useState({ phone: '', vehicle_number: '', notes: '' });
   const [loading, setLoading] = useState(false);
+
+  if (!isAuthenticated) {
+    router.replace('/(auth)/login');
+    return null;
+  }
 
   const set = (key: string, val: string) => setForm(f => ({ ...f, [key]: val }));
 

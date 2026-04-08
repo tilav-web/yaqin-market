@@ -294,8 +294,8 @@ export default function HomeScreen() {
         }
       >
 
-        {/* Promo Banner */}
-        <View style={styles.section}>
+        {/* Promo Banner — floats over header bottom */}
+        <View style={[styles.section, { marginTop: -Spacing.lg }]}>
           <PromoBanner onPress={() => router.push('/(customer)/broadcast-cart')} />
         </View>
 
@@ -350,9 +350,14 @@ export default function HomeScreen() {
               )}
             />
           ) : (
-            <View style={styles.emptyRow}>
-              <Ionicons name="storefront-outline" size={32} color={Colors.textHint} />
-              <Text style={styles.emptyText}>Yaqin do'konlar topilmadi</Text>
+            <View style={styles.emptyRowCard}>
+              <View style={styles.emptyRowIcon}>
+                <Ionicons name="storefront-outline" size={20} color={Colors.textHint} />
+              </View>
+              <View>
+                <Text style={styles.emptyRowTitle}>Do'konlar topilmadi</Text>
+                <Text style={styles.emptyRowSub}>Joylashuv aniqlanganda ko'rinadi</Text>
+              </View>
             </View>
           )}
         </View>
@@ -379,9 +384,11 @@ export default function HomeScreen() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Text style={{ fontSize: 52 }}>🛒</Text>
+              <View style={styles.emptyIconBox}>
+                <Ionicons name="cube-outline" size={32} color={Colors.primaryLight} />
+              </View>
               <Text style={styles.emptyTitle}>Mahsulotlar topilmadi</Text>
-              <Text style={styles.emptySubtitle}>Tez orada yangi mahsulotlar qo'shiladi</Text>
+              <Text style={styles.emptySubtitle}>Server bilan ulanishni tekshiring</Text>
             </View>
           )}
         </View>
@@ -394,12 +401,14 @@ export default function HomeScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.primary },
+  safe: { flex: 1, backgroundColor: Colors.background },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.lg,
+    paddingBottom: Spacing.xl,
     paddingTop: Platform.OS === 'android' ? Spacing.sm : 0,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   headerTop: {
     flexDirection: 'row',
@@ -467,9 +476,6 @@ const styles = StyleSheet.create({
   scroll: {
     flex: 1,
     backgroundColor: Colors.background,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    marginTop: -1,
   },
   section: {
     marginTop: Spacing.md,
@@ -486,21 +492,36 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginTop: Spacing.sm,
   },
-  emptyRow: {
+  emptyRowCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.md,
+    gap: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    marginHorizontal: Spacing.md,
+    ...Shadow.sm,
   },
+  emptyRowIcon: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: Colors.background,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  emptyRowTitle: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  emptyRowSub: { fontSize: 12, color: Colors.textHint, marginTop: 2 },
   emptyText: { fontSize: 13, color: Colors.textHint },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: Spacing.xl,
+    paddingVertical: Spacing.lg,
     gap: Spacing.sm,
   },
-  emptyTitle: { ...Typography.title, color: Colors.textSecondary },
-  emptySubtitle: { ...Typography.caption, textAlign: 'center' },
+  emptyIconBox: {
+    width: 64, height: 64, borderRadius: 20,
+    backgroundColor: Colors.primarySurface,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  emptyTitle: { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
+  emptySubtitle: { fontSize: 12, color: Colors.textHint, textAlign: 'center' },
 });
 
 const sectionStyles = StyleSheet.create({
@@ -667,6 +688,7 @@ const promoStyles = StyleSheet.create({
     flexDirection: 'row',
     overflow: 'hidden',
     minHeight: 110,
+    ...Shadow.lg,
   },
   textBlock: {
     flex: 1,

@@ -35,7 +35,7 @@ export default function WelcomeScreen() {
 
         <View style={styles.logoWrap}>
           <View style={styles.logoIcon}>
-            <Text style={{ fontSize: 36 }}>🛒</Text>
+            <Ionicons name="storefront" size={36} color={Colors.white} />
           </View>
         </View>
 
@@ -82,7 +82,7 @@ export default function WelcomeScreen() {
           activeOpacity={0.8}
         >
           <View style={styles.telegramIcon}>
-            <Text style={{ fontSize: 20 }}>✈️</Text>
+            <Ionicons name="paper-plane" size={20} color="#0088CC" />
           </View>
           <Text style={styles.telegramText}>Telegram bilan kirish</Text>
           <Ionicons name="chevron-forward" size={16} color="#0088CC" />

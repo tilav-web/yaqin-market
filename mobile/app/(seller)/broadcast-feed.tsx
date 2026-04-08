@@ -1,18 +1,13 @@
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-  RefreshControl,
+  View, Text, StyleSheet, FlatList,
+  TouchableOpacity, RefreshControl, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Colors, Spacing, Typography, Radius, Shadow } from '../../src/theme';
-import { Badge } from '../../src/components/ui/Badge';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
 
 export default function BroadcastFeedScreen() {
@@ -24,100 +19,172 @@ export default function BroadcastFeedScreen() {
     refetchInterval: 30000,
   });
 
+  const requests = Array.isArray(feed) ? feed : [];
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <Text style={styles.title}>📢 Umumiy buyurtmalar</Text>
-        <Text style={styles.subtitle}>Yaqin atrofdan kelgan buyurtmalar</Text>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      {/* Header */}
+      <View style={s.header}>
+        <View style={s.headerTop}>
+          <View>
+            <Text style={s.title}>Umumiy buyurtmalar</Text>
+            <Text style={s.subtitle}>{requests.length} ta talab · Yaqin atrofdан</Text>
+          </View>
+          <View style={s.livePill}>
+            <View style={s.liveDot} />
+            <Text style={s.liveTxt}>Jonli</Text>
+          </View>
+        </View>
       </View>
 
-      {isLoading ? (
-        <ActivityIndicator style={{ marginTop: 40 }} color={Colors.primary} />
-      ) : (
-        <FlatList
-          data={feed ?? []}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.list}
-          refreshControl={
-            <RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.primary} />
-          }
-          ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>📭</Text>
-              <Text style={styles.emptyText}>Hozircha buyurtma yo'q</Text>
-              <Text style={styles.emptySubtext}>Yaqin atrofdagi buyurtmalar bu yerda ko'rinadi</Text>
+      <FlatList
+        data={requests}
+        keyExtractor={i => i.id}
+        contentContainerStyle={s.list}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refetch}
+            tintColor={Colors.primary}
+            colors={[Colors.primary]}
+          />
+        }
+        ListEmptyComponent={
+          !isLoading ? (
+            <View style={s.empty}>
+              <View style={s.emptyIconBox}>
+                <Ionicons name="megaphone-outline" size={40} color={Colors.primaryLight} />
+              </View>
+              <Text style={s.emptyTitle}>Buyurtma yo'q</Text>
+              <Text style={s.emptySub}>Yaqin atrofdagi umumiy buyurtmalar bu yerda ko'rinadi</Text>
             </View>
-          }
-          renderItem={({ item: request }) => (
+          ) : null
+        }
+        renderItem={({ item: request }) => {
+          const hasMyOffer = !!request.my_offer;
+          const offerCount = request.offers?.length ?? 0;
+          return (
             <TouchableOpacity
-              style={styles.card}
+              style={s.card}
               onPress={() =>
                 router.push({
                   pathname: '/(seller)/broadcast-offer/[id]',
                   params: { id: request.id },
                 })
               }
-              activeOpacity={0.85}
+              activeOpacity={0.88}
             >
-              <View style={styles.cardTop}>
-                <Text style={styles.requestTitle}>{request.title}</Text>
-                <Badge label="🟢 Ochiq" color={Colors.success} bg={Colors.successSurface} />
-              </View>
-
-              <View style={styles.itemsList}>
-                {request.items?.slice(0, 3).map((item: any) => (
-                  <Text key={item.id} style={styles.itemText}>
-                    • {item.product_name} — {item.quantity} ta
-                  </Text>
-                ))}
-                {(request.items?.length ?? 0) > 3 && (
-                  <Text style={styles.moreText}>
-                    +{request.items.length - 3} ta mahsulot
-                  </Text>
+              {/* Card top */}
+              <View style={s.cardTop}>
+                <View style={s.titleRow}>
+                  <View style={s.megaIcon}>
+                    <Ionicons name="megaphone-outline" size={16} color="#FF9800" />
+                  </View>
+                  <Text style={s.requestTitle} numberOfLines={1}>{request.title}</Text>
+                </View>
+                {hasMyOffer ? (
+                  <View style={s.sentPill}>
+                    <Ionicons name="checkmark-circle" size={12} color={Colors.success} />
+                    <Text style={s.sentTxt}>Yuborildi</Text>
+                  </View>
+                ) : (
+                  <View style={s.openPill}>
+                    <Text style={s.openTxt}>Ochiq</Text>
+                  </View>
                 )}
               </View>
 
-              <View style={styles.cardFooter}>
-                <Text style={styles.offerCount}>
-                  {request.offers?.length ?? 0} ta taklif
-                </Text>
-                {request.my_offer ? (
-                  <Badge label="✅ Taklifingiz yuborildi" color={Colors.success} bg={Colors.successSurface} />
-                ) : (
-                  <Text style={styles.actionText}>Taklif yuborish →</Text>
+              {/* Items */}
+              <View style={s.itemsBlock}>
+                {request.items?.slice(0, 3).map((item: any) => (
+                  <View key={item.id} style={s.itemRow}>
+                    <View style={s.itemDot} />
+                    <Text style={s.itemTxt} numberOfLines={1}>{item.product_name}</Text>
+                    <Text style={s.itemQty}>× {item.quantity}</Text>
+                  </View>
+                ))}
+                {(request.items?.length ?? 0) > 3 && (
+                  <Text style={s.moreTxt}>+{request.items.length - 3} ta mahsulot yana</Text>
+                )}
+              </View>
+
+              <View style={s.divider} />
+
+              {/* Footer */}
+              <View style={s.cardFooter}>
+                <View style={s.footerMeta}>
+                  <Ionicons name="chatbubble-outline" size={13} color={Colors.textHint} />
+                  <Text style={s.offerCount}>{offerCount} ta taklif</Text>
+                </View>
+                {!hasMyOffer && (
+                  <View style={s.actionRow}>
+                    <Text style={s.actionTxt}>Taklif yuborish</Text>
+                    <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
+                  </View>
                 )}
               </View>
             </TouchableOpacity>
-          )}
-        />
-      )}
+          );
+        }}
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
-  header: { backgroundColor: Colors.primary, padding: Spacing.md },
-  title: { ...Typography.h4, color: Colors.white },
-  subtitle: { ...Typography.caption, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  list: { padding: Spacing.md, gap: Spacing.sm },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadow.sm,
-    gap: Spacing.sm,
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Colors.background },
+  header: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Platform.OS === 'android' ? Spacing.xs : 0,
+    paddingBottom: Spacing.md,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  requestTitle: { ...Typography.title, flex: 1 },
-  itemsList: { gap: 2 },
-  itemText: { ...Typography.bodySmall, color: Colors.textSecondary },
-  moreText: { ...Typography.caption, color: Colors.textHint },
+  headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' },
+  title: { fontSize: 22, fontWeight: '800', color: Colors.white },
+  subtitle: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  livePill: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: Radius.full,
+  },
+  liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#A5D6A7' },
+  liveTxt: { fontSize: 11, fontWeight: '600', color: Colors.white },
+
+  list: { padding: Spacing.md, gap: Spacing.sm },
+  card: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, flex: 1, marginRight: Spacing.sm },
+  megaIcon: { width: 32, height: 32, borderRadius: 9, backgroundColor: '#FFF3E0', alignItems: 'center', justifyContent: 'center' },
+  requestTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, flex: 1 },
+  sentPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: '#E8F5E9', paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full,
+  },
+  sentTxt: { fontSize: 11, fontWeight: '600', color: Colors.success },
+  openPill: {
+    backgroundColor: Colors.primarySurface, paddingHorizontal: 10, paddingVertical: 4, borderRadius: Radius.full,
+  },
+  openTxt: { fontSize: 11, fontWeight: '600', color: Colors.primary },
+
+  itemsBlock: { gap: 4 },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  itemDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: Colors.border },
+  itemTxt: { flex: 1, fontSize: 13, color: Colors.textSecondary },
+  itemQty: { fontSize: 12, fontWeight: '600', color: Colors.textHint },
+  moreTxt: { fontSize: 12, color: Colors.textHint, marginTop: 2, paddingLeft: 11 },
+
+  divider: { height: 1, backgroundColor: Colors.divider },
   cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  offerCount: { ...Typography.caption, color: Colors.textHint },
-  actionText: { ...Typography.bodySmall, color: Colors.primary, fontWeight: '600' },
+  footerMeta: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  offerCount: { fontSize: 12, color: Colors.textHint },
+  actionRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  actionTxt: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+
   empty: { alignItems: 'center', paddingTop: 80, gap: Spacing.sm },
-  emptyIcon: { fontSize: 48 },
-  emptyText: { ...Typography.body, color: Colors.textSecondary },
-  emptySubtext: { ...Typography.caption, color: Colors.textHint, textAlign: 'center' },
+  emptyIconBox: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  emptyTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
+  emptySub: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingHorizontal: 40, lineHeight: 19 },
 });

@@ -10,6 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import * as SecureStore from 'expo-secure-store';
 import { Colors, Spacing, Typography, Radius, Shadow } from '../../src/theme';
 import { Button } from '../../src/components/ui';
@@ -98,17 +99,8 @@ export default function OtpScreen() {
       await SecureStore.setItemAsync('user_id', userId ?? '');
       setRole(role, userId);
 
-      // Navigate based on role
-      switch (role) {
-        case 'SELLER':
-          router.replace('/(seller)/dashboard');
-          break;
-        case 'COURIER':
-          router.replace('/(courier)/nearby');
-          break;
-        default:
-          router.replace('/(customer)/home');
-      }
+      // All roles go to customer home; panels accessible via profile
+      router.replace('/(customer)/home');
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ?? 'Noto\'g\'ri kod. Qayta urinib ko\'ring';
@@ -138,7 +130,7 @@ export default function OtpScreen() {
 
         <View style={styles.header}>
           <View style={styles.iconCircle}>
-            <Text style={styles.icon}>🔐</Text>
+            <Ionicons name="lock-closed-outline" size={36} color={Colors.primary} />
           </View>
           <Text style={styles.title}>Kodni kiriting</Text>
           <Text style={styles.subtitle}>
@@ -218,7 +210,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: Spacing.md,
   },
-  icon: { fontSize: 36 },
   title: { ...Typography.h3, textAlign: 'center', marginBottom: Spacing.xs },
   subtitle: {
     ...Typography.bodySmall,

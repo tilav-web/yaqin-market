@@ -20,22 +20,29 @@ function TabIcon({
   badge?: number;
 }) {
   return (
-    <View style={tabStyles.wrap}>
-      <View style={[tabStyles.pill, focused && tabStyles.pillActive]}>
-        <Ionicons
-          name={focused ? iconActive : iconInactive}
-          size={21}
-          color={focused ? Colors.white : Colors.textHint}
-        />
-        {badge != null && badge > 0 && (
-          <View style={tabStyles.badge}>
-            <Text style={tabStyles.badgeTxt}>{badge > 9 ? '9+' : badge}</Text>
-          </View>
-        )}
-      </View>
-      <Text style={[tabStyles.label, focused && tabStyles.labelActive]} numberOfLines={1}>
-        {label}
-      </Text>
+    <View style={t.wrap}>
+      {focused ? (
+        // Active: pill with icon + label side by side
+        <View style={t.activePill}>
+          <Ionicons name={iconActive} size={18} color={Colors.white} />
+          <Text style={t.activeLabel}>{label}</Text>
+          {badge != null && badge > 0 && (
+            <View style={t.badge}>
+              <Text style={t.badgeTxt}>{badge > 9 ? '9+' : badge}</Text>
+            </View>
+          )}
+        </View>
+      ) : (
+        // Inactive: icon only
+        <View style={t.iconWrap}>
+          <Ionicons name={iconInactive} size={22} color={Colors.textHint} />
+          {badge != null && badge > 0 && (
+            <View style={t.badge}>
+              <Text style={t.badgeTxt}>{badge > 9 ? '9+' : badge}</Text>
+            </View>
+          )}
+        </View>
+      )}
     </View>
   );
 }
@@ -49,9 +56,8 @@ export default function CustomerLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: tabStyles.bar,
+        tabBarStyle: t.bar,
         tabBarShowLabel: false,
-        tabBarItemStyle: { flex: 1 },
       }}
     >
       <Tabs.Screen
@@ -66,7 +72,7 @@ export default function CustomerLayout() {
         name="search"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon iconActive="search" iconInactive="search-outline" label="Izla" focused={focused} />
+            <TabIcon iconActive="search" iconInactive="search-outline" label="Izlash" focused={focused} />
           ),
         }}
       />
@@ -98,11 +104,11 @@ export default function CustomerLayout() {
   );
 }
 
-const tabStyles = StyleSheet.create({
+const t = StyleSheet.create({
   bar: {
     height: Platform.OS === 'ios' ? 82 : 64,
-    paddingBottom: Platform.OS === 'ios' ? 22 : 4,
-    paddingTop: 6,
+    paddingBottom: Platform.OS === 'ios' ? 22 : 6,
+    paddingTop: 8,
     backgroundColor: Colors.white,
     borderTopWidth: 0,
     elevation: 24,
@@ -111,28 +117,44 @@ const tabStyles = StyleSheet.create({
     shadowOpacity: 0.07,
     shadowRadius: 10,
   },
-  wrap: { alignItems: 'center', gap: 3, minWidth: 52 },
-  pill: {
-    width: 46,
-    height: 30,
-    borderRadius: Radius.full,
+  wrap: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  pillActive: {
+  // Active: horizontal pill
+  activePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
     backgroundColor: Colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: Radius.full,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.35,
     shadowRadius: 6,
     elevation: 5,
   },
-  label: { fontSize: 9, color: Colors.textHint, fontWeight: '500', letterSpacing: 0.1 },
-  labelActive: { color: Colors.primary, fontWeight: '700' },
+  activeLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.white,
+    letterSpacing: 0.1,
+  },
+  // Inactive: icon only
+  iconWrap: {
+    width: 40,
+    height: 36,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
   badge: {
     position: 'absolute',
-    top: -3,
-    right: 2,
+    top: -1,
+    right: -1,
     backgroundColor: Colors.primary,
     borderRadius: Radius.full,
     minWidth: 15,

@@ -10,6 +10,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, Radius } from '../../src/theme';
 import { Button, Input } from '../../src/components/ui';
 import { authApi } from '../../src/api/auth';
@@ -76,7 +77,7 @@ export default function LoginScreen() {
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.iconCircle}>
-            <Text style={styles.icon}>📱</Text>
+            <Ionicons name="phone-portrait-outline" size={36} color={Colors.primary} />
           </View>
           <Text style={styles.title}>Telefon raqamingizni kiriting</Text>
           <Text style={styles.subtitle}>
@@ -142,7 +143,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: Spacing.md,
   },
-  icon: { fontSize: 36 },
   title: { ...Typography.h3, textAlign: 'center', marginBottom: Spacing.xs },
   subtitle: {
     ...Typography.bodySmall,

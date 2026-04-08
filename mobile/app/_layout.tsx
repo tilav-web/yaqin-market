@@ -13,9 +13,6 @@ const queryClient = new QueryClient({
   },
 });
 
-// Public customer routes — accessible without login
-const PUBLIC_CUSTOMER_PAGES = ['home', 'search'];
-
 function PushNotificationsSetup() {
   usePushNotifications();
   return null;
@@ -34,25 +31,34 @@ function AuthGuard() {
     if (isLoading) return;
 
     const group = segments[0] as string | undefined;
-    const page  = (segments as string[])[1] as string | undefined;
 
     const inAuthGroup     = group === '(auth)';
     const inCustomerGroup = group === '(customer)';
-    const isPublicPage    = PUBLIC_CUSTOMER_PAGES.includes(page ?? '');
+    const inSellerGroup   = group === '(seller)';
+    const inCourierGroup  = group === '(courier)';
 
+    // Authenticated user on auth pages (login/otp/welcome) → go to home
     if (isAuthenticated && inAuthGroup) {
-      // After login → always go to customer home, regardless of role
-      // Seller/Courier access their panels via the profile screen
       router.replace('/(customer)/home');
       return;
     }
 
-    if (!isAuthenticated && !inAuthGroup) {
-      // Allow unauthenticated users to browse public customer pages
-      if (inCustomerGroup && isPublicPage) return;
-      // Everything else requires login
-      router.replace('/(auth)/welcome');
+    // Auth pages — always accessible
+    if (inAuthGroup) return;
+
+    // All customer pages — always accessible (individual screens handle auth)
+    if (inCustomerGroup) return;
+
+    // Seller / courier panels — require login
+    if (inSellerGroup || inCourierGroup) {
+      if (!isAuthenticated) {
+        router.replace('/(auth)/login');
+      }
+      return;
     }
+
+    // No route matched (initial load) → customer home
+    router.replace('/(customer)/home');
   }, [isAuthenticated, isLoading, segments]);
 
   return null;

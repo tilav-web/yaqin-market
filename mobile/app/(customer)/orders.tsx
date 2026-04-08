@@ -14,6 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
+import { useAuthStore } from '../../src/store/auth.store';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -43,14 +44,38 @@ const FILTER_TABS = [
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const [activeFilter, setActiveFilter] = useState<string | undefined>(undefined);
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ['my-orders', activeFilter],
     queryFn: () => ordersApi.getMyOrders(activeFilter),
+    enabled: isAuthenticated,
   });
 
   const list = Array.isArray(orders) ? orders : [];
+
+  // Not logged in — show login prompt
+  if (!isAuthenticated) {
+    return (
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <View style={s.header}>
+          <Text style={s.title}>Buyurtmalarim</Text>
+        </View>
+        <View style={s.loginWrap}>
+          <View style={s.loginIconBox}>
+            <Ionicons name="cube-outline" size={44} color={Colors.primaryLight} />
+          </View>
+          <Text style={s.loginTitle}>Buyurtmalarni ko'rish uchun kiring</Text>
+          <Text style={s.loginSub}>Barcha buyurtmalaringiz shu yerda ko'rinadi</Text>
+          <TouchableOpacity style={s.loginBtn} onPress={() => router.push('/(auth)/login')} activeOpacity={0.85}>
+            <Ionicons name="log-in-outline" size={18} color={Colors.white} />
+            <Text style={s.loginBtnTxt}>Kirish</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -262,4 +287,11 @@ const s = StyleSheet.create({
     marginTop: Spacing.md,
   },
   shopBtnTxt: { fontSize: 15, fontWeight: '700', color: Colors.white },
+
+  loginWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.md },
+  loginIconBox: { width: 96, height: 96, borderRadius: 28, backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
+  loginTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center' },
+  loginSub: { fontSize: 13, color: Colors.textHint, textAlign: 'center', lineHeight: 19 },
+  loginBtn: { flexDirection: 'row', alignItems: 'center', gap: 7, backgroundColor: Colors.primary, paddingHorizontal: Spacing.xl, paddingVertical: 13, borderRadius: Radius.full, marginTop: Spacing.sm, ...Shadow.sm },
+  loginBtnTxt: { fontSize: 15, fontWeight: '700', color: Colors.white },
 });

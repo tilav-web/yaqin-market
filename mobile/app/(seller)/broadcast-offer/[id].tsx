@@ -1,19 +1,13 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  TextInput,
-  ActivityIndicator,
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Alert, TextInput, ActivityIndicator, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Colors, Spacing, Typography, Radius, Shadow } from '../../../src/theme';
-import { Button, Input } from '../../../src/components/ui';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, Radius, Shadow } from '../../../src/theme';
 import { ordersApi } from '../../../src/api/orders';
 
 export default function BroadcastOfferScreen() {
@@ -36,29 +30,21 @@ export default function BroadcastOfferScreen() {
   const toggleItem = (itemId: string) => {
     setSelectedItems((prev) => {
       const next = new Set(prev);
-      if (next.has(itemId)) next.delete(itemId);
-      else next.add(itemId);
+      if (next.has(itemId)) next.delete(itemId); else next.add(itemId);
       return next;
     });
   };
 
   const handleSubmit = async () => {
-    if (selectedItems.size === 0) {
-      Alert.alert('Xato', 'Kamida bitta mahsulot tanlang');
-      return;
-    }
-
+    if (selectedItems.size === 0) { Alert.alert('Xato', 'Kamida bitta mahsulot tanlang'); return; }
     const items = Array.from(selectedItems).map((itemId) => ({
       request_item_id: itemId,
       unit_price: Number(prices[itemId] ?? 0),
     }));
-
-    const invalidPrice = items.find(i => i.unit_price <= 0);
-    if (invalidPrice) {
+    if (items.find(i => i.unit_price <= 0)) {
       Alert.alert('Xato', 'Barcha tanlangan mahsulotlar uchun narx kiriting');
       return;
     }
-
     setLoading(true);
     try {
       await ordersApi.createBroadcastOffer(id, {
@@ -67,9 +53,8 @@ export default function BroadcastOfferScreen() {
         estimated_minutes: Number(estimatedMinutes),
         message: message.trim() || undefined,
       });
-
       queryClient.invalidateQueries({ queryKey: ['broadcast-feed'] });
-      Alert.alert('✅', 'Taklifingiz yuborildi!', [
+      Alert.alert('Yuborildi!', 'Taklifingiz muvaffaqiyatli yuborildi!', [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err: any) {
@@ -80,183 +65,194 @@ export default function BroadcastOfferScreen() {
   };
 
   if (isLoading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <ActivityIndicator style={{ flex: 1 }} color={Colors.primary} />
-      </SafeAreaView>
-    );
+    return <SafeAreaView style={s.safe}><ActivityIndicator style={{ flex: 1 }} color={Colors.primary} /></SafeAreaView>;
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Text style={styles.back}>← Orqaga</Text>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      {/* Header */}
+      <View style={s.header}>
+        <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={22} color={Colors.white} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Taklif yuborish</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.headerTitle}>Taklif yuborish</Text>
+          <Text style={s.headerSub}>{request?.items?.length ?? 0} ta mahsulot so'ralgan</Text>
+        </View>
       </View>
 
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Buyurtma tafsilotlari</Text>
-          <Text style={styles.deliveryAddr}>📍 {request?.delivery_address}</Text>
+      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+
+        {/* Delivery address */}
+        <View style={s.card}>
+          <View style={s.infoRow}>
+            <View style={[s.iconBox, { backgroundColor: Colors.primarySurface }]}>
+              <Ionicons name="location-outline" size={18} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.infoLabel}>Yetkazib berish manzili</Text>
+              <Text style={s.infoVal}>{request?.delivery_address}</Text>
+            </View>
+          </View>
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>
-            Qaysi mahsulotlarni yetkazib bera olasiz?
-          </Text>
-          <Text style={styles.hint}>Har bir tanlangan mahsulot uchun narx kiriting</Text>
+        {/* Items selection */}
+        <View style={s.card}>
+          <View style={s.cardHeaderRow}>
+            <View style={[s.iconBox, { backgroundColor: Colors.primarySurface }]}>
+              <Ionicons name="cube-outline" size={18} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={s.cardTitle}>Qaysi mahsulotlarni yetkazib bera olasiz?</Text>
+              <Text style={s.cardHint}>Har bir tanlangan uchun narx kiriting</Text>
+            </View>
+          </View>
 
           {request?.items?.map((item: any) => (
-            <View key={item.id} style={styles.itemCard}>
-              <TouchableOpacity
-                style={styles.itemRow}
-                onPress={() => toggleItem(item.id)}
-              >
-                <View style={[styles.checkbox, selectedItems.has(item.id) && styles.checkboxActive]}>
-                  {selectedItems.has(item.id) && <Text style={styles.checkmark}>✓</Text>}
+            <View key={item.id} style={[s.itemCard, selectedItems.has(item.id) && s.itemCardActive]}>
+              <TouchableOpacity style={s.itemRow} onPress={() => toggleItem(item.id)} activeOpacity={0.7}>
+                <View style={[s.checkbox, selectedItems.has(item.id) && s.checkboxActive]}>
+                  {selectedItems.has(item.id) && <Ionicons name="checkmark" size={12} color={Colors.white} />}
                 </View>
-                <View style={styles.itemInfo}>
-                  <Text style={styles.itemName}>{item.product_name}</Text>
-                  <Text style={styles.itemQty}>Miqdor: {item.quantity} ta</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.itemName}>{item.product_name}</Text>
+                  <Text style={s.itemQty}>{item.quantity} ta so'ralmoqda</Text>
                 </View>
               </TouchableOpacity>
 
               {selectedItems.has(item.id) && (
-                <View style={styles.priceInput}>
+                <View style={s.priceInputRow}>
+                  <Ionicons name="pricetag-outline" size={16} color={Colors.primary} />
                   <TextInput
-                    style={styles.priceField}
-                    placeholder="Narx (so'm)"
+                    style={s.priceField}
+                    placeholder="Narx kiriting..."
                     placeholderTextColor={Colors.textHint}
                     keyboardType="numeric"
                     value={prices[item.id] ?? ''}
-                    onChangeText={(val) =>
-                      setPrices((prev) => ({ ...prev, [item.id]: val }))
-                    }
+                    onChangeText={(val) => setPrices((prev) => ({ ...prev, [item.id]: val }))}
                   />
-                  <Text style={styles.currency}>so'm / dona</Text>
+                  <Text style={s.currency}>so'm/dona</Text>
                 </View>
               )}
             </View>
           ))}
         </View>
 
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Yetkazib berish</Text>
-          <View style={styles.row}>
-            <Input
-              label="Yetkazib berish narxi (so'm)"
-              value={deliveryPrice}
-              onChangeText={setDeliveryPrice}
-              keyboardType="numeric"
-              containerStyle={styles.halfInput}
-            />
-            <Input
-              label="Taxminiy vaqt (daqiqa)"
-              value={estimatedMinutes}
-              onChangeText={setEstimatedMinutes}
-              keyboardType="numeric"
-              containerStyle={styles.halfInput}
-            />
+        {/* Delivery details */}
+        <View style={s.card}>
+          <View style={s.cardHeaderRow}>
+            <View style={[s.iconBox, { backgroundColor: '#E3F2FD' }]}>
+              <Ionicons name="car-outline" size={18} color="#2196F3" />
+            </View>
+            <Text style={s.cardTitle}>Yetkazib berish</Text>
           </View>
-          <Input
-            label="Xabar (ixtiyoriy)"
-            value={message}
-            onChangeText={setMessage}
-            placeholder="Mijozga qo'shimcha ma'lumot..."
-            multiline
-          />
+
+          <View style={s.twoColRow}>
+            <View style={s.fieldWrap}>
+              <Text style={s.fieldLabel}>Narxi (so'm)</Text>
+              <View style={s.fieldInputWrap}>
+                <TextInput
+                  style={s.fieldInput}
+                  value={deliveryPrice}
+                  onChangeText={setDeliveryPrice}
+                  keyboardType="numeric"
+                  placeholderTextColor={Colors.textHint}
+                />
+              </View>
+            </View>
+            <View style={s.fieldWrap}>
+              <Text style={s.fieldLabel}>Taxminiy vaqt (daqiqa)</Text>
+              <View style={s.fieldInputWrap}>
+                <TextInput
+                  style={s.fieldInput}
+                  value={estimatedMinutes}
+                  onChangeText={setEstimatedMinutes}
+                  keyboardType="numeric"
+                  placeholderTextColor={Colors.textHint}
+                />
+              </View>
+            </View>
+          </View>
+
+          <View>
+            <Text style={s.fieldLabel}>Xabar (ixtiyoriy)</Text>
+            <View style={[s.fieldInputWrap, { minHeight: 60 }]}>
+              <TextInput
+                style={[s.fieldInput, { textAlignVertical: 'top', minHeight: 50 }]}
+                value={message}
+                onChangeText={setMessage}
+                placeholder="Mijozga qo'shimcha ma'lumot..."
+                placeholderTextColor={Colors.textHint}
+                multiline
+              />
+            </View>
+          </View>
         </View>
 
-        <View style={styles.actions}>
-          <Button
-            title={`Taklif yuborish (${selectedItems.size} ta mahsulot)`}
+        {/* Submit */}
+        <View style={{ paddingHorizontal: Spacing.md }}>
+          <TouchableOpacity
+            style={[s.submitBtn, (loading || selectedItems.size === 0) && { opacity: 0.6 }]}
             onPress={handleSubmit}
-            loading={loading}
-            disabled={selectedItems.size === 0}
-            size="lg"
-          />
+            disabled={loading || selectedItems.size === 0}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="paper-plane-outline" size={20} color={Colors.white} />
+            <Text style={s.submitBtnTxt}>
+              {loading ? 'Yuborilmoqda...' : `Taklif yuborish (${selectedItems.size} ta)`}
+            </Text>
+          </TouchableOpacity>
         </View>
-
-        <View style={{ height: Spacing.xl }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: Colors.background },
   header: {
     backgroundColor: Colors.primary,
-    padding: Spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
+    paddingTop: Platform.OS === 'android' ? Spacing.sm : Spacing.md,
+    gap: Spacing.sm,
+    borderBottomLeftRadius: 20, borderBottomRightRadius: 20,
   },
-  back: { color: Colors.white, ...Typography.body },
-  headerTitle: { ...Typography.title, color: Colors.white, flex: 1 },
+  backBtn: { width: 36, height: 36, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.15)', alignItems: 'center', justifyContent: 'center' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.white },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 1 },
+
   scroll: { flex: 1 },
-  section: {
-    backgroundColor: Colors.white,
-    margin: Spacing.md,
-    marginBottom: 0,
-    borderRadius: Radius.md,
-    padding: Spacing.md,
-    ...Shadow.sm,
-    gap: Spacing.sm,
-  },
-  sectionTitle: { ...Typography.title },
-  deliveryAddr: { ...Typography.bodySmall, color: Colors.textSecondary },
-  hint: { ...Typography.caption, color: Colors.textHint },
-  itemCard: {
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.sm,
-    overflow: 'hidden',
-  },
-  itemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: Spacing.sm,
-    gap: Spacing.sm,
-  },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  card: { backgroundColor: Colors.white, marginHorizontal: Spacing.md, marginTop: Spacing.sm, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },
+  cardHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, flex: 1 },
+  cardHint: { fontSize: 11, color: Colors.textHint, marginTop: 2 },
+  iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
+  infoRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
+  infoLabel: { fontSize: 11, fontWeight: '600', color: Colors.textHint, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  infoVal: { fontSize: 14, fontWeight: '500', color: Colors.textPrimary },
+
+  itemCard: { borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.md, overflow: 'hidden' },
+  itemCardActive: { borderColor: Colors.primary },
+  itemRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.sm, gap: Spacing.sm },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
   checkboxActive: { borderColor: Colors.primary, backgroundColor: Colors.primary },
-  checkmark: { color: Colors.white, fontSize: 14, fontWeight: '700' },
-  itemInfo: { flex: 1 },
-  itemName: { ...Typography.bodySmall, fontWeight: '500' },
-  itemQty: { ...Typography.caption, color: Colors.textHint, marginTop: 2 },
-  priceInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.primarySurface,
-    padding: Spacing.sm,
-    gap: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.primaryBorder,
+  itemName: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary },
+  itemQty: { fontSize: 11, color: Colors.textHint, marginTop: 1 },
+  priceInputRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: Colors.primarySurface, padding: Spacing.sm,
+    borderTopWidth: 1, borderTopColor: Colors.primaryBorder,
   },
-  priceField: {
-    flex: 1,
-    height: 40,
-    borderWidth: 1,
-    borderColor: Colors.primary,
-    borderRadius: Radius.sm,
-    paddingHorizontal: Spacing.sm,
-    ...Typography.body,
-    color: Colors.textPrimary,
-    backgroundColor: Colors.white,
-  },
-  currency: { ...Typography.caption, color: Colors.primary },
-  row: { flexDirection: 'row', gap: Spacing.sm },
-  halfInput: { flex: 1 },
-  actions: { padding: Spacing.md },
+  priceField: { flex: 1, height: 36, borderWidth: 1, borderColor: Colors.primary, borderRadius: Radius.sm, paddingHorizontal: Spacing.sm, fontSize: 14, color: Colors.textPrimary, backgroundColor: Colors.white },
+  currency: { fontSize: 11, color: Colors.primary, fontWeight: '600' },
+
+  twoColRow: { flexDirection: 'row', gap: Spacing.sm },
+  fieldWrap: { flex: 1, gap: 4 },
+  fieldLabel: { fontSize: 12, fontWeight: '600', color: Colors.textSecondary },
+  fieldInputWrap: { borderWidth: 1.5, borderColor: Colors.border, borderRadius: Radius.md, backgroundColor: Colors.background, paddingHorizontal: Spacing.sm },
+  fieldInput: { fontSize: 14, color: Colors.textPrimary, height: 44 },
+
+  submitBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: Colors.primary, borderRadius: Radius.lg, height: 54, marginTop: Spacing.md, ...Shadow.md },
+  submitBtnTxt: { fontSize: 16, fontWeight: '700', color: Colors.white },
 });

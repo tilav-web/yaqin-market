@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useCartStore } from '../../src/store/cart.store';
 import { useLocationStore } from '../../src/store/location.store';
+import { useAuthStore } from '../../src/store/auth.store';
 import { ordersApi } from '../../src/api/orders';
 
 type Tab = 'direct' | 'broadcast';
@@ -23,6 +24,7 @@ export default function CartScreen() {
   const [activeTab, setActiveTab] = useState<Tab>('direct');
   const [loading, setLoading] = useState(false);
   const { lat, lng, address } = useLocationStore();
+  const { isAuthenticated } = useAuthStore();
 
   const {
     directItems, directStoreName, broadcastItems,
@@ -35,6 +37,10 @@ export default function CartScreen() {
 
   const handleOrder = async () => {
     if (!directItems.length) return;
+    if (!isAuthenticated) {
+      router.push('/(auth)/login');
+      return;
+    }
     if (!lat || !lng) {
       Alert.alert('Joylashuv kerak', 'Yetkazib berish uchun joylashuvingizni yoqing');
       return;
@@ -256,7 +262,10 @@ export default function CartScreen() {
               </View>
               <TouchableOpacity
                 style={s.checkoutBtn}
-                onPress={() => router.push('/(customer)/broadcast-cart')}
+                onPress={() => {
+                  if (!isAuthenticated) { router.push('/(auth)/login'); return; }
+                  router.push('/(customer)/broadcast-cart');
+                }}
                 activeOpacity={0.85}
               >
                 <Ionicons name="megaphone" size={18} color={Colors.white} />
