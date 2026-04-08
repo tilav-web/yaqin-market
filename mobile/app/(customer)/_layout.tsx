@@ -1,7 +1,7 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Radius } from '../../src/theme';
+import { Colors, Radius } from '../../src/theme';
 import { useCartStore } from '../../src/store/cart.store';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
@@ -20,34 +20,36 @@ function TabIcon({
   badge?: number;
 }) {
   return (
-    <View style={styles.tabItem}>
-      <View style={[styles.iconWrap, focused && styles.iconWrapActive]}>
+    <View style={tabStyles.wrap}>
+      <View style={[tabStyles.pill, focused && tabStyles.pillActive]}>
         <Ionicons
           name={focused ? iconActive : iconInactive}
-          size={22}
+          size={21}
           color={focused ? Colors.white : Colors.textHint}
         />
         {badge != null && badge > 0 && (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{badge > 9 ? '9+' : badge}</Text>
+          <View style={tabStyles.badge}>
+            <Text style={tabStyles.badgeTxt}>{badge > 9 ? '9+' : badge}</Text>
           </View>
         )}
       </View>
-      <Text style={[styles.label, focused && styles.labelActive]}>{label}</Text>
+      <Text style={[tabStyles.label, focused && tabStyles.labelActive]} numberOfLines={1}>
+        {label}
+      </Text>
     </View>
   );
 }
 
 export default function CustomerLayout() {
-  const directCount = useCartStore(s => s.directItems.length);
-  const broadcastCount = useCartStore(s => s.broadcastItems.length);
-  const cartCount = directCount + broadcastCount;
+  const cartCount =
+    useCartStore(s => s.directItems.length) +
+    useCartStore(s => s.broadcastItems.length);
 
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: tabStyles.bar,
         tabBarShowLabel: false,
       }}
     >
@@ -55,12 +57,7 @@ export default function CustomerLayout() {
         name="home"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon
-              iconActive="home"
-              iconInactive="home-outline"
-              label="Asosiy"
-              focused={focused}
-            />
+            <TabIcon iconActive="home" iconInactive="home-outline" label="Bosh" focused={focused} />
           ),
         }}
       />
@@ -68,12 +65,7 @@ export default function CustomerLayout() {
         name="search"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon
-              iconActive="search"
-              iconInactive="search-outline"
-              label="Qidirish"
-              focused={focused}
-            />
+            <TabIcon iconActive="search" iconInactive="search-outline" label="Izla" focused={focused} />
           ),
         }}
       />
@@ -81,13 +73,7 @@ export default function CustomerLayout() {
         name="cart"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon
-              iconActive="cart"
-              iconInactive="cart-outline"
-              label="Savat"
-              focused={focused}
-              badge={cartCount}
-            />
+            <TabIcon iconActive="cart" iconInactive="cart-outline" label="Savat" focused={focused} badge={cartCount} />
           ),
         }}
       />
@@ -95,12 +81,7 @@ export default function CustomerLayout() {
         name="orders"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon
-              iconActive="cube"
-              iconInactive="cube-outline"
-              label="Buyurtma"
-              focused={focused}
-            />
+            <TabIcon iconActive="cube" iconInactive="cube-outline" label="Buyurtma" focused={focused} />
           ),
         }}
       />
@@ -108,12 +89,7 @@ export default function CustomerLayout() {
         name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon
-              iconActive="person"
-              iconInactive="person-outline"
-              label="Profil"
-              focused={focused}
-            />
+            <TabIcon iconActive="person" iconInactive="person-outline" label="Profil" focused={focused} />
           ),
         }}
       />
@@ -121,61 +97,50 @@ export default function CustomerLayout() {
   );
 }
 
-const styles = StyleSheet.create({
-  tabBar: {
-    height: Platform.OS === 'ios' ? 80 : 68,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 8,
-    paddingTop: 8,
+const tabStyles = StyleSheet.create({
+  bar: {
+    height: Platform.OS === 'ios' ? 82 : 64,
+    paddingBottom: Platform.OS === 'ios' ? 22 : 4,
+    paddingTop: 6,
     backgroundColor: Colors.white,
     borderTopWidth: 0,
-    elevation: 20,
+    elevation: 24,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOffset: { width: 0, height: -3 },
+    shadowOpacity: 0.07,
+    shadowRadius: 10,
   },
-  tabItem: {
-    alignItems: 'center',
-    gap: 4,
-  },
-  iconWrap: {
-    width: 44,
-    height: 36,
-    borderRadius: Radius.lg,
+  wrap: { alignItems: 'center', gap: 3, minWidth: 52 },
+  pill: {
+    width: 46,
+    height: 30,
+    borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'transparent',
   },
-  iconWrapActive: {
+  pillActive: {
     backgroundColor: Colors.primary,
     shadowColor: Colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.4,
+    shadowRadius: 6,
+    elevation: 5,
   },
-  label: {
-    fontSize: 10,
-    color: Colors.textHint,
-    fontWeight: '500',
-  },
-  labelActive: {
-    color: Colors.primary,
-    fontWeight: '700',
-  },
+  label: { fontSize: 9, color: Colors.textHint, fontWeight: '500', letterSpacing: 0.1 },
+  labelActive: { color: Colors.primary, fontWeight: '700' },
   badge: {
     position: 'absolute',
-    top: -2,
-    right: 4,
+    top: -3,
+    right: 2,
     backgroundColor: Colors.primary,
     borderRadius: Radius.full,
-    minWidth: 16,
-    height: 16,
+    minWidth: 15,
+    height: 15,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 3,
     borderWidth: 1.5,
     borderColor: Colors.white,
   },
-  badgeText: { color: Colors.white, fontSize: 9, fontWeight: '800' },
+  badgeTxt: { color: Colors.white, fontSize: 8, fontWeight: '800' },
 });
