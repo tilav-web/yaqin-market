@@ -40,6 +40,9 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "updates": {
+      "enabled": false
+    },
     "scheme": "yaqinmarket",
     "plugins": [
       "expo-router",
