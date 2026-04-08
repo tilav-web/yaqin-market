@@ -27,6 +27,22 @@ export const storeProductsApi = {
       .get('/store-products', { params: { store_id: storeId } })
       .then((r) => r.data),
 
+  getCatalog: (params: {
+    store_id: string;
+    q?: string;
+    category_id?: string;
+    page?: number;
+    limit?: number;
+  }) =>
+    apiClient
+      .get('/store-products/catalog', { params })
+      .then((r) => r.data),
+
+  getCategories: (storeId: string) =>
+    apiClient
+      .get('/store-products/categories', { params: { store_id: storeId } })
+      .then((r) => r.data),
+
   create: (data: any) =>
     apiClient.post('/store-products', data).then((r) => r.data),
 
