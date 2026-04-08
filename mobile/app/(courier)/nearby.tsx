@@ -221,7 +221,7 @@ const s = StyleSheet.create({
   myMarker: { width: 36, height: 36, borderRadius: 18, backgroundColor: COURIER_COLOR, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.white },
   orderMarker: { width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.white },
 
-  list: { padding: Spacing.md, gap: Spacing.sm },
+  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
   card: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   orderInfo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },

@@ -1,22 +1,16 @@
 import React, { useState, useRef } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  ActivityIndicator,
-  Platform,
+  View, Text, StyleSheet, FlatList, TouchableOpacity,
+  Image, TextInput, ActivityIndicator, Platform, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
-import { productsApi } from '../../src/api/products';
+import { productsApi, categoriesApi } from '../../src/api/products';
 import { useCartStore } from '../../src/store/cart.store';
+import { useSearchHistory } from '../../src/store/search-history.store';
 import { useTranslation } from '../../src/i18n';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -26,31 +20,57 @@ function imageUrl(path?: string) {
   return `${API_URL}/${path}`;
 }
 
-const RECENT = ['Tuxum', 'Non', 'Yogʻ', 'Sabzi'];
-
 export default function SearchScreen() {
   const router = useRouter();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState('');
+  const [selectedCat, setSelectedCat] = useState('');
   const { lang, t, tr } = useTranslation();
   const { addBroadcastItem } = useCartStore();
+  const { history, addSearch, removeSearch, clearAll } = useSearchHistory();
 
-  const FILTER_CHIPS = [
-    { label: lang === 'ru' ? 'Все' : 'Barchasi', value: '' },
-    { label: lang === 'ru' ? 'Продукты' : 'Oziq-ovqat', value: 'food' },
-    { label: lang === 'ru' ? 'Напитки' : 'Ichimliklar', value: 'drinks' },
-    { label: lang === 'ru' ? 'Сладости' : 'Shirinliklar', value: 'sweets' },
-  ];
+  // Categories
+  const { data: categories } = useQuery({
+    queryKey: ['categories'],
+    queryFn: categoriesApi.getAll,
+  });
 
+  // Ko'p qidiriladigan mahsulotlar (top from catalog)
+  const { data: trendingData } = useQuery({
+    queryKey: ['trending-products'],
+    queryFn: () => productsApi.getCatalog({ limit: 6 }),
+    enabled: query.length === 0,
+  });
+  const trendingProducts = Array.isArray(trendingData)
+    ? trendingData
+    : Array.isArray(trendingData?.items) ? trendingData.items : [];
+
+  // Search results
   const { data, isLoading } = useQuery({
-    queryKey: ['search-products', query],
-    queryFn: () => productsApi.getCatalog({ q: query, limit: 30 }),
-    enabled: query.length >= 1,
+    queryKey: ['search-products', query, selectedCat],
+    queryFn: () => productsApi.getCatalog({
+      q: query || undefined,
+      category_id: selectedCat ? Number(selectedCat) : undefined,
+      limit: 30,
+    }),
+    enabled: query.length >= 1 || selectedCat.length > 0,
   });
 
   const products = Array.isArray(data) ? data : Array.isArray(data?.items) ? data.items : [];
-  const showEmpty = query.length > 0 && !isLoading && products.length === 0;
+  const showResults = query.length > 0 || selectedCat.length > 0;
+  const showEmpty = showResults && !isLoading && products.length === 0;
+
+  const handleSearch = (text: string) => {
+    setQuery(text);
+    if (text.trim().length >= 2) {
+      addSearch(text.trim());
+    }
+  };
+
+  const pickRecent = (term: string) => {
+    setQuery(term);
+    addSearch(term);
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -63,85 +83,115 @@ export default function SearchScreen() {
               ref={inputRef}
               style={s.input}
               value={query}
-              onChangeText={setQuery}
+              onChangeText={handleSearch}
               placeholder={tr('search_placeholder')}
               placeholderTextColor={Colors.textHint}
               autoFocus
               returnKeyType="search"
             />
             {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery('')}>
+              <TouchableOpacity onPress={() => { setQuery(''); setSelectedCat(''); }}>
                 <Ionicons name="close-circle" size={18} color={Colors.textHint} />
               </TouchableOpacity>
             )}
           </View>
-          {query.length > 0 && (
-            <TouchableOpacity onPress={() => setQuery('')} style={s.cancelBtn}>
+          {(query.length > 0 || selectedCat) && (
+            <TouchableOpacity onPress={() => { setQuery(''); setSelectedCat(''); }} style={s.cancelBtn}>
               <Text style={s.cancelTxt}>{tr('cancel')}</Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {/* Filter chips */}
-        <FlatList
-          data={FILTER_CHIPS}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          keyExtractor={i => i.value}
-          contentContainerStyle={s.chips}
-          renderItem={({ item }) => (
-            <TouchableOpacity
-              style={[s.chip, filter === item.value && s.chipActive]}
-              onPress={() => setFilter(item.value)}
-            >
-              <Text style={[s.chipTxt, filter === item.value && s.chipTxtActive]}>
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          )}
-        />
+        {/* Category chips */}
+        {(categories?.length ?? 0) > 0 && (
+          <FlatList
+            data={categories}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={i => String(i.id)}
+            contentContainerStyle={s.chips}
+            renderItem={({ item }) => {
+              const active = selectedCat === String(item.id);
+              return (
+                <TouchableOpacity
+                  style={[s.chip, active && s.chipActive]}
+                  onPress={() => setSelectedCat(active ? '' : String(item.id))}
+                >
+                  <Text style={[s.chipTxt, active && s.chipTxtActive]}>
+                    {t(item.name)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            }}
+          />
+        )}
       </View>
 
       {/* ── Body ── */}
-      {query.length === 0 ? (
-        // Recent / suggestions
-        <View style={s.suggestions}>
-          <Text style={s.suggTitle}>{tr('recent_searches')}</Text>
-          <View style={s.recentRow}>
-            {RECENT.map(r => (
-              <TouchableOpacity key={r} style={s.recentChip} onPress={() => setQuery(r)}>
-                <Ionicons name="time-outline" size={13} color={Colors.textHint} />
-                <Text style={s.recentTxt}>{r}</Text>
-              </TouchableOpacity>
-            ))}
+      {!showResults ? (
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: Spacing.md, paddingBottom: 100 }}>
+          {/* Oxirgi qidiruvlar */}
+          {history.length > 0 && (
+            <>
+              <View style={s.sectionRow}>
+                <Text style={s.suggTitle}>{tr('recent_searches')}</Text>
+                <TouchableOpacity onPress={clearAll}>
+                  <Text style={s.clearTxt}>{lang === 'ru' ? 'Очистить' : 'Tozalash'}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={s.recentRow}>
+                {history.slice(0, 15).map(term => (
+                  <TouchableOpacity key={term} style={s.recentChip} onPress={() => pickRecent(term)}>
+                    <Ionicons name="time-outline" size={13} color={Colors.textHint} />
+                    <Text style={s.recentTxt}>{term}</Text>
+                    <TouchableOpacity hitSlop={8} onPress={() => removeSearch(term)}>
+                      <Ionicons name="close" size={12} color={Colors.textHint} />
+                    </TouchableOpacity>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* Ko'p qidiriladigan mahsulotlar */}
+          <Text style={[s.suggTitle, { marginTop: Spacing.lg }]}>
+            {lang === 'ru' ? 'Популярные товары' : 'Ko\'p qidiriladigan mahsulotlar'}
+          </Text>
+          <View style={s.trendGrid}>
+            {trendingProducts.map((item: any) => {
+              const img = item.images?.[0]?.url;
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={s.trendCard}
+                  onPress={() => router.push({ pathname: '/(customer)/product/[id]', params: { id: item.id } })}
+                  activeOpacity={0.85}
+                >
+                  {img ? (
+                    <Image source={{ uri: imageUrl(img)! }} style={s.trendImg} resizeMode="cover" />
+                  ) : (
+                    <View style={[s.trendImg, { backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center' }]}>
+                      <Ionicons name="cube-outline" size={22} color={Colors.primaryLight} />
+                    </View>
+                  )}
+                  <Text style={s.trendName} numberOfLines={2}>{t(item.name)}</Text>
+                  {item.store_products?.[0]?.price != null && (
+                    <Text style={s.trendPrice}>{Number(item.store_products[0].price).toLocaleString()} so'm</Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
-          <Text style={[s.suggTitle, { marginTop: Spacing.lg }]}>{lang === 'ru' ? 'Популярные категории' : 'Mashhur kategoriyalar'}</Text>
-          <View style={s.catGrid}>
-            {[
-              { icon: '🥦', label: lang === 'ru' ? 'Овощи' : 'Sabzavot' },
-              { icon: '🍎', label: lang === 'ru' ? 'Фрукты' : 'Meva' },
-              { icon: '🥛', label: lang === 'ru' ? 'Молочные' : 'Sut mahsuloti' },
-              { icon: '🍞', label: lang === 'ru' ? 'Хлеб' : 'Non-bulka' },
-              { icon: '🥩', label: lang === 'ru' ? 'Мясо' : 'Go\'sht' },
-              { icon: '🍬', label: lang === 'ru' ? 'Сладости' : 'Shirinlik' },
-            ].map(c => (
-              <TouchableOpacity key={c.label} style={s.catCard} onPress={() => setQuery(c.label)}>
-                <Text style={{ fontSize: 28 }}>{c.icon}</Text>
-                <Text style={s.catLabel}>{c.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
+        </ScrollView>
       ) : isLoading ? (
         <View style={s.center}>
           <ActivityIndicator color={Colors.primary} size="large" />
-          <Text style={s.loadingTxt}>{tr('loading')}...</Text>
         </View>
       ) : showEmpty ? (
         <View style={s.center}>
-          <Text style={{ fontSize: 52 }}>🔍</Text>
+          <Ionicons name="search-outline" size={48} color={Colors.textHint} />
           <Text style={s.emptyTitle}>"{query}" {tr('no_results')}</Text>
-          <Text style={s.emptySub}>{lang === 'ru' ? 'Попробуйте другое слово' : "Boshqa so'z bilan qayta urinib ko'ring"}</Text>
+          <Text style={s.emptySub}>{lang === 'ru' ? 'Попробуйте другое слово' : "Boshqa so'z bilan qidiring"}</Text>
         </View>
       ) : (
         <FlatList
@@ -157,9 +207,7 @@ export default function SearchScreen() {
               <TouchableOpacity
                 style={s.card}
                 activeOpacity={0.88}
-                onPress={() =>
-                  router.push({ pathname: '/(customer)/product/[id]', params: { id: item.id } })
-                }
+                onPress={() => router.push({ pathname: '/(customer)/product/[id]', params: { id: item.id } })}
               >
                 {img ? (
                   <Image source={{ uri: imageUrl(img)! }} style={s.cardImg} resizeMode="cover" />
@@ -175,14 +223,12 @@ export default function SearchScreen() {
                   )}
                   <TouchableOpacity
                     style={s.addBtn}
-                    onPress={() =>
-                      addBroadcastItem({
-                        product_id: item.id,
-                        product_name: item.name,
-                        product_image: img,
-                        quantity: 1,
-                      })
-                    }
+                    onPress={() => addBroadcastItem({
+                      product_id: item.id,
+                      product_name: item.name,
+                      product_image: img,
+                      quantity: 1,
+                    })}
                   >
                     <Ionicons name="add" size={16} color={Colors.white} />
                     <Text style={s.addTxt}>{tr('add_to_cart')}</Text>
@@ -199,7 +245,6 @@ export default function SearchScreen() {
 
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: Colors.background },
-
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
@@ -211,33 +256,23 @@ const s = StyleSheet.create({
   },
   searchRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   searchBox: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: Radius.full,
-    paddingHorizontal: Spacing.md,
-    height: 44,
-    gap: Spacing.sm,
-    ...Shadow.sm,
+    flex: 1, flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.white, borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md, height: 44, gap: Spacing.sm, ...Shadow.sm,
   },
   input: { flex: 1, fontSize: 14, color: Colors.textPrimary, paddingVertical: 0 },
   cancelBtn: { paddingHorizontal: 4 },
   cancelTxt: { fontSize: 14, fontWeight: '600', color: Colors.white },
 
   chips: { gap: Spacing.xs, paddingBottom: 4 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: Radius.full,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
+  chip: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: Radius.full, backgroundColor: 'rgba(255,255,255,0.2)' },
   chipActive: { backgroundColor: Colors.white },
   chipTxt: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
   chipTxtActive: { color: Colors.primary },
 
-  suggestions: { flex: 1, padding: Spacing.md },
+  sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
   suggTitle: { fontSize: 13, fontWeight: '700', color: Colors.textHint, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: Spacing.sm },
+  clearTxt: { fontSize: 12, fontWeight: '600', color: Colors.primary },
   recentRow: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs },
   recentChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
@@ -246,45 +281,29 @@ const s = StyleSheet.create({
   },
   recentTxt: { fontSize: 13, color: Colors.textSecondary },
 
-  catGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
-  catCard: {
-    width: '30%',
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    alignItems: 'center',
-    paddingVertical: Spacing.md,
-    gap: Spacing.xs,
-    ...Shadow.sm,
+  trendGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.sm },
+  trendCard: {
+    width: '30%', backgroundColor: Colors.white,
+    borderRadius: Radius.lg, overflow: 'hidden', ...Shadow.sm,
   },
-  catLabel: { fontSize: 11, fontWeight: '600', color: Colors.textSecondary, textAlign: 'center' },
+  trendImg: { width: '100%', height: 80, backgroundColor: Colors.background },
+  trendName: { fontSize: 11, fontWeight: '500', color: Colors.textPrimary, paddingHorizontal: 6, paddingTop: 4, lineHeight: 15 },
+  trendPrice: { fontSize: 11, fontWeight: '700', color: Colors.primary, paddingHorizontal: 6, paddingBottom: 6 },
 
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm },
-  loadingTxt: { fontSize: 14, color: Colors.textHint },
   emptyTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
   emptySub: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingHorizontal: Spacing.xl },
 
-  list: { padding: Spacing.md, gap: Spacing.sm },
-  card: {
-    flex: 1,
-    backgroundColor: Colors.white,
-    borderRadius: Radius.lg,
-    overflow: 'hidden',
-    ...Shadow.sm,
-  },
+  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
+  card: { flex: 1, backgroundColor: Colors.white, borderRadius: Radius.lg, overflow: 'hidden', ...Shadow.sm },
   cardImg: { width: '100%', height: 120, backgroundColor: Colors.background },
   cardPlaceholder: { alignItems: 'center', justifyContent: 'center' },
   cardBody: { padding: Spacing.sm, gap: 4 },
   cardName: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 17 },
   cardPrice: { fontSize: 13, fontWeight: '700', color: Colors.primary },
   addBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    backgroundColor: Colors.primary,
-    borderRadius: Radius.md,
-    paddingVertical: 6,
-    marginTop: 2,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    backgroundColor: Colors.primary, borderRadius: Radius.md, paddingVertical: 6, marginTop: 2,
   },
   addTxt: { fontSize: 12, fontWeight: '700', color: Colors.white },
 });

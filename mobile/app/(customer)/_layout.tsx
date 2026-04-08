@@ -32,6 +32,15 @@ export default function CustomerLayout() {
       <Tabs.Screen name="cart" />
       <Tabs.Screen name="orders" />
       <Tabs.Screen name="profile" />
+      {/* Tab bar da ko'rinmaydigan sahifalar */}
+      <Tabs.Screen name="edit-profile" options={{ href: null }} />
+      <Tabs.Screen name="my-locations" options={{ href: null }} />
+      <Tabs.Screen name="stores-map" options={{ href: null }} />
+      <Tabs.Screen name="help" options={{ href: null }} />
+      <Tabs.Screen name="about" options={{ href: null }} />
+      <Tabs.Screen name="apply-seller" options={{ href: null }} />
+      <Tabs.Screen name="apply-courier" options={{ href: null }} />
+      <Tabs.Screen name="broadcast-cart" options={{ href: null }} />
     </Tabs>
   );
 }

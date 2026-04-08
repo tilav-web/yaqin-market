@@ -240,7 +240,7 @@ const s = StyleSheet.create({
   filterTxt: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
   filterTxtActive: { color: Colors.primary },
 
-  list: { padding: Spacing.md, gap: Spacing.sm },
+  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
 
   card: {
     backgroundColor: Colors.white,

@@ -198,7 +198,7 @@ export default function ActiveDeliveryScreen() {
           <Text style={s.deliverBtnTxt}>{lang === 'ru' ? 'Доставлено' : 'Yetkazib berdim'}</Text>
         </TouchableOpacity>
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
   );

@@ -120,7 +120,7 @@ const s = StyleSheet.create({
   },
   earningsTxt: { fontSize: 12, fontWeight: '700', color: Colors.white },
 
-  list: { padding: Spacing.md, gap: Spacing.sm },
+  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
   card: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   orderInfo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },

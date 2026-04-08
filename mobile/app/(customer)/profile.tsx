@@ -226,7 +226,7 @@ export default function ProfileScreen() {
         {
           icon: 'megaphone-outline', color: '#FF5722', bg: '#FBE9E7',
           label: tr('my_broadcast'), sub: tr('my_broadcast_sub'),
-          onPress: () => {},
+          onPress: () => router.push('/(customer)/broadcast-cart'),
         },
       ],
     },
@@ -245,14 +245,20 @@ export default function ProfileScreen() {
           onPress: () => {},
         },
         {
-          icon: 'help-circle-outline', color: '#2196F3', bg: '#E3F2FD',
+          icon: 'location-outline', color: '#2196F3', bg: '#E3F2FD',
+          label: lang === 'ru' ? 'Мои адреса' : 'Manzillarim',
+          sub: lang === 'ru' ? 'Сохранённые адреса' : 'Saqlangan manzillar',
+          onPress: () => router.push('/(customer)/my-locations'),
+        },
+        {
+          icon: 'help-circle-outline', color: '#00897B', bg: '#E0F2F1',
           label: tr('help'), sub: tr('help_sub'),
-          onPress: () => {},
+          onPress: () => router.push('/(customer)/help'),
         },
         {
           icon: 'information-circle-outline', color: Colors.textSecondary, bg: Colors.background,
           label: tr('about'), sub: tr('about_sub'),
-          onPress: () => {},
+          onPress: () => router.push('/(customer)/about'),
         },
       ],
     },
@@ -268,7 +274,7 @@ export default function ProfileScreen() {
           <View style={s.avatar}>
             <Text style={s.avatarTxt}>{initials}</Text>
           </View>
-          <TouchableOpacity style={s.editBtn}>
+          <TouchableOpacity style={s.editBtn} onPress={() => router.push('/(customer)/edit-profile')}>
             <Ionicons name="pencil" size={12} color={Colors.white} />
           </TouchableOpacity>
         </View>

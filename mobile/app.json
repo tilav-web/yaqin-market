@@ -35,7 +35,12 @@
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION"
       ],
-      "edgeToEdgeEnabled": false
+      "edgeToEdgeEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyA1ji9JERM4bxmnyn4QN2yVaTFp91uxLZI"
+        }
+      }
     },
     "web": {
       "favicon": "./assets/favicon.png"

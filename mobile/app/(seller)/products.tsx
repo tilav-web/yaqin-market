@@ -383,7 +383,7 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
-  list: { padding: Spacing.md, gap: Spacing.sm },
+  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
   card: {
     backgroundColor: Colors.white, borderRadius: Radius.lg,
     flexDirection: 'row', ...Shadow.sm, overflow: 'hidden',
