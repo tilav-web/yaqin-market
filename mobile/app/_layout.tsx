@@ -13,13 +13,16 @@ const queryClient = new QueryClient({
   },
 });
 
+// Public customer routes — accessible without login
+const PUBLIC_CUSTOMER_PAGES = ['home', 'search'];
+
 function PushNotificationsSetup() {
   usePushNotifications();
   return null;
 }
 
 function AuthGuard() {
-  const { isAuthenticated, isLoading, role, loadFromStorage } = useAuthStore();
+  const { isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
   const router = useRouter();
   const segments = useSegments();
 
@@ -30,24 +33,27 @@ function AuthGuard() {
   useEffect(() => {
     if (isLoading) return;
 
-    const inAuthGroup = segments[0] === '(auth)';
+    const group = segments[0] as string | undefined;
+    const page  = (segments as string[])[1] as string | undefined;
+
+    const inAuthGroup     = group === '(auth)';
+    const inCustomerGroup = group === '(customer)';
+    const isPublicPage    = PUBLIC_CUSTOMER_PAGES.includes(page ?? '');
+
+    if (isAuthenticated && inAuthGroup) {
+      // After login → always go to customer home, regardless of role
+      // Seller/Courier access their panels via the profile screen
+      router.replace('/(customer)/home');
+      return;
+    }
 
     if (!isAuthenticated && !inAuthGroup) {
+      // Allow unauthenticated users to browse public customer pages
+      if (inCustomerGroup && isPublicPage) return;
+      // Everything else requires login
       router.replace('/(auth)/welcome');
-    } else if (isAuthenticated && inAuthGroup) {
-      // Route based on role
-      switch (role) {
-        case 'SELLER':
-          router.replace('/(seller)/dashboard');
-          break;
-        case 'COURIER':
-          router.replace('/(courier)/nearby');
-          break;
-        default:
-          router.replace('/(customer)/home');
-      }
     }
-  }, [isAuthenticated, isLoading, role]);
+  }, [isAuthenticated, isLoading, segments]);
 
   return null;
 }

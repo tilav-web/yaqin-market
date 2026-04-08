@@ -51,6 +51,7 @@ export default function CustomerLayout() {
         headerShown: false,
         tabBarStyle: tabStyles.bar,
         tabBarShowLabel: false,
+        tabBarItemStyle: { flex: 1 },
       }}
     >
       <Tabs.Screen
