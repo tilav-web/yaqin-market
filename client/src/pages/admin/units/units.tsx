@@ -216,38 +216,38 @@ export default function AdminUnitsPage() {
         )}
 
         {units.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {units.map((unit) => (
               <div
                 key={unit.id}
-                className="group relative rounded-[1.25rem] border border-border bg-background p-4 shadow-sm transition hover:border-primary/40 hover:shadow-md"
+                className="group relative rounded-[1.65rem] border border-slate-200/80 bg-background p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md"
               >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary font-bold text-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary font-bold text-base">
                     {t(unit.short_name, lang) || t(unit.name, lang)?.charAt(0)?.toUpperCase()}
                   </div>
                   <button
                     type="button"
                     onClick={() => dispatch({ type: "OPEN_EDIT", payload: unit })}
-                    className="rounded-full border border-border bg-background/80 p-1.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition hover:text-foreground"
+                    className="rounded-full border border-border bg-background/80 p-2 text-muted-foreground opacity-0 group-hover:opacity-100 transition hover:text-foreground"
                   >
                     <Pencil className="size-3.5" />
                   </button>
                 </div>
-                <div className="mt-3">
-                  <p className="text-sm font-semibold text-foreground">{t(unit.name, lang)}</p>
+                <div className="mt-4 space-y-1">
+                  <p className="text-[15px] font-semibold text-foreground leading-tight">{t(unit.name, lang)}</p>
                   {unit.short_name && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Qisqa: <span className="font-medium text-foreground">{t(unit.short_name, lang)}</span>
+                    <p className="text-xs text-muted-foreground">
+                      Qisqa nomi: <span className="font-semibold text-foreground/80">{t(unit.short_name, lang)}</span>
                     </p>
                   )}
                 </div>
-                <div className="mt-2 flex gap-1.5">
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    UZ: {unit.name?.uz}
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                    🇺🇿 {unit.name?.uz}
                   </span>
-                  <span className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    RU: {unit.name?.ru}
+                  <span className="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+                    🇷🇺 {unit.name?.ru}
                   </span>
                 </div>
               </div>
@@ -258,65 +258,71 @@ export default function AdminUnitsPage() {
 
       {/* ── Create / Edit Dialog ── */}
       <Dialog open={state.dialogOpen} onOpenChange={(val) => !val && dispatch({ type: "CLOSE_DIALOG" })}>
-        <DialogContent className="sm:max-w-md rounded-2xl border-border bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.1),transparent_60%),linear-gradient(180deg,#fff,rgba(255,245,245,0.98))] p-5 shadow-2xl">
-          <DialogHeader className="gap-1">
-            <DialogTitle className="text-base font-semibold text-foreground">
+        <DialogContent className="sm:max-w-lg rounded-2xl border-border bg-[radial-gradient(circle_at_top,rgba(239,68,68,0.1),transparent_60%),linear-gradient(180deg,#fff,rgba(255,245,245,0.98))] p-6 shadow-2xl">
+          <DialogHeader className="gap-1.5 pb-2">
+            <DialogTitle className="text-lg font-semibold text-foreground">
               {state.dialogMode === "edit" ? "Birlikni tahrirlash" : "Yangi birlik"}
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            <DialogDescription className="text-sm text-muted-foreground">
               {state.dialogMode === "edit"
                 ? "Ma'lumotlarni yangilang yoki o'chiring."
                 : "Yangi o'lchov birligi yarating (kg, dona, litr, metr...)"}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-2">
+          <div className="grid gap-6 py-3">
             {/* Name fields */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
-                Nomi (UZ)
-              </label>
-              <input
-                value={state.form.name.uz}
-                onChange={(e) => dispatch({ type: "SET_NAME", payload: { lang: "uz", value: e.target.value } })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
-                placeholder="Kilogramm"
-              />
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
-                Nomi (RU)
-              </label>
-              <input
-                value={state.form.name.ru}
-                onChange={(e) => dispatch({ type: "SET_NAME", payload: { lang: "ru", value: e.target.value } })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
-                placeholder="Килограмм"
-              />
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">To'liq nomi</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-muted-foreground/80">🇺🇿 O'zbekcha</label>
+                  <input
+                    value={state.form.name.uz}
+                    onChange={(e) => dispatch({ type: "SET_NAME", payload: { lang: "uz", value: e.target.value } })}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
+                    placeholder="Kilogramm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-muted-foreground/80">🇷🇺 Ruscha</label>
+                  <input
+                    value={state.form.name.ru}
+                    onChange={(e) => dispatch({ type: "SET_NAME", payload: { lang: "ru", value: e.target.value } })}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
+                    placeholder="Килограмм"
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Short name fields */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
-                Qisqa nomi (UZ)
-              </label>
-              <input
-                value={state.form.short_name.uz}
-                onChange={(e) => dispatch({ type: "SET_SHORT_NAME", payload: { lang: "uz", value: e.target.value } })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
-                placeholder="kg"
-              />
-              <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">
-                Qisqa nomi (RU)
-              </label>
-              <input
-                value={state.form.short_name.ru}
-                onChange={(e) => dispatch({ type: "SET_SHORT_NAME", payload: { lang: "ru", value: e.target.value } })}
-                className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
-                placeholder="кг"
-              />
+            <div className="space-y-1.5">
+              <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground/70 mb-2">Qisqa nomi</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-muted-foreground/80">🇺🇿 O'zbekcha</label>
+                  <input
+                    value={state.form.short_name.uz}
+                    onChange={(e) => dispatch({ type: "SET_SHORT_NAME", payload: { lang: "uz", value: e.target.value } })}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
+                    placeholder="kg"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-semibold text-muted-foreground/80">🇷🇺 Rusча</label>
+                  <input
+                    value={state.form.short_name.ru}
+                    onChange={(e) => dispatch({ type: "SET_SHORT_NAME", payload: { lang: "ru", value: e.target.value } })}
+                    className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm outline-none transition focus-visible:ring-2 focus-visible:ring-primary/20"
+                    placeholder="кг"
+                  />
+                </div>
+              </div>
             </div>
           </div>
 
-          <DialogFooter className="mt-4 flex flex-row items-center justify-between gap-2 bg-transparent border-none p-0 sm:justify-between">
+          <DialogFooter className="mt-5 flex flex-row items-center justify-between gap-3 bg-transparent border-none p-0 sm:justify-between">
             {state.dialogMode === "edit" ? (
               <Button variant="destructive" size="sm" onClick={handleDelete} disabled={isDialogLoading} className="h-8 text-xs px-3">
                 O'chirish

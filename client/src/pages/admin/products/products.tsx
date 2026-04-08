@@ -1,12 +1,9 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import {
   useInfiniteQuery,
-  useMutation,
   useQuery,
-  useQueryClient,
 } from "@tanstack/react-query";
-import { BoxesIcon, PackageCheckIcon, SearchIcon, ShieldCheckIcon, SparklesIcon } from "lucide-react";
-import { toast } from "sonner";
+import { PackageCheckIcon, Plus, SearchIcon, SparklesIcon } from "lucide-react";
 import { api } from "@/api/api";
 import {
   AdminInfoPill,
@@ -14,13 +11,12 @@ import {
   AdminSurface,
 } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PaginatedResponse, ProductTaxInfo } from "@/interfaces/market.interface";
-import { extractErrorMessage } from "@/lib/market";
 import { t, type TName } from "@/lib/i18n";
 import { useLang } from "@/context/lang.context";
 import CategoryList from "./_components/category-list";
+import ProductCreateDialog from "./_components/product-create-dialog";
 
 type Product = {
   id: number;
@@ -39,12 +35,6 @@ type Product = {
 type Category = {
   id: string;
   name: TName;
-};
-
-type Unit = {
-  id: number;
-  name: TName;
-  short_name?: TName | null;
 };
 
 type ProductCatalogSummary = {
@@ -95,42 +85,17 @@ function ProductCardSkeleton() {
 }
 
 export default function Products() {
-  const queryClient = useQueryClient();
   const { lang } = useLang();
   const loadMoreRef = useRef<HTMLDivElement | null>(null);
   const [query, setQuery] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [form, setForm] = useState({
-    nameUz: "",
-    nameRu: "",
-    slug: "",
-    descriptionUz: "",
-    descriptionRu: "",
-    category_id: "",
-    unit_id: "",
-    mxik_code: "",
-    barcode: "",
-    package_code: "",
-    tiftn_code: "",
-    vat_percent: "12",
-    mark_required: "",
-    origin_country: "O'zbekiston",
-    maker_name: "",
-    cert_no: "",
-    made_on: "",
-    expires_on: "",
-  });
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const normalizedQuery = deferredQuery.trim();
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories", "admin", "all"],
     queryFn: async () => (await api.get<Category[]>("/categories")).data,
-  });
-
-  const { data: units = [] } = useQuery({
-    queryKey: ["units", "admin", "all"],
-    queryFn: async () => (await api.get<Unit[]>("/units")).data,
   });
 
   const {
@@ -172,24 +137,6 @@ export default function Products() {
     withTax: 0,
   };
 
-  const hasTaxFormValues = useMemo(
-    () =>
-      [
-        form.mxik_code,
-        form.barcode,
-        form.package_code,
-        form.tiftn_code,
-        form.vat_percent,
-        form.mark_required,
-        form.origin_country,
-        form.maker_name,
-        form.cert_no,
-        form.made_on,
-        form.expires_on,
-      ].some((value) => value.trim() !== ""),
-    [form],
-  );
-
   const topCategories = useMemo(() => {
     const counts = new Map<string, { name: TName; total: number }>();
 
@@ -225,66 +172,6 @@ export default function Products() {
     return () => observer.disconnect();
   }, [fetchNextPage, hasNextPage, isFetchingNextPage, productsLoading, visibleProducts.length]);
 
-  const createProduct = useMutation({
-    mutationFn: async () =>
-      (
-        await api.post("/products", {
-          name: { uz: form.nameUz.trim(), ru: form.nameRu.trim() },
-          slug: form.slug.trim() || undefined,
-          description: (form.descriptionUz.trim() || form.descriptionRu.trim())
-            ? { uz: form.descriptionUz.trim(), ru: form.descriptionRu.trim() }
-            : undefined,
-          category_id: form.category_id || undefined,
-          unit_id: form.unit_id ? Number(form.unit_id) : undefined,
-          tax: hasTaxFormValues
-            ? {
-                mxik_code: form.mxik_code.trim() || undefined,
-                barcode: form.barcode.trim() || undefined,
-                package_code: form.package_code.trim() || undefined,
-                tiftn_code: form.tiftn_code.trim() || undefined,
-                vat_percent: form.vat_percent ? Number(form.vat_percent) : undefined,
-                mark_required:
-                  form.mark_required === ""
-                    ? undefined
-                    : form.mark_required === "true",
-                origin_country: form.origin_country.trim() || undefined,
-                maker_name: form.maker_name.trim() || undefined,
-                cert_no: form.cert_no.trim() || undefined,
-                made_on: form.made_on || undefined,
-                expires_on: form.expires_on || undefined,
-              }
-            : undefined,
-        })
-      ).data,
-    onSuccess: () => {
-      toast.success("Mahsulot yaratildi");
-      setForm({
-        nameUz: "",
-        nameRu: "",
-        slug: "",
-        descriptionUz: "",
-        descriptionRu: "",
-        category_id: "",
-        unit_id: "",
-        mxik_code: "",
-        barcode: "",
-        package_code: "",
-        tiftn_code: "",
-        vat_percent: "12",
-        mark_required: "",
-        origin_country: "O'zbekiston",
-        maker_name: "",
-        cert_no: "",
-        made_on: "",
-        expires_on: "",
-      });
-      queryClient.invalidateQueries({ queryKey: ["admin", "products", "catalog"] });
-    },
-    onError: (error) => {
-      toast.error(extractErrorMessage(error));
-    },
-  });
-
   const selectedCategoryRaw =
     categories.find((category) => category.id === selectedCategoryId)?.name ?? null;
   const selectedCategoryName = selectedCategoryRaw ? t(selectedCategoryRaw, lang) : null;
@@ -296,6 +183,12 @@ export default function Products() {
         title="Mahsulotlar"
         description="Search, kategoriya filteri va infinite scroll bilan ishlaydigan yagona admin katalog workspace."
         badge={`${summary.total} mahsulot`}
+        actions={
+          <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="h-9 gap-2 px-4">
+            <Plus className="size-4" />
+            Yangi mahsulot
+          </Button>
+        }
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -306,215 +199,7 @@ export default function Products() {
         <AdminInfoPill label="Soliq profili bor" value={summary.withTax} />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(320px,0.9fr)]">
-        <AdminSurface className="p-5 sm:p-6" id="create-product">
-          <div className="flex items-start gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1rem] bg-primary text-primary-foreground">
-              <BoxesIcon className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="text-lg font-semibold text-slate-950">Yangi mahsulot yaratish</h2>
-              <p className="mt-1 text-sm leading-6 text-slate-500">
-                Katalog ma'lumoti va soliq/compliance ma'lumotini bitta oqimda saqlang.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-4 xl:grid-cols-2">
-            <div className="rounded-[1.6rem] border border-slate-200/80 bg-white/88 p-4">
-              <div className="mb-4">
-                <p className="text-sm font-semibold text-slate-950">Katalog ma'lumoti</p>
-                <p className="text-sm text-slate-500">
-                  Foydalanuvchiga ko'rinadigan asosiy mahsulot ma'lumoti.
-                </p>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  placeholder="Mahsulot nomi (UZ)"
-                  value={form.nameUz}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, nameUz: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Название товара (RU)"
-                  value={form.nameRu}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, nameRu: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Slug"
-                  value={form.slug}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, slug: event.target.value }))
-                  }
-                />
-                <select
-                  value={form.category_id}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, category_id: event.target.value }))
-                  }
-                  className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none"
-                >
-                  <option value="">Kategoriya tanlang</option>
-                  {categories.map((category) => (
-                    <option key={category.id} value={category.id}>
-                      {t(category.name, lang)}
-                    </option>
-                  ))}
-                </select>
-                <select
-                  value={form.unit_id}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, unit_id: event.target.value }))
-                  }
-                  className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none"
-                >
-                  <option value="">Birlik tanlang</option>
-                  {units.map((unit) => (
-                    <option key={unit.id} value={unit.id}>
-                      {t(unit.name, lang)}
-                      {unit.short_name ? ` (${t(unit.short_name, lang)})` : ""}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <textarea
-                value={form.descriptionUz}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, descriptionUz: event.target.value }))
-                }
-                placeholder="Qisqa tavsif (UZ)"
-                className="mt-3 min-h-[80px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-              />
-              <textarea
-                value={form.descriptionRu}
-                onChange={(event) =>
-                  setForm((current) => ({ ...current, descriptionRu: event.target.value }))
-                }
-                placeholder="Краткое описание (RU)"
-                className="mt-2 min-h-[80px] w-full rounded-[1.2rem] border border-slate-200 bg-white px-4 py-3 text-sm text-slate-950 outline-none transition focus:border-primary/30 focus:ring-4 focus:ring-primary/10"
-              />
-            </div>
-
-            <div className="rounded-[1.6rem] border border-primary/10 bg-[linear-gradient(180deg,rgba(254,242,242,0.8),rgba(255,255,255,0.94))] p-4">
-              <div className="mb-4 flex items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-[1rem] bg-primary/10 text-primary">
-                  <ShieldCheckIcon className="h-4.5 w-4.5" />
-                </span>
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">Soliq va compliance</p>
-                  <p className="text-sm text-slate-500">
-                    MXIK, barcode, QQS va markirovka kabi maydonlar.
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input
-                  placeholder="MXIK kodi"
-                  value={form.mxik_code}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, mxik_code: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Barcode"
-                  value={form.barcode}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, barcode: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Qadoq kodi"
-                  value={form.package_code}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, package_code: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="TIF TN kodi"
-                  value={form.tiftn_code}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, tiftn_code: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="QQS foizi"
-                  value={form.vat_percent}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, vat_percent: event.target.value }))
-                  }
-                />
-                <select
-                  value={form.mark_required}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, mark_required: event.target.value }))
-                  }
-                  className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none"
-                >
-                  <option value="">Markirovka holati</option>
-                  <option value="true">Majburiy</option>
-                  <option value="false">Majburiy emas</option>
-                </select>
-                <Input
-                  placeholder="Ishlab chiqarilgan davlat"
-                  value={form.origin_country}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, origin_country: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Ishlab chiqaruvchi"
-                  value={form.maker_name}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, maker_name: event.target.value }))
-                  }
-                />
-                <Input
-                  placeholder="Sertifikat raqami"
-                  value={form.cert_no}
-                  onChange={(event) =>
-                    setForm((current) => ({ ...current, cert_no: event.target.value }))
-                  }
-                />
-                <div className="grid gap-3 md:grid-cols-2 md:col-span-2">
-                  <Input
-                    type="date"
-                    value={form.made_on}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, made_on: event.target.value }))
-                    }
-                  />
-                  <Input
-                    type="date"
-                    value={form.expires_on}
-                    onChange={(event) =>
-                      setForm((current) => ({ ...current, expires_on: event.target.value }))
-                    }
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 flex flex-wrap items-center gap-3">
-            <Button
-              className="rounded-full px-5"
-              onClick={() => createProduct.mutate()}
-              disabled={!form.nameUz.trim() || createProduct.isPending}
-            >
-              {createProduct.isPending ? "Saqlanmoqda..." : "Mahsulot yaratish"}
-            </Button>
-            <p className="text-sm text-slate-500">
-              Mahsulot va unga tegishli soliq profili bitta request bilan saqlanadi.
-            </p>
-          </div>
-        </AdminSurface>
-
+      <div className="grid gap-6 xl:grid-cols-1">
         <AdminSurface className="p-5 sm:p-6">
           <div className="rounded-[1.8rem] border border-primary/10 bg-[linear-gradient(145deg,rgba(220,38,38,0.95),rgba(244,63,94,0.88))] p-5 text-white shadow-[0_26px_55px_-38px_rgba(220,38,38,0.65)]">
             <div className="flex items-center gap-3">
@@ -761,6 +446,8 @@ export default function Products() {
           </>
         )}
       </AdminSurface>
+
+      <ProductCreateDialog open={createDialogOpen} onOpenChange={setCreateDialogOpen} />
     </div>
   );
 }

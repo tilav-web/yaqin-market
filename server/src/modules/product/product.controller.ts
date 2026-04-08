@@ -3,22 +3,31 @@ import {
   Get,
   Post,
   Put,
+  Delete,
   Param,
   Body,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFiles,
   ParseIntPipe,
 } from '@nestjs/common';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { RolesGuard } from '../auth/guard/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
+import { ImageService } from '../image/image.service';
+import { UploadFolderEnum } from '../image/enums/upload-folder.enum';
 
 @Controller('products')
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly imageService: ImageService,
+  ) {}
 
   @Get()
   async findAll(
@@ -35,7 +44,6 @@ export class ProductController {
         limit: limit ? Number(limit) : 12,
       });
     }
-
     return this.productService.findAll(categoryId);
   }
 
@@ -74,5 +82,49 @@ export class ProductController {
     @Body() dto: Partial<CreateProductDto>,
   ) {
     return this.productService.update(id, dto);
+  }
+
+  /** Mahsulotga rasmlar yuklash (1-5 ta) */
+  @Post(':id/images')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
+  @UseInterceptors(FilesInterceptor('images', 5))
+  async uploadImages(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFiles() files: Express.Multer.File[],
+  ) {
+    const product = await this.productService.findById(id);
+    const existingImages = product.images ?? [];
+
+    const newImages: { url: string; is_main: boolean }[] = [];
+    for (const file of files) {
+      const url = await this.imageService.processAndSaveImage(file, UploadFolderEnum.PRODUCT);
+      newImages.push({ url, is_main: existingImages.length === 0 && newImages.length === 0 });
+    }
+
+    return this.productService.update(id, {
+      images: [...existingImages, ...newImages],
+    });
+  }
+
+  /** Mahsulotdan rasm o'chirish (index bo'yicha) */
+  @Delete(':id/images/:index')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
+  async removeImage(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('index', ParseIntPipe) index: number,
+  ) {
+    const product = await this.productService.findById(id);
+    const images = [...(product.images ?? [])];
+
+    if (index >= 0 && index < images.length) {
+      const removed = images.splice(index, 1)[0];
+      if (removed?.url) {
+        await this.imageService.removeImage(removed.url).catch(() => {});
+      }
+    }
+
+    return this.productService.update(id, { images });
   }
 }
