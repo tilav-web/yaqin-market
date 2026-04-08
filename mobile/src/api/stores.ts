@@ -6,9 +6,9 @@ export const storesApi = {
       .get('/stores/nearby', { params: { lat, lng, radius } })
       .then((r) => r.data),
 
-  getPrime: (lat: number, lng: number) =>
+  getPrime: (lat?: number | null, lng?: number | null) =>
     apiClient
-      .get('/stores/prime', { params: { lat, lng } })
+      .get('/stores/prime', { params: lat && lng ? { lat, lng } : undefined })
       .then((r) => r.data),
 
   getById: (id: string) =>

@@ -1,18 +1,20 @@
-import React, { useEffect } from 'react';
+import React, { useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   FlatList,
   Image,
-  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Platform,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, Radius, Shadow } from '../../src/theme';
 import { useLocation } from '../../src/hooks/useLocation';
 import { storesApi } from '../../src/api/stores';
@@ -20,6 +22,8 @@ import { productsApi, categoriesApi } from '../../src/api/products';
 import { t } from '../../src/i18n';
 import { useLangStore } from '../../src/store/lang.store';
 
+const { width: SCREEN_W } = Dimensions.get('window');
+const CARD_W = SCREEN_W * 0.62;
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 function imageUrl(path?: string) {
@@ -28,83 +32,196 @@ function imageUrl(path?: string) {
   return `${API_URL}/${path}`;
 }
 
-function PrimeStoreCard({ store, onPress }: { store: any; onPress: () => void }) {
+// ─── Skeleton ─────────────────────────────────────────────────────────────────
+function SkeletonBox({ w, h, radius = 8, style }: { w: number | string; h: number; radius?: number; style?: any }) {
+  const anim = useRef(new Animated.Value(0.4)).current;
+  React.useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(anim, { toValue: 1, duration: 750, useNativeDriver: true }),
+        Animated.timing(anim, { toValue: 0.4, duration: 750, useNativeDriver: true }),
+      ])
+    ).start();
+  }, []);
   return (
-    <TouchableOpacity style={storeStyles.card} onPress={onPress} activeOpacity={0.85}>
-      {store.banner ? (
-        <Image source={{ uri: imageUrl(store.banner)! }} style={storeStyles.banner} />
+    <Animated.View
+      style={[{ width: w as any, height: h, borderRadius: radius, backgroundColor: '#E8E8E8', opacity: anim }, style]}
+    />
+  );
+}
+
+function StoreCardSkeleton() {
+  return (
+    <View style={{ width: CARD_W, backgroundColor: Colors.white, borderRadius: Radius.lg, overflow: 'hidden', ...Shadow.sm, marginRight: Spacing.sm }}>
+      <SkeletonBox w="100%" h={110} radius={0} />
+      <View style={{ padding: Spacing.sm, gap: 6 }}>
+        <SkeletonBox w="70%" h={14} />
+        <SkeletonBox w="45%" h={11} />
+      </View>
+    </View>
+  );
+}
+
+function ProductCardSkeleton() {
+  return (
+    <View style={{ width: '48%', backgroundColor: Colors.white, borderRadius: Radius.lg, overflow: 'hidden', ...Shadow.sm }}>
+      <SkeletonBox w="100%" h={130} radius={0} />
+      <View style={{ padding: Spacing.sm, gap: 6 }}>
+        <SkeletonBox w="80%" h={12} />
+        <SkeletonBox w="55%" h={12} />
+        <SkeletonBox w="40%" h={14} />
+      </View>
+    </View>
+  );
+}
+
+// ─── Store Card ───────────────────────────────────────────────────────────────
+function PrimeStoreCard({ store, onPress }: { store: any; onPress: () => void }) {
+  const img = imageUrl(store.banner);
+  return (
+    <TouchableOpacity style={[storeStyles.card, { width: CARD_W }]} onPress={onPress} activeOpacity={0.9}>
+      {img ? (
+        <Image source={{ uri: img }} style={storeStyles.banner} resizeMode="cover" />
       ) : (
         <View style={[storeStyles.banner, storeStyles.bannerPlaceholder]}>
-          <Text style={storeStyles.bannerEmoji}>🏪</Text>
+          <Ionicons name="storefront" size={40} color={Colors.primaryLight} />
         </View>
       )}
-      <View style={storeStyles.info}>
-        <View style={storeStyles.row}>
-          {store.logo ? (
-            <Image source={{ uri: imageUrl(store.logo)! }} style={storeStyles.logo} />
-          ) : (
-            <View style={[storeStyles.logo, storeStyles.logoPlaceholder]}>
-              <Text>🏪</Text>
-            </View>
-          )}
-          <View style={storeStyles.textBlock}>
-            <Text style={storeStyles.name} numberOfLines={1}>{store.name}</Text>
-            <View style={storeStyles.tags}>
-              <View style={storeStyles.primeBadge}>
-                <Text style={storeStyles.primeBadgeText}>⭐ Premium</Text>
-              </View>
-            </View>
+      {/* gradient overlay */}
+      <View style={storeStyles.overlay} />
+      {/* premium badge */}
+      <View style={storeStyles.premiumBadge}>
+        <Ionicons name="star" size={10} color="#F57F17" />
+        <Text style={storeStyles.premiumText}>Premium</Text>
+      </View>
+      {/* store info */}
+      <View style={storeStyles.infoOverlay}>
+        {store.logo ? (
+          <Image source={{ uri: imageUrl(store.logo)! }} style={storeStyles.logo} />
+        ) : (
+          <View style={[storeStyles.logo, storeStyles.logoPlaceholder]}>
+            <Ionicons name="storefront" size={14} color={Colors.white} />
           </View>
+        )}
+        <View style={{ flex: 1 }}>
+          <Text style={storeStyles.storeName} numberOfLines={1}>{store.name}</Text>
+          <Text style={storeStyles.storeSubtitle} numberOfLines={1}>
+            <Ionicons name="time-outline" size={10} color="rgba(255,255,255,0.8)" /> 20–35 min
+          </Text>
+        </View>
+        <View style={storeStyles.arrowBtn}>
+          <Ionicons name="chevron-forward" size={14} color={Colors.white} />
         </View>
       </View>
     </TouchableOpacity>
   );
 }
 
-function ProductCard({ product, onPress, lang: cardLang }: { product: any; onPress: () => void; lang?: import('../../src/i18n').Lang }) {
+// ─── Product Card ─────────────────────────────────────────────────────────────
+function ProductCard({
+  product,
+  onPress,
+  lang: cardLang,
+}: {
+  product: any;
+  onPress: () => void;
+  lang?: import('../../src/i18n').Lang;
+}) {
   const img = product.images?.[0]?.url;
+  const price = product.store_products?.[0]?.price;
   return (
-    <TouchableOpacity style={productStyles.card} onPress={onPress} activeOpacity={0.85}>
+    <TouchableOpacity style={productStyles.card} onPress={onPress} activeOpacity={0.9}>
       {img ? (
-        <Image source={{ uri: imageUrl(img)! }} style={productStyles.image} />
+        <Image source={{ uri: imageUrl(img)! }} style={productStyles.image} resizeMode="cover" />
       ) : (
         <View style={[productStyles.image, productStyles.imagePlaceholder]}>
-          <Text style={{ fontSize: 32 }}>📦</Text>
+          <Ionicons name="cube-outline" size={36} color={Colors.primaryLight} />
         </View>
       )}
       <View style={productStyles.info}>
-        <Text style={productStyles.name} numberOfLines={2}>{t(product.name, cardLang)}</Text>
-        {product.store_products?.[0] && (
+        <Text style={productStyles.name} numberOfLines={2}>
+          {t(product.name, cardLang)}
+        </Text>
+        {price != null && (
           <Text style={productStyles.price}>
-            {Number(product.store_products[0].price).toLocaleString()} so'm
+            {Number(price).toLocaleString()} so'm
           </Text>
         )}
+      </View>
+      <TouchableOpacity style={productStyles.addBtn} onPress={onPress} activeOpacity={0.85}>
+        <Ionicons name="add" size={18} color={Colors.white} />
+      </TouchableOpacity>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Category Chip ────────────────────────────────────────────────────────────
+function CategoryChip({ item, lang }: { item: any; lang: any }) {
+  const img = imageUrl(item.image);
+  return (
+    <TouchableOpacity style={catStyles.chip} activeOpacity={0.8}>
+      <View style={catStyles.iconCircle}>
+        {img ? (
+          <Image source={{ uri: img }} style={catStyles.icon} resizeMode="cover" />
+        ) : (
+          <Ionicons name="grid-outline" size={20} color={Colors.primary} />
+        )}
+      </View>
+      <Text style={catStyles.label} numberOfLines={1}>
+        {t(item.name, lang)}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+// ─── Promo Banner ─────────────────────────────────────────────────────────────
+function PromoBanner({ onPress }: { onPress: () => void }) {
+  return (
+    <TouchableOpacity style={promoStyles.banner} onPress={onPress} activeOpacity={0.9}>
+      <View style={promoStyles.textBlock}>
+        <Text style={promoStyles.label}>Umumiy buyurtma</Text>
+        <Text style={promoStyles.title}>Tez va arzon{'\n'}yetkazib berish</Text>
+        <View style={promoStyles.btn}>
+          <Text style={promoStyles.btnText}>Buyurtma berish</Text>
+          <Ionicons name="arrow-forward" size={14} color={Colors.white} />
+        </View>
+      </View>
+      <View style={promoStyles.iconBlock}>
+        <Text style={{ fontSize: 64 }}>🚀</Text>
       </View>
     </TouchableOpacity>
   );
 }
 
+// ─── Section Header ───────────────────────────────────────────────────────────
+function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) {
+  return (
+    <View style={sectionStyles.row}>
+      <Text style={sectionStyles.title}>{title}</Text>
+      {onSeeAll && (
+        <TouchableOpacity style={sectionStyles.seeAllBtn} onPress={onSeeAll}>
+          <Text style={sectionStyles.seeAll}>Barchasi</Text>
+          <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
+        </TouchableOpacity>
+      )}
+    </View>
+  );
+}
+
+// ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const router = useRouter();
-  const { lat, lng, address, permissionGranted } = useLocation();
+  const { address, permissionGranted } = useLocation();
   const lang = useLangStore((s) => s.lang);
   const setLang = useLangStore((s) => s.setLang);
+  const scrollY = useRef(new Animated.Value(0)).current;
 
-  const {
-    data: primeStores,
-    isLoading: loadingPrime,
-    refetch: refetchPrime,
-  } = useQuery({
-    queryKey: ['prime-stores', lat, lng],
-    queryFn: () => storesApi.getPrime(lat!, lng!),
-    enabled: !!lat && !!lng,
+  const { data: primeStores, isLoading: loadingStores, refetch: refetchPrime } = useQuery({
+    queryKey: ['prime-stores'],
+    queryFn: () => storesApi.getPrime(undefined, undefined),
   });
 
-  const {
-    data: productsData,
-    isLoading: loadingProducts,
-    refetch: refetchProducts,
-  } = useQuery({
+  const { data: productsData, isLoading: loadingProducts, refetch: refetchProducts } = useQuery({
     queryKey: ['products-catalog'],
     queryFn: () => productsApi.getCatalog({ limit: 20 }),
   });
@@ -114,263 +231,478 @@ export default function HomeScreen() {
     queryFn: categoriesApi.getAll,
   });
 
-  const isLoading = loadingPrime || loadingProducts;
+  const products = Array.isArray(productsData)
+    ? productsData
+    : Array.isArray(productsData?.items)
+    ? productsData.items
+    : [];
+
+  const headerScale = scrollY.interpolate({
+    inputRange: [-60, 0],
+    outputRange: [1.08, 1],
+    extrapolate: 'clamp',
+  });
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Yaqin Market 🛒</Text>
-          <Text style={styles.location} numberOfLines={1}>
-            📍 {address ?? (permissionGranted ? 'Joylashuv aniqlanmoqda...' : 'Joylashuvga ruxsat bering')}
-          </Text>
-        </View>
-        <View style={styles.headerRight}>
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      {/* ── Header ── */}
+      <Animated.View style={[styles.header, { transform: [{ scale: headerScale }] }]}>
+        <View style={styles.headerTop}>
+          <View style={styles.locationRow}>
+            <Ionicons name="location" size={14} color="rgba(255,255,255,0.9)" />
+            <Text style={styles.locationText} numberOfLines={1}>
+              {address ?? (permissionGranted ? 'Joylashuv aniqlanmoqda...' : 'Joylashuvga ruxsat bering')}
+            </Text>
+          </View>
           <TouchableOpacity
-            style={styles.langToggle}
+            style={styles.langPill}
             onPress={() => setLang(lang === 'uz' ? 'ru' : 'uz')}
             activeOpacity={0.8}
           >
-            <Text style={styles.langToggleText}>{lang === 'uz' ? 'UZ' : 'RU'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.broadcastBtn}
-            onPress={() => router.push('/(customer)/broadcast-cart')}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.broadcastBtnText}>📢 Umumiy buyurtma</Text>
+            <Text style={styles.langText}>{lang.toUpperCase()}</Text>
           </TouchableOpacity>
         </View>
-      </View>
+        <Text style={styles.brand}>Yaqin Market</Text>
 
-      <ScrollView
+        {/* Search bar */}
+        <TouchableOpacity
+          style={styles.searchBar}
+          onPress={() => router.push('/(customer)/search')}
+          activeOpacity={0.9}
+        >
+          <Ionicons name="search" size={18} color={Colors.textHint} />
+          <Text style={styles.searchPlaceholder}>Mahsulot yoki do'kon qidiring...</Text>
+          <View style={styles.searchFilter}>
+            <Ionicons name="options-outline" size={16} color={Colors.primary} />
+          </View>
+        </TouchableOpacity>
+      </Animated.View>
+
+      {/* ── Content ── */}
+      <Animated.ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], { useNativeDriver: false })}
+        scrollEventThrottle={16}
         refreshControl={
           <RefreshControl
-            refreshing={isLoading}
+            refreshing={loadingStores || loadingProducts}
             onRefresh={() => { refetchPrime(); refetchProducts(); }}
             tintColor={Colors.primary}
+            colors={[Colors.primary]}
           />
         }
       >
-        {/* Premium Stores */}
-        {(primeStores?.length ?? 0) > 0 && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>⭐ Premium do'konlar</Text>
-              <TouchableOpacity onPress={() => router.push('/(customer)/search')}>
-                <Text style={styles.seeAll}>Barchasi</Text>
-              </TouchableOpacity>
-            </View>
-            <FlatList
-              data={primeStores}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => (
-                <PrimeStoreCard
-                  store={item}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/(customer)/store/[id]',
-                      params: { id: item.id },
-                    })
-                  }
-                />
-              )}
-            />
-          </View>
-        )}
+
+        {/* Promo Banner */}
+        <View style={styles.section}>
+          <PromoBanner onPress={() => router.push('/(customer)/broadcast-cart')} />
+        </View>
 
         {/* Categories */}
         {(categories?.length ?? 0) > 0 && (
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Kategoriyalar</Text>
+          <View style={[styles.section, { paddingHorizontal: 0 }]}>
+            <View style={{ paddingHorizontal: Spacing.md }}>
+              <SectionHeader title="Kategoriyalar" />
+            </View>
             <FlatList
               data={categories}
               horizontal
               showsHorizontalScrollIndicator={false}
               keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={styles.horizontalList}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={styles.categoryChip}>
-                  {item.image && (
-                    <Image
-                      source={{ uri: imageUrl(item.image)! }}
-                      style={styles.categoryImage}
-                    />
-                  )}
-                  <Text style={styles.categoryName}>{t(item.name, lang)}</Text>
-                </TouchableOpacity>
-              )}
+              contentContainerStyle={styles.horizontalPad}
+              renderItem={({ item }) => <CategoryChip item={item} lang={lang} />}
             />
           </View>
         )}
 
+        {/* Premium Stores */}
+        <View style={[styles.section, { paddingHorizontal: 0 }]}>
+          <View style={{ paddingHorizontal: Spacing.md }}>
+            <SectionHeader
+              title="Premium do'konlar"
+              onSeeAll={() => router.push('/(customer)/search')}
+            />
+          </View>
+          {loadingStores ? (
+            <FlatList
+              data={[1, 2, 3]}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => String(item)}
+              contentContainerStyle={styles.horizontalPad}
+              renderItem={() => <StoreCardSkeleton />}
+            />
+          ) : (primeStores?.length ?? 0) > 0 ? (
+            <FlatList
+              data={primeStores}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.horizontalPad}
+              renderItem={({ item }) => (
+                <PrimeStoreCard
+                  store={item}
+                  onPress={() =>
+                    router.push({ pathname: '/(customer)/store/[id]', params: { id: item.id } })
+                  }
+                />
+              )}
+            />
+          ) : (
+            <View style={styles.emptyRow}>
+              <Ionicons name="storefront-outline" size={32} color={Colors.textHint} />
+              <Text style={styles.emptyText}>Yaqin do'konlar topilmadi</Text>
+            </View>
+          )}
+        </View>
+
         {/* All Products */}
         <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Barcha mahsulotlar</Text>
-          </View>
-
+          <SectionHeader title="Barcha mahsulotlar" />
           {loadingProducts ? (
-            <ActivityIndicator color={Colors.primary} style={{ marginTop: 20 }} />
-          ) : (
             <View style={styles.productGrid}>
-              {(productsData?.items ?? productsData ?? []).map((product: any) => (
+              {[1, 2, 3, 4].map((i) => <ProductCardSkeleton key={i} />)}
+            </View>
+          ) : products.length > 0 ? (
+            <View style={styles.productGrid}>
+              {products.map((product: any) => (
                 <ProductCard
                   key={product.id}
                   product={product}
                   lang={lang}
                   onPress={() =>
-                    router.push({
-                      pathname: '/(customer)/product/[id]',
-                      params: { id: product.id },
-                    })
+                    router.push({ pathname: '/(customer)/product/[id]', params: { id: product.id } })
                   }
                 />
               ))}
             </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={{ fontSize: 52 }}>🛒</Text>
+              <Text style={styles.emptyTitle}>Mahsulotlar topilmadi</Text>
+              <Text style={styles.emptySubtitle}>Tez orada yangi mahsulotlar qo'shiladi</Text>
+            </View>
           )}
         </View>
 
-        <View style={{ height: Spacing.xl }} />
-      </ScrollView>
+        <View style={{ height: Spacing.xl * 2 }} />
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
+    paddingBottom: Spacing.lg,
+    paddingTop: Platform.OS === 'android' ? Spacing.sm : 0,
+  },
+  headerTop: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    marginBottom: 4,
   },
-  greeting: { ...Typography.h4, color: Colors.white, marginBottom: 2 },
-  location: {
-    ...Typography.caption,
-    color: 'rgba(255,255,255,0.85)',
-    maxWidth: 180,
-  },
-  headerRight: {
+  locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.sm,
+    gap: 4,
+    flex: 1,
   },
-  langToggle: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: Spacing.xs,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    minWidth: 36,
-    alignItems: 'center',
+  locationText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.85)',
+    flex: 1,
   },
-  langToggleText: {
-    ...Typography.buttonSmall,
-    color: Colors.white,
-    fontWeight: '700',
-  },
-  broadcastBtn: {
+  langPill: {
     backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
     borderRadius: Radius.full,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.4)',
+    minWidth: 40,
+    alignItems: 'center',
   },
-  broadcastBtnText: {
-    ...Typography.buttonSmall,
+  langText: {
+    fontSize: 12,
+    fontWeight: '800',
     color: Colors.white,
+    letterSpacing: 0.5,
   },
-  scroll: { flex: 1 },
-  section: { marginTop: Spacing.md, paddingHorizontal: Spacing.md },
-  sectionHeader: {
+  brand: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: Colors.white,
+    letterSpacing: -0.5,
+    marginBottom: Spacing.md,
+  },
+  searchBar: {
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.md,
+    gap: Spacing.sm,
+    ...Shadow.md,
+  },
+  searchPlaceholder: {
+    flex: 1,
+    fontSize: 14,
+    color: Colors.textHint,
+  },
+  searchFilter: {
+    width: 32,
+    height: 32,
+    borderRadius: Radius.sm,
+    backgroundColor: Colors.primarySurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  scroll: {
+    flex: 1,
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    marginTop: -1,
+  },
+  section: {
+    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.md,
+  },
+  horizontalPad: {
+    paddingHorizontal: Spacing.md,
+    paddingRight: Spacing.lg,
+    gap: Spacing.sm,
+  },
+  productGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  emptyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  emptyText: { fontSize: 13, color: Colors.textHint },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: Spacing.xl,
+    gap: Spacing.sm,
+  },
+  emptyTitle: { ...Typography.title, color: Colors.textSecondary },
+  emptySubtitle: { ...Typography.caption, textAlign: 'center' },
+});
+
+const sectionStyles = StyleSheet.create({
+  row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: Spacing.sm,
   },
-  sectionTitle: { ...Typography.title },
-  seeAll: { ...Typography.bodySmall, color: Colors.primary, fontWeight: '600' },
-  horizontalList: { paddingRight: Spacing.md, gap: Spacing.sm },
-  categoryChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: Colors.white,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: Radius.full,
-    gap: Spacing.xs,
-    ...Shadow.sm,
-  },
-  categoryImage: { width: 20, height: 20, borderRadius: 10 },
-  categoryName: { ...Typography.bodySmall, fontWeight: '500' },
-  productGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: Spacing.sm,
-  },
+  title: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
+  seeAllBtn: { flexDirection: 'row', alignItems: 'center', gap: 2 },
+  seeAll: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
 });
 
 const storeStyles = StyleSheet.create({
   card: {
-    width: 220,
     backgroundColor: Colors.white,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
-    ...Shadow.sm,
+    ...Shadow.md,
   },
-  banner: { width: '100%', height: 100 },
-  bannerPlaceholder: {
+  banner: {
+    width: '100%',
+    height: 120,
     backgroundColor: Colors.primarySurface,
+  },
+  bannerPlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  bannerEmoji: { fontSize: 36 },
-  info: { padding: Spacing.sm },
-  row: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  logo: { width: 36, height: 36, borderRadius: 18 },
-  logoPlaceholder: {
-    backgroundColor: Colors.background,
-    alignItems: 'center',
-    justifyContent: 'center',
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    top: 60,
+    backgroundColor: 'rgba(0,0,0,0.45)',
   },
-  textBlock: { flex: 1 },
-  name: { ...Typography.title, fontSize: 14 },
-  tags: { flexDirection: 'row', gap: 4, marginTop: 2 },
-  primeBadge: {
+  premiumBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
     backgroundColor: '#FFF8E1',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: Radius.full,
   },
-  primeBadgeText: { fontSize: 10, color: '#F57F17', fontWeight: '600' },
+  premiumText: { fontSize: 10, color: '#F57F17', fontWeight: '700' },
+  infoOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    padding: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  logo: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    borderColor: Colors.white,
+  },
+  logoPlaceholder: {
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  storeName: { fontSize: 13, fontWeight: '700', color: Colors.white },
+  storeSubtitle: { fontSize: 11, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  arrowBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
 
 const productStyles = StyleSheet.create({
   card: {
-    width: '48%',
+    width: '48.5%',
     backgroundColor: Colors.white,
-    borderRadius: Radius.md,
+    borderRadius: Radius.lg,
     overflow: 'hidden',
     ...Shadow.sm,
   },
-  image: { width: '100%', height: 130 },
-  imagePlaceholder: {
+  image: {
+    width: '100%',
+    height: 130,
     backgroundColor: Colors.background,
+  },
+  imagePlaceholder: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  info: { padding: Spacing.sm },
-  name: { ...Typography.bodySmall, marginBottom: 4 },
-  price: { ...Typography.priceSmall },
+  info: {
+    padding: Spacing.sm,
+    paddingBottom: 4,
+    gap: 3,
+  },
+  name: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: Colors.textPrimary,
+    lineHeight: 18,
+  },
+  price: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.primary,
+    marginTop: 2,
+  },
+  addBtn: {
+    position: 'absolute',
+    bottom: Spacing.sm,
+    right: Spacing.sm,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.sm,
+  },
+});
+
+const catStyles = StyleSheet.create({
+  chip: {
+    alignItems: 'center',
+    gap: 6,
+    width: 72,
+  },
+  iconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadow.sm,
+    overflow: 'hidden',
+  },
+  icon: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+});
+
+const promoStyles = StyleSheet.create({
+  banner: {
+    backgroundColor: Colors.primaryDark,
+    borderRadius: Radius.xl,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    minHeight: 110,
+  },
+  textBlock: {
+    flex: 1,
+    padding: Spacing.md,
+    gap: 4,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.7)',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.white,
+    lineHeight: 24,
+  },
+  btn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
+  },
+  btnText: { fontSize: 12, fontWeight: '700', color: Colors.white },
+  iconBlock: {
+    width: 120,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
