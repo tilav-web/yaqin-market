@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { BikeIcon, MessageCircleIcon, NavigationIcon } from "lucide-react";
+import { BikeIcon, MessageCircleIcon } from "lucide-react";
 import { api } from "@/api/api";
 import StatusPill from "@/components/common/status-pill";
 import { Button } from "@/components/ui/button";
