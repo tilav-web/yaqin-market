@@ -7,7 +7,7 @@ import {
   IsUUID,
   ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ProductTaxDto } from './product-tax.dto';
 import { TranslatableStringDto } from 'src/common/dto/translatable.dto';
 
@@ -15,11 +15,13 @@ export class CreateProductDto {
   @IsOptional()
   slug?: string;
 
+  @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
   @ValidateNested()
   @Type(() => TranslatableStringDto)
   name: TranslatableStringDto;
 
   @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
   @ValidateNested()
   @Type(() => TranslatableStringDto)
   description?: TranslatableStringDto;

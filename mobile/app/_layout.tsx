@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useRootNavigationState } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -22,12 +22,14 @@ function AuthGuard() {
   const { isAuthenticated, isLoading, loadFromStorage } = useAuthStore();
   const router = useRouter();
   const segments = useSegments();
+  const navState = useRootNavigationState();
 
   useEffect(() => {
     loadFromStorage();
   }, []);
 
   useEffect(() => {
+    if (!navState?.key) return; // navigation not mounted yet
     if (isLoading) return;
 
     const group = segments[0] as string | undefined;
@@ -59,7 +61,7 @@ function AuthGuard() {
 
     // No route matched (initial load) → customer home
     router.replace('/(customer)/home');
-  }, [isAuthenticated, isLoading, segments]);
+  }, [isAuthenticated, isLoading, segments, navState?.key]);
 
   return null;
 }
@@ -71,11 +73,30 @@ export default function RootLayout() {
         <StatusBar style="light" backgroundColor={Colors.primary} />
         <PushNotificationsSetup />
         <AuthGuard />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(auth)" />
-          <Stack.Screen name="(customer)" />
-          <Stack.Screen name="(seller)" />
-          <Stack.Screen name="(courier)" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'fade_from_bottom',
+            animationDuration: 220,
+            contentStyle: { backgroundColor: Colors.background },
+          }}
+        >
+          <Stack.Screen
+            name="(auth)"
+            options={{ animation: 'fade', animationDuration: 180 }}
+          />
+          <Stack.Screen
+            name="(customer)"
+            options={{ animation: 'none' }}
+          />
+          <Stack.Screen
+            name="(seller)"
+            options={{ animation: 'none' }}
+          />
+          <Stack.Screen
+            name="(courier)"
+            options={{ animation: 'none' }}
+          />
         </Stack>
       </QueryClientProvider>
     </GestureHandlerRootView>

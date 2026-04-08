@@ -15,12 +15,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, Typography, Radius, Shadow } from '../../src/theme';
+import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useLocation } from '../../src/hooks/useLocation';
 import { storesApi } from '../../src/api/stores';
 import { productsApi, categoriesApi } from '../../src/api/products';
-import { t } from '../../src/i18n';
-import { useLangStore } from '../../src/store/lang.store';
+import { t, useTranslation } from '../../src/i18n';
 
 const { width: SCREEN_W } = Dimensions.get('window');
 const CARD_W = SCREEN_W * 0.62;
@@ -212,10 +211,8 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => vo
 export default function HomeScreen() {
   const router = useRouter();
   const { address, permissionGranted } = useLocation();
-  const lang = useLangStore((s) => s.lang);
-  const setLang = useLangStore((s) => s.setLang);
+  const { lang, t } = useTranslation();
   const scrollY = useRef(new Animated.Value(0)).current;
-
   const { data: primeStores, isLoading: loadingStores, refetch: refetchPrime } = useQuery({
     queryKey: ['prime-stores'],
     queryFn: () => storesApi.getPrime(undefined, undefined),
@@ -237,46 +234,21 @@ export default function HomeScreen() {
     ? productsData.items
     : [];
 
-  const headerScale = scrollY.interpolate({
-    inputRange: [-60, 0],
-    outputRange: [1.08, 1],
-    extrapolate: 'clamp',
-  });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       {/* ── Header ── */}
-      <Animated.View style={[styles.header, { transform: [{ scale: headerScale }] }]}>
+      <View style={styles.header}>
         <View style={styles.headerTop}>
           <View style={styles.locationRow}>
             <Ionicons name="location" size={14} color="rgba(255,255,255,0.9)" />
             <Text style={styles.locationText} numberOfLines={1}>
-              {address ?? (permissionGranted ? 'Joylashuv aniqlanmoqda...' : 'Joylashuvga ruxsat bering')}
+              {address ?? (permissionGranted ? (lang === 'ru' ? 'Определение местоположения...' : 'Joylashuv aniqlanmoqda...') : (lang === 'ru' ? 'Разрешите геолокацию' : 'Joylashuvga ruxsat bering'))}
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.langPill}
-            onPress={() => setLang(lang === 'uz' ? 'ru' : 'uz')}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.langText}>{lang.toUpperCase()}</Text>
-          </TouchableOpacity>
         </View>
         <Text style={styles.brand}>Yaqin Market</Text>
-
-        {/* Search bar */}
-        <TouchableOpacity
-          style={styles.searchBar}
-          onPress={() => router.push('/(customer)/search')}
-          activeOpacity={0.9}
-        >
-          <Ionicons name="search" size={18} color={Colors.textHint} />
-          <Text style={styles.searchPlaceholder}>Mahsulot yoki do'kon qidiring...</Text>
-          <View style={styles.searchFilter}>
-            <Ionicons name="options-outline" size={16} color={Colors.primary} />
-          </View>
-        </TouchableOpacity>
-      </Animated.View>
+      </View>
 
       {/* ── Content ── */}
       <Animated.ScrollView
@@ -293,9 +265,23 @@ export default function HomeScreen() {
           />
         }
       >
+        {/* Search bar — inside scroll, sticks visually below header */}
+        <View style={styles.searchWrap}>
+          <TouchableOpacity
+            style={styles.searchBar}
+            onPress={() => router.push('/(customer)/search')}
+            activeOpacity={0.9}
+          >
+            <Ionicons name="search" size={18} color={Colors.textHint} />
+            <Text style={styles.searchPlaceholder}>{lang === 'ru' ? 'Поиск товара или магазина...' : "Mahsulot yoki do'kon qidiring..."}</Text>
+            <View style={styles.searchFilter}>
+              <Ionicons name="options-outline" size={16} color={Colors.primary} />
+            </View>
+          </TouchableOpacity>
+        </View>
 
-        {/* Promo Banner — floats over header bottom */}
-        <View style={[styles.section, { marginTop: -Spacing.lg }]}>
+        {/* Promo Banner */}
+        <View style={styles.section}>
           <PromoBanner onPress={() => router.push('/(customer)/broadcast-cart')} />
         </View>
 
@@ -401,14 +387,12 @@ export default function HomeScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.xl,
+    paddingBottom: Spacing.md,
     paddingTop: Platform.OS === 'android' ? Spacing.sm : 0,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
   },
   headerTop: {
     flexDirection: 'row',
@@ -427,28 +411,20 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     flex: 1,
   },
-  langPill: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    minWidth: 40,
-    alignItems: 'center',
-  },
-  langText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: Colors.white,
-    letterSpacing: 0.5,
-  },
   brand: {
     fontSize: 26,
     fontWeight: '800',
     color: Colors.white,
     letterSpacing: -0.5,
-    marginBottom: Spacing.md,
+    marginBottom: 0,
+  },
+  searchWrap: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.lg,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
   },
   searchBar: {
     backgroundColor: Colors.white,

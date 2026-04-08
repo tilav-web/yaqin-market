@@ -1,87 +1,30 @@
 import { Tabs } from 'expo-router';
-import { BottomTabIcon, bottomTabBarStyle } from '../../src/components/navigation/BottomTabIcon';
+import { CustomTabBar } from '../../src/components/navigation/CustomTabBar';
 import { Colors } from '../../src/theme';
 
 export default function SellerLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: bottomTabBarStyle.bar,
-        tabBarShowLabel: false,
-        tabBarItemStyle: bottomTabBarStyle.item,
-      }}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          accentColor={Colors.primary}
+          tabs={[
+            { name: 'dashboard',      label: 'Bosh',    icon: 'grid-outline',      iconFocused: 'grid' },
+            { name: 'orders',         label: 'Buyurtma', icon: 'cube-outline',     iconFocused: 'cube' },
+            { name: 'broadcast-feed', label: 'Umumiy',  icon: 'megaphone-outline', iconFocused: 'megaphone' },
+            { name: 'products',       label: 'Tovar',   icon: 'bag-outline',       iconFocused: 'bag' },
+            { name: 'profile',        label: 'Profil',  icon: 'person-outline',    iconFocused: 'person' },
+          ]}
+        />
+      )}
     >
-      <Tabs.Screen
-        name="dashboard"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={Colors.primary}
-              iconActive="grid"
-              iconInactive="grid-outline"
-              label="Bosh"
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="orders"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={Colors.primary}
-              iconActive="cube"
-              iconInactive="cube-outline"
-              label="Buyurtma"
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="broadcast-feed"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={Colors.primary}
-              iconActive="megaphone"
-              iconInactive="megaphone-outline"
-              label="Umumiy"
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="products"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={Colors.primary}
-              iconActive="bag"
-              iconInactive="bag-outline"
-              label="Mahsulot"
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={Colors.primary}
-              iconActive="person"
-              iconInactive="person-outline"
-              label="Profil"
-              focused={focused}
-            />
-          ),
-        }}
-      />
+      <Tabs.Screen name="dashboard" />
+      <Tabs.Screen name="orders" />
+      <Tabs.Screen name="broadcast-feed" />
+      <Tabs.Screen name="products" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }

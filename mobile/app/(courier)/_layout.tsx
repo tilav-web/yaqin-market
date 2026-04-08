@@ -1,74 +1,29 @@
 import { Tabs } from 'expo-router';
-import { BottomTabIcon, bottomTabBarStyle } from '../../src/components/navigation/BottomTabIcon';
+import { CustomTabBar } from '../../src/components/navigation/CustomTabBar';
 
 const COURIER_COLOR = '#FF5722';
 
 export default function CourierLayout() {
   return (
     <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: bottomTabBarStyle.bar,
-        tabBarShowLabel: false,
-        tabBarItemStyle: bottomTabBarStyle.item,
-      }}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => (
+        <CustomTabBar
+          {...props}
+          accentColor={COURIER_COLOR}
+          tabs={[
+            { name: 'nearby',  label: 'Yaqin',  icon: 'map-outline',     iconFocused: 'map' },
+            { name: 'active',  label: 'Faol',   icon: 'bicycle-outline', iconFocused: 'bicycle' },
+            { name: 'history', label: 'Tarix',  icon: 'time-outline',    iconFocused: 'time' },
+            { name: 'profile', label: 'Profil', icon: 'person-outline',  iconFocused: 'person' },
+          ]}
+        />
+      )}
     >
-      <Tabs.Screen
-        name="nearby"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={COURIER_COLOR}
-              iconActive="map"
-              iconInactive="map-outline"
-              label="Yaqin"
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="active"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={COURIER_COLOR}
-              iconActive="bicycle"
-              iconInactive="bicycle-outline"
-              label="Faol"
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="history"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={COURIER_COLOR}
-              iconActive="time"
-              iconInactive="time-outline"
-              label="Tarix"
-              focused={focused}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <BottomTabIcon
-              accentColor={COURIER_COLOR}
-              iconActive="person"
-              iconInactive="person-outline"
-              label="Profil"
-              focused={focused}
-            />
-          ),
-        }}
-      />
+      <Tabs.Screen name="nearby" />
+      <Tabs.Screen name="active" />
+      <Tabs.Screen name="history" />
+      <Tabs.Screen name="profile" />
     </Tabs>
   );
 }
