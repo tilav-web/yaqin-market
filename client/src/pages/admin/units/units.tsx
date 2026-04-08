@@ -6,7 +6,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Pencil, Ruler } from "lucide-react";
 import { unitService, type IUnit } from "@/services/unit.service";
-import { cn } from "@/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -188,16 +187,17 @@ export default function AdminUnitsPage() {
       <AdminPageHeader
         title="O'lchov birliklari"
         description="Mahsulotlar uchun o'lchov birliklarini boshqaring"
-      >
-        <Button size="sm" onClick={() => dispatch({ type: "OPEN_CREATE" })} className="h-9 gap-2 px-4">
-          <Plus className="size-4" />
-          Yangi birlik
-        </Button>
-      </AdminPageHeader>
+        actions={
+          <Button size="sm" onClick={() => dispatch({ type: "OPEN_CREATE" })} className="h-9 gap-2 px-4">
+            <Plus className="size-4" />
+            Yangi birlik
+          </Button>
+        }
+      />
 
       <AdminSurface>
         <div className="flex items-center gap-3 mb-4">
-          <AdminInfoPill icon={Ruler} label="Jami" value={units.length} />
+          <AdminInfoPill label="Jami" value={units.length} />
         </div>
 
         {isLoading && <p className="text-sm text-muted-foreground py-8 text-center">Yuklanmoqda...</p>}
