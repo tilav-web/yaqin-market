@@ -21,7 +21,7 @@ import { RolesGuard } from '../auth/guard/roles.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageService } from '../image/image.service';
 import { UploadFolderEnum } from '../image/enums/upload-folder.enum';
-import { ParseJsonBodyPipe } from 'src/common/pipes/parse-json-body.pipe';
+import { ParseJsonFieldsInterceptor } from 'src/common/interceptors/parse-json-fields.interceptor';
 
 @Controller('categories')
 export class CategoryController {
@@ -43,9 +43,9 @@ export class CategoryController {
   @Post()
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(AuthRoleEnum.SUPER_ADMIN)
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileInterceptor('image'), ParseJsonFieldsInterceptor)
   async create(
-    @Body(new ParseJsonBodyPipe()) dto: CreateCategoryDto,
+    @Body() dto: CreateCategoryDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
     let imageUrl: string | undefined;
@@ -61,10 +61,10 @@ export class CategoryController {
   @Patch(':id')
   @UseGuards(AuthGuard('jwt'), RolesGuard)
   @Roles(AuthRoleEnum.SUPER_ADMIN)
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileInterceptor('image'), ParseJsonFieldsInterceptor)
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body(new ParseJsonBodyPipe()) dto: UpdateCategoryDto,
+    @Body() dto: UpdateCategoryDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
     let imageUrl: string | undefined;
