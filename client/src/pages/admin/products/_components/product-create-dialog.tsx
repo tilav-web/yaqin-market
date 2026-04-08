@@ -20,6 +20,8 @@ import { useLang } from "@/context/lang.context";
 type Category = { id: string; name: TName };
 type Unit = { id: number; name: TName; short_name?: TName | null };
 
+type Product = { id: number; name: TName; slug: string };
+
 const emptyForm = {
   nameUz: "",
   nameRu: "",
@@ -28,6 +30,7 @@ const emptyForm = {
   descriptionRu: "",
   category_id: "",
   unit_id: "",
+  parent_id: "",
   mxik_code: "",
   barcode: "",
   package_code: "",
@@ -65,6 +68,14 @@ export default function ProductCreateDialog({
     queryFn: async () => (await api.get<Unit[]>("/units")).data,
   });
 
+  const { data: allProducts = [] } = useQuery({
+    queryKey: ["products", "admin", "parent-list"],
+    queryFn: async () => {
+      const res = (await api.get<any>("/products", { params: { limit: 200 } })).data;
+      return (res?.items ?? res ?? []) as Product[];
+    },
+  });
+
   const previews = useMemo(
     () => images.map((file) => URL.createObjectURL(file)),
     [images],
@@ -89,6 +100,7 @@ export default function ProductCreateDialog({
               : undefined,
           category_id: form.category_id || undefined,
           unit_id: form.unit_id ? Number(form.unit_id) : undefined,
+          parent_id: form.parent_id ? Number(form.parent_id) : undefined,
           tax: hasTax
             ? {
                 mxik_code: form.mxik_code.trim() || undefined,
@@ -257,6 +269,18 @@ export default function ProductCreateDialog({
                     {t(u.name, lang)} {u.short_name ? `(${t(u.short_name, lang)})` : ""}
                   </option>
                 ))}
+              </select>
+              <select
+                value={form.parent_id}
+                onChange={(e) => set("parent_id", e.target.value)}
+                className="h-11 rounded-[1rem] border border-slate-200 bg-white px-3 text-sm text-slate-950 outline-none sm:col-span-2"
+              >
+                <option value="">Ota mahsulot (variant bo'lsa)</option>
+                {allProducts
+                  .filter((p) => !p.slug?.includes('variant'))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{t(p.name, lang)} (ID: {p.id})</option>
+                  ))}
               </select>
             </div>
             <textarea

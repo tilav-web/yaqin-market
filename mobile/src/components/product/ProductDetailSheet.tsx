@@ -32,16 +32,38 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
 
   const visible = productId !== null;
 
+  // 1. Tanlangan mahsulotni yuklash
   const { data: product, isLoading } = useQuery({
     queryKey: ['product-detail', productId],
     queryFn: () => productsApi.getById(productId!),
     enabled: !!productId,
   });
 
+  // 2. Agar child bo'lsa — parent ni yuklash (uning barcha children lari bilan)
+  const parentId = product?.parent_id ?? product?.parent?.id;
+  const isChild = !!parentId;
+
+  const { data: parentProduct } = useQuery({
+    queryKey: ['product-detail', parentId],
+    queryFn: () => productsApi.getById(parentId!),
+    enabled: !!parentId,
+  });
+
+  // Ota mahsulot — agar child bosilsa parent, aks holda o'zi
+  const rootProduct = isChild ? parentProduct : product;
+  // Barcha variantlar — ota + uning barcha children lari
+  const allVariants = rootProduct?.children?.length > 0
+    ? [rootProduct, ...rootProduct.children]
+    : product?.children?.length > 0
+    ? [product, ...product.children]
+    : [];
+
   useEffect(() => {
     if (visible) {
-      setSelectedChild(null);
       setQuantity(1);
+      // Child bosilgan bo'lsa — drawer ochilganda shu child tanlangan bo'lsin
+      // Parent bosilgan bo'lsa — null (parent o'zi ko'rinadi)
+      setSelectedChild(null);
       Animated.parallel([
         Animated.timing(bgOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
         Animated.spring(slideY, { toValue: 0, friction: 8, tension: 70, useNativeDriver: true }),
@@ -56,8 +78,9 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
 
   if (!visible) return null;
 
+  // Hozir tanlangan variant — agar foydalanuvchi chipdan tanlasa shu, aks holda boshlang'ich product
   const activeProduct = selectedChild ?? product;
-  const hasChildren = product?.children?.length > 0;
+  const hasVariants = allVariants.length > 1;
   const img = activeProduct?.images?.[0]?.url;
   const images = activeProduct?.images ?? [];
   const storeProduct = activeProduct?.store_products?.[0];
@@ -95,7 +118,7 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
       <Animated.View style={[s.sheet, { transform: [{ translateY: slideY }] }]}>
         <View style={s.handle} />
 
-        {isLoading || !product ? (
+        {isLoading || !product || (isChild && !parentProduct) ? (
           <View style={{ paddingVertical: 40, alignItems: 'center' }}>
             <Text style={{ color: Colors.textHint }}>{lang === 'ru' ? 'Загрузка...' : 'Yuklanmoqda...'}</Text>
           </View>
@@ -136,33 +159,32 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
                 <Text style={s.desc}>{t(product.description)}</Text>
               )}
 
-              {/* Children variants */}
-              {hasChildren && (
+              {/* Variants — istalgan variant bosilsa barchasi ko'rinadi */}
+              {hasVariants && (
                 <View style={s.variantsSection}>
                   <Text style={s.variantsTitle}>
                     {lang === 'ru' ? 'Варианты' : 'Variantlar'}
                   </Text>
                   <View style={s.variantsList}>
-                    {/* Parent as option */}
-                    <TouchableOpacity
-                      style={[s.variantChip, !selectedChild && s.variantChipActive]}
-                      onPress={() => setSelectedChild(null)}
-                    >
-                      <Text style={[s.variantText, !selectedChild && s.variantTextActive]}>
-                        {t(product.name)}
-                      </Text>
-                    </TouchableOpacity>
-                    {product.children.map((child: any) => (
-                      <TouchableOpacity
-                        key={child.id}
-                        style={[s.variantChip, selectedChild?.id === child.id && s.variantChipActive]}
-                        onPress={() => setSelectedChild(child)}
-                      >
-                        <Text style={[s.variantText, selectedChild?.id === child.id && s.variantTextActive]}>
-                          {t(child.name)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                    {allVariants.map((variant: any) => {
+                      const isActive = activeProduct?.id === variant.id;
+                      return (
+                        <TouchableOpacity
+                          key={variant.id}
+                          style={[s.variantChip, isActive && s.variantChipActive]}
+                          onPress={() => setSelectedChild(variant.id === product?.id ? null : variant)}
+                        >
+                          <Text style={[s.variantText, isActive && s.variantTextActive]}>
+                            {t(variant.name)}
+                          </Text>
+                          {variant.store_products?.[0]?.price != null && (
+                            <Text style={[s.variantPrice, isActive && { color: Colors.primary }]}>
+                              {Number(variant.store_products[0].price).toLocaleString()} so'm
+                            </Text>
+                          )}
+                        </TouchableOpacity>
+                      );
+                    })}
                   </View>
                 </View>
               )}
@@ -242,6 +264,7 @@ const s = StyleSheet.create({
   variantChipActive: { borderColor: Colors.primary, backgroundColor: Colors.primarySurface },
   variantText: { fontSize: 13, fontWeight: '500', color: Colors.textSecondary },
   variantTextActive: { color: Colors.primary, fontWeight: '700' },
+  variantPrice: { fontSize: 11, color: Colors.textHint, marginTop: 1 },
 
   actionRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
