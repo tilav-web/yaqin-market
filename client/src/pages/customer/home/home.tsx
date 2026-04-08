@@ -1,12 +1,14 @@
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import {
+  ChevronDownIcon,
   ChevronRightIcon,
-  CrownIcon,
-  LocateFixedIcon,
   MapPinIcon,
+  PlusIcon,
+  RocketIcon,
   SearchIcon,
   ShoppingBagIcon,
+  MapIcon,
   StarIcon,
 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -23,123 +25,90 @@ import type {
   ProductCatalogItem,
   StoreSummary,
 } from "@/interfaces/market.interface";
-import { calculateDeliveryQuote, formatMoney } from "@/lib/market";
+import { formatMoney } from "@/lib/market";
 import { useBroadcastCartStore } from "@/stores/broadcast-cart.store";
-import { t } from "@/lib/i18n";
 import { useLang } from "@/context/lang.context";
 
-type PromoTone = "prime" | "nearby" | "rated" | "value";
-
-type PromoStore = {
-  store: StoreSummary;
-  badge: string;
-  summary: string;
-  description: string;
-  tone: PromoTone;
-};
-
-type FeedItem =
-  | {
-      type: "product";
-      product: ProductCatalogItem;
-    }
-  | {
-      type: "store";
-      promo: PromoStore;
-    };
-
-const PROMO_THEME: Record<
-  PromoTone,
-  {
-    border: string;
-    badge: string;
-    panel: string;
-  }
-> = {
-  prime: {
-    border:
-      "border-red-200 bg-[linear-gradient(135deg,rgba(220,38,38,0.95),rgba(239,68,68,0.9))]",
-    badge: "bg-white/18 text-white",
-    panel: "bg-white/14",
-  },
-  nearby: {
-    border:
-      "border-sky-200 bg-[linear-gradient(135deg,rgba(27,93,155,0.95),rgba(38,132,255,0.92))]",
-    badge: "bg-white/18 text-white",
-    panel: "bg-white/14",
-  },
-  rated: {
-    border:
-      "border-amber-200 bg-[linear-gradient(135deg,rgba(26,32,44,0.96),rgba(71,85,105,0.92))]",
-    badge: "bg-white/16 text-white",
-    panel: "bg-white/12",
-  },
-  value: {
-    border:
-      "border-emerald-200 bg-[linear-gradient(135deg,rgba(6,95,70,0.96),rgba(16,185,129,0.9))]",
-    badge: "bg-white/18 text-white",
-    panel: "bg-white/14",
-  },
-};
-
 const PRODUCTS_PAGE_SIZE = 12;
+const STORE_INSERT_EVERY = 8;
 
-function formatDistance(distance?: number | null) {
-  if (distance == null) return "Yaqin";
-  if (distance < 1000) return `${Math.round(distance)} m`;
-  return `${(distance / 1000).toFixed(1)} km`;
+function imageUrl(path?: string | null) {
+  if (!path) return null;
+  if (path.startsWith("http")) return path;
+  return path;
 }
 
-function getDeliveryFee(
-  store: StoreSummary,
-  location?: { lat: number; lng: number } | null,
-) {
-  if (location && store.lat && store.lng) {
-    const quote = calculateDeliveryQuote(
-      store.deliverySettings?.[0],
-      {
-        lat: Number(store.lat),
-        lng: Number(store.lng),
-      },
-      location,
-    );
+/* ── Skeleton ──────────────────────────────────────────────────────────────── */
 
-    if (quote?.isDeliverable) {
-      return Number(quote.deliveryPrice ?? 0);
-    }
-  }
-
-  return Number(store.deliverySettings?.[0]?.delivery_fee ?? 0);
-}
-
-function dedupeStores(stores: StoreSummary[]) {
-  const map = new Map<string, StoreSummary>();
-
-  for (const store of stores) {
-    if (!map.has(store.id)) {
-      map.set(store.id, store);
-    }
-  }
-
-  return Array.from(map.values());
-}
-
-function ProductFeedSkeleton() {
+function ProductCardSkeleton() {
   return (
-    <div className="rounded-[1.5rem] border border-white/70 bg-white/92 p-3 shadow-[0_18px_48px_-40px_rgba(15,23,42,0.26)]">
-      <Skeleton className="aspect-[0.92] rounded-[1.25rem]" />
-      <div className="mt-3 space-y-2">
-        <Skeleton className="h-4 w-4/5 rounded-full" />
-        <Skeleton className="h-3 w-full rounded-full" />
-        <Skeleton className="h-3 w-2/3 rounded-full" />
-        <Skeleton className="h-4 w-24 rounded-full" />
+    <div className="overflow-hidden rounded-2xl bg-white shadow-sm">
+      <Skeleton className="aspect-square w-full" />
+      <div className="space-y-2 p-3">
+        <Skeleton className="h-3.5 w-4/5 rounded" />
+        <Skeleton className="h-4 w-1/2 rounded" />
       </div>
     </div>
   );
 }
 
+/* ── Prime Store Inline Card ───────────────────────────────────────────────── */
+
+function PrimeStoreInline({ store }: { store: StoreSummary }) {
+  const img = imageUrl(store.banner);
+  return (
+    <Link
+      to={`/mobile/stores/${store.id}`}
+      className="relative col-span-2 block h-36 overflow-hidden rounded-2xl shadow-md"
+    >
+      {img ? (
+        <img
+          src={img}
+          alt={store.name}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-red-50">
+          <ShoppingBagIcon className="h-8 w-8 text-red-300" />
+        </div>
+      )}
+      <div className="absolute inset-0 bg-black/35" />
+
+      {/* Badge */}
+      <div className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1">
+        <StarIcon className="h-3 w-3 fill-amber-500 text-amber-500" />
+        <span className="text-[10px] font-bold text-amber-700">Premium</span>
+      </div>
+
+      {/* Bottom info */}
+      <div className="absolute inset-x-0 bottom-0 flex items-center gap-3 p-3">
+        {store.logo ? (
+          <img
+            src={imageUrl(store.logo)!}
+            alt={store.name}
+            className="h-8 w-8 rounded-full border-2 border-white object-cover"
+          />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded-full bg-red-600">
+            <ShoppingBagIcon className="h-3.5 w-3.5 text-white" />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-bold text-white">{store.name}</p>
+          <p className="text-[11px] text-white/80">20-35 min</p>
+        </div>
+        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/25">
+          <ChevronRightIcon className="h-4 w-4 text-white" />
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+/* ── Main Component ────────────────────────────────────────────────────────── */
+
 export default function CustomerHome() {
-  const { lang, setLang } = useLang();
+  const { lang, setLang, tr, t } = useLang();
   const [search, setSearch] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [activeProduct, setActiveProduct] = useState<ProductCatalogItem | null>(null);
@@ -161,17 +130,7 @@ export default function CustomerHome() {
     [cartItems],
   );
 
-  const { data: stores = [] } = useQuery({
-    queryKey: ["stores", "nearby", location?.lat, location?.lng],
-    queryFn: async () =>
-      (
-        await api.get<StoreSummary[]>(
-          `/stores/nearby?lat=${location?.lat ?? 0}&lng=${location?.lng ?? 0}`,
-        )
-      ).data,
-    enabled: !!location,
-    staleTime: 60000,
-  });
+  /* ── Queries ─────────────────────────────────────────────────────────────── */
 
   const { data: primeStores = [] } = useQuery({
     queryKey: ["stores", "prime", location?.lat, location?.lng],
@@ -216,23 +175,40 @@ export default function CustomerHome() {
     staleTime: 60000,
   });
 
-  const nearbyStores = useMemo(
-    () => dedupeStores([...primeStores, ...stores]),
-    [primeStores, stores],
+  /* ── Derived data ────────────────────────────────────────────────────────── */
+
+  const visibleProducts = useMemo(
+    () => productPages?.pages.flatMap((page) => page.items) ?? [],
+    [productPages],
   );
 
-  const visibleProducts = useMemo(() => {
-    return productPages?.pages.flatMap((page) => page.items) ?? [];
-  }, [productPages]);
+  // Mix prime stores into products every STORE_INSERT_EVERY items
+  const mixedItems = useMemo(() => {
+    const items: Array<
+      | { _type: "product"; data: ProductCatalogItem }
+      | { _type: "store"; data: StoreSummary }
+    > = [];
+    let storeIdx = 0;
 
-  const totalProducts = productPages?.pages[0]?.meta.total ?? visibleProducts.length;
+    for (let i = 0; i < visibleProducts.length; i++) {
+      items.push({ _type: "product", data: visibleProducts[i] });
+      if (
+        (i + 1) % STORE_INSERT_EVERY === 0 &&
+        storeIdx < primeStores.length
+      ) {
+        items.push({ _type: "store", data: primeStores[storeIdx] });
+        storeIdx++;
+      }
+    }
+
+    return items;
+  }, [visibleProducts, primeStores]);
+
+  /* ── Infinite scroll observer ────────────────────────────────────────────── */
 
   useEffect(() => {
     const node = loadMoreRef.current;
-
-    if (!node || !hasNextPage || isFetchingNextPage || productsLoading) {
-      return;
-    }
+    if (!node || !hasNextPage || isFetchingNextPage || productsLoading) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -252,428 +228,230 @@ export default function CustomerHome() {
     setSelectedCategoryId(null);
   };
 
-  const promoStores = useMemo(() => {
-    if (!nearbyStores.length) return [] as PromoStore[];
-
-    const rankedByPrime = [...(primeStores.length ? primeStores : nearbyStores)].sort(
-      (left, right) =>
-        Number(right.rating ?? 0) - Number(left.rating ?? 0) ||
-        Number(left.distance_meters ?? Number.MAX_SAFE_INTEGER) -
-          Number(right.distance_meters ?? Number.MAX_SAFE_INTEGER),
-    );
-
-    const nearestStore = [...nearbyStores].sort(
-      (left, right) =>
-        Number(left.distance_meters ?? Number.MAX_SAFE_INTEGER) -
-        Number(right.distance_meters ?? Number.MAX_SAFE_INTEGER),
-    )[0];
-
-    const topRatedStore = [...nearbyStores].sort(
-      (left, right) =>
-        Number(right.rating ?? 0) - Number(left.rating ?? 0) ||
-        Number(left.distance_meters ?? Number.MAX_SAFE_INTEGER) -
-          Number(right.distance_meters ?? Number.MAX_SAFE_INTEGER),
-    )[0];
-
-    const bestValueStore = [...nearbyStores].sort(
-      (left, right) =>
-        getDeliveryFee(left, location) - getDeliveryFee(right, location) ||
-        Number(left.distance_meters ?? Number.MAX_SAFE_INTEGER) -
-          Number(right.distance_meters ?? Number.MAX_SAFE_INTEGER),
-    )[0];
-
-    const primaryStore = rankedByPrime[0] ?? nearestStore ?? topRatedStore ?? bestValueStore;
-    const morePrimeStores = rankedByPrime.slice(1, 4);
-
-    const candidates = [
-      primaryStore
-        ? {
-            store: primaryStore,
-            badge: primaryStore.is_prime ? "Prime tavsiya" : "Bugungi tavsiya",
-            summary: `${Number(primaryStore.rating ?? 0).toFixed(1)} reyting`,
-            description: `${formatDistance(primaryStore.distance_meters)} · ${formatMoney(getDeliveryFee(primaryStore, location))} delivery`,
-            tone: "prime" as const,
-          }
-        : null,
-      nearestStore
-        ? {
-            store: nearestStore,
-            badge: "Sizga eng yaqin",
-            summary: formatDistance(nearestStore.distance_meters),
-            description: "Hozir shu do'kondan tez buyurtma berish mumkin",
-            tone: "nearby" as const,
-          }
-        : null,
-      topRatedStore
-        ? {
-            store: topRatedStore,
-            badge: "Eng nufuzli",
-            summary: `⭐ ${Number(topRatedStore.rating ?? 0).toFixed(1)}`,
-            description: "Atrofdagi eng yaxshi baholangan do'konlardan biri",
-            tone: "rated" as const,
-          }
-        : null,
-      bestValueStore
-        ? {
-            store: bestValueStore,
-            badge: "Eng qulay",
-            summary: formatMoney(getDeliveryFee(bestValueStore, location)),
-            description: "Delivery narxi qulay bo'lgan yaqin do'kon",
-            tone: "value" as const,
-          }
-        : null,
-      ...morePrimeStores.map((store) => ({
-        store,
-        badge: store.is_prime ? "Prime" : "Yaqin do'kon",
-        summary: `${Number(store.rating ?? 0).toFixed(1)} reyting`,
-        description: `${formatDistance(store.distance_meters)} · ${formatMoney(getDeliveryFee(store, location))} delivery`,
-        tone: "prime" as const,
-      })),
-    ].filter((item): item is PromoStore => item !== null);
-
-    const unique = new Map<string, PromoStore>();
-
-    for (const promo of candidates) {
-      if (!unique.has(promo.store.id)) {
-        unique.set(promo.store.id, promo);
-      }
-    }
-
-    return Array.from(unique.values());
-  }, [location, nearbyStores, primeStores]);
-
-  const feedItems = useMemo(() => {
-    if (!visibleProducts.length) return [] as FeedItem[];
-
-    const items: FeedItem[] = [];
-    let promoIndex = 0;
-
-    if (promoStores[promoIndex]) {
-      items.push({ type: "store", promo: promoStores[promoIndex] });
-      promoIndex += 1;
-    }
-
-    visibleProducts.forEach((product, index) => {
-      items.push({ type: "product", product });
-
-      if (!promoStores[promoIndex]) return;
-
-      const shouldInsertPromo = index === 1 || (index + 1) % 4 === 0;
-
-      if (shouldInsertPromo) {
-        items.push({ type: "store", promo: promoStores[promoIndex] });
-        promoIndex += 1;
-      }
-    });
-
-    return items;
-  }, [promoStores, visibleProducts]);
+  /* ── Render ──────────────────────────────────────────────────────────────── */
 
   return (
-    <div className="min-h-screen pb-32">
-      <div className="space-y-5 px-4 pb-10 pt-4">
-        <header className="rounded-[2rem] border border-white/70 bg-[radial-gradient(circle_at_top,rgba(220,38,38,0.14),transparent_42%),linear-gradient(180deg,rgba(255,255,255,0.97),rgba(255,244,245,0.98))] p-4 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.35)]">
-          <div className="flex items-center justify-between gap-3">
+    <div className="min-h-screen bg-gray-50 pb-32">
+      {/* ── Header (red, rounded bottom) ─────────────────────────────────── */}
+      <header className="bg-red-600 px-4 pb-4 pt-3 text-white rounded-b-[1.75rem]">
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => requestCurrentLocation().catch(() => undefined)}
+              className="flex items-center gap-1 text-white/85"
+            >
+              <MapPinIcon className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate text-xs">
+                {location ? tr("location_ready") : tr("location_detecting")}
+              </span>
+              <ChevronDownIcon className="h-3.5 w-3.5 shrink-0" />
+            </button>
+            <h1 className="mt-0.5 text-2xl font-extrabold tracking-tight">
+              Yaqin Market
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setLang(lang === "uz" ? "ru" : "uz")}
+              className="rounded-full bg-white/20 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-white/30"
+            >
+              {lang === "uz" ? "RU" : "UZ"}
+            </button>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Search bar area (continues red bg with rounded bottom) ────── */}
+      <div className="bg-red-600 px-4 pb-5 rounded-b-[1.75rem] -mt-1">
+        <div className="flex items-center gap-2 rounded-xl bg-white px-4 py-3 shadow-md">
+          <SearchIcon className="h-4.5 w-4.5 text-gray-400" />
+          <input
+            type="text"
+            placeholder={tr("search_placeholder")}
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 bg-transparent text-sm text-gray-900 outline-none placeholder:text-gray-400"
+          />
+          <Link
+            to="/mobile/stores-map"
+            className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50"
+          >
+            <MapIcon className="h-4 w-4 text-red-600" />
+          </Link>
+        </div>
+      </div>
+
+      <div className="space-y-4 px-4 pt-4">
+        {/* ── Promo Banner (broadcast order) ──────────────────────────────── */}
+        <button
+          type="button"
+          onClick={() => setCartOpen(true)}
+          className="flex w-full items-center overflow-hidden rounded-2xl bg-red-800 p-4 text-left shadow-lg"
+        >
+          <div className="flex-1 space-y-1">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-white/70">
+              {tr("promo_label")}
+            </p>
+            <p className="text-lg font-extrabold leading-snug text-white">
+              {tr("promo_title")}
+            </p>
+            <div className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-white/35 bg-white/20 px-3 py-1.5">
+              <span className="text-xs font-bold text-white">{tr("promo_btn")}</span>
+              <ChevronRightIcon className="h-3.5 w-3.5 text-white" />
+            </div>
+          </div>
+          <div className="flex w-20 items-center justify-center">
+            <RocketIcon className="h-12 w-12 text-white/30" />
+          </div>
+        </button>
+
+        {/* ── Category Chips ──────────────────────────────────────────────── */}
+        {categories.length > 0 && (
+          <div className="scrollbar-none -mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
             <button
               type="button"
               onClick={resetCatalogFilters}
-              className="shrink-0 rounded-2xl transition active:scale-[0.98]"
-              aria-label="Filterlarni tozalash"
+              className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition ${
+                !selectedCategoryId
+                  ? "bg-red-600 text-white"
+                  : "bg-white text-gray-700 shadow-sm hover:bg-gray-50"
+              }`}
             >
-              <img
-                src="/logo-web.png"
-                alt="Yaqin Market"
-                className="h-9 w-auto sm:h-10"
-              />
+              {tr("all")}
             </button>
-
-            <div className="flex items-center gap-2">
+            {categories.map((category) => (
               <button
-                onClick={() => setLang(lang === "uz" ? "ru" : "uz")}
-                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
-              >
-                {lang === "uz" ? "RU" : "UZ"}
-              </button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="rounded-full"
-                onClick={() => requestCurrentLocation().catch(() => undefined)}
-              >
-                <LocateFixedIcon />
-                GPS
-              </Button>
-              <Button
-                size="sm"
-                className="rounded-full px-4"
-                onClick={() => setCartOpen(true)}
-              >
-                <ShoppingBagIcon />
-                Savat {totalCartItems ? `(${totalCartItems})` : ""}
-              </Button>
-            </div>
-          </div>
-
-          <div className="mt-4 flex items-center gap-2 rounded-[1.35rem] border border-slate-200 bg-white px-4 py-3">
-            <SearchIcon className="h-4 w-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Mahsulot yoki kategoriya"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              className="flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
-            />
-          </div>
-
-          <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto pb-1">
-            <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-primary/15 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary">
-              <MapPinIcon className="h-3.5 w-3.5" />
-              {location ? "Joylashuv tayyor" : "Joylashuv olinmoqda"}
-            </div>
-            <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
-              <CrownIcon className="h-3.5 w-3.5 text-primary" />
-              {primeStores.length} prime
-            </div>
-            <div className="inline-flex shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700">
-              <StarIcon className="h-3.5 w-3.5 text-amber-500" />
-              {stores.length} yaqin do'kon
-            </div>
-          </div>
-
-          {categories.length > 0 ? (
-            <div className="scrollbar-none mt-3 flex gap-2 overflow-x-auto pb-1">
-              <button
+                key={category.id}
                 type="button"
-                onClick={resetCatalogFilters}
-                className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                  !selectedCategoryId
-                    ? "border-slate-200 bg-slate-950 text-white"
-                    : "border-slate-200 bg-white text-slate-700 hover:border-primary/15 hover:text-primary"
+                onClick={() =>
+                  setSelectedCategoryId((current) =>
+                    current === String(category.id) ? null : String(category.id),
+                  )
+                }
+                className={`shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition ${
+                  selectedCategoryId === String(category.id)
+                    ? "bg-red-600 text-white"
+                    : "bg-white text-gray-700 shadow-sm hover:bg-gray-50"
                 }`}
               >
-                Hammasi
+                {t(category.name)}
               </button>
-              {categories.slice(0, 10).map((category) => (
-                <button
-                  key={category.id}
-                  type="button"
-                  onClick={() =>
-                    setSelectedCategoryId((current) =>
-                      current === String(category.id) ? null : String(category.id),
-                    )
-                  }
-                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
-                    selectedCategoryId === String(category.id)
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-slate-200 bg-white text-slate-700 hover:border-primary/15 hover:text-primary"
-                  }`}
-                >
-                  {t(category.name, lang)}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </header>
-
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-950">Feed</h2>
-            <span className="text-sm text-slate-400">
-              {totalProducts > visibleProducts.length
-                ? `${visibleProducts.length} / ${totalProducts} ta`
-                : `${visibleProducts.length} ta`}
-            </span>
+            ))}
           </div>
+        )}
 
-          {productsLoading && visibleProducts.length === 0 ? (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-              {Array.from({ length: 6 }).map((_, index) => (
-                <ProductFeedSkeleton key={index} />
-              ))}
-            </div>
-          ) : feedItems.length === 0 ? (
-            <EmptyState
-              title="Mahsulot topilmadi"
-              description="Qidiruv yoki kategoriya filtrini o'zgartirib ko'ring."
-            />
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                {feedItems.map((item, index) => {
-                  if (item.type === "store") {
-                    const { promo } = item;
-                    const theme = PROMO_THEME[promo.tone];
-                    const deliveryFee = getDeliveryFee(promo.store, location);
+        {/* ── Section title ───────────────────────────────────────────────── */}
+        <h2 className="text-[17px] font-bold text-gray-900">
+          {selectedCategoryId
+            ? t(categories.find((c) => String(c.id) === selectedCategoryId)?.name)
+            : tr("all_products")}
+        </h2>
 
-                    return (
-                      <Link
-                        key={`${promo.store.id}-${promo.badge}-${index}`}
-                        to={`/mobile/stores/${promo.store.id}`}
-                        className={`col-span-full overflow-hidden rounded-[1.9rem] border text-white shadow-[0_24px_70px_-50px_rgba(15,23,42,0.55)] ${theme.border}`}
-                      >
-                        <div className="relative overflow-hidden">
-                          {promo.store.banner ? (
-                            <img
-                              src={promo.store.banner}
-                              alt={promo.store.name}
-                              className="absolute inset-0 h-full w-full object-cover opacity-20"
-                            />
-                          ) : null}
-
-                          <div className="relative grid gap-4 p-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
-                            <div className="flex items-start gap-3">
-                              <div className="h-16 w-16 shrink-0 overflow-hidden rounded-[1.35rem] border border-white/25 bg-white/90">
-                                {promo.store.logo ? (
-                                  <img
-                                    src={promo.store.logo}
-                                    alt={promo.store.name}
-                                    className="h-full w-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-2xl text-slate-900">
-                                    🏪
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="min-w-0">
-                                <div
-                                  className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-semibold ${theme.badge}`}
-                                >
-                                  {promo.tone === "prime" ? (
-                                    <CrownIcon className="h-3.5 w-3.5" />
-                                  ) : null}
-                                  {promo.badge}
-                                </div>
-
-                                <h3 className="mt-3 text-xl font-semibold leading-tight md:text-2xl">
-                                  {promo.store.name}
-                                </h3>
-
-                                <div className="mt-2 flex flex-wrap gap-2 text-xs font-medium text-white/80">
-                                  <span>⭐ {Number(promo.store.rating ?? 0).toFixed(1)}</span>
-                                  <span>{formatDistance(promo.store.distance_meters)}</span>
-                                  <span>{formatMoney(deliveryFee)} delivery</span>
-                                </div>
-
-                                <p className="mt-3 max-w-2xl text-sm leading-6 text-white/86">
-                                  {promo.store.address ?? promo.description}
-                                </p>
-                              </div>
-                            </div>
-
-                            <div className="space-y-3">
-                              <div className={`rounded-[1.35rem] p-4 ${theme.panel}`}>
-                                <p className="text-xs uppercase tracking-[0.2em] text-white/55">
-                                  Tavsiya
-                                </p>
-                                <p className="mt-2 text-2xl font-semibold">{promo.summary}</p>
-                                <p className="mt-1 text-sm text-white/80">
-                                  {promo.description}
-                                </p>
-                              </div>
-
-                              <div className="inline-flex items-center gap-2 text-sm font-semibold text-white">
-                                Do'konni ochish
-                                <ChevronRightIcon className="h-4 w-4" />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </Link>
-                    );
-                  }
-
-                  const { product } = item;
-                  const childCount =
-                    product.children?.filter((child) => child.is_active !== false).length ?? 0;
-
+        {/* ── Product Grid ────────────────────────────────────────────────── */}
+        {productsLoading && visibleProducts.length === 0 ? (
+          <div className="grid grid-cols-2 gap-3">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <ProductCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : mixedItems.length === 0 ? (
+          <EmptyState
+            title={tr("empty_products")}
+            description={tr("empty_products_sub")}
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              {mixedItems.map((item, index) => {
+                if (item._type === "store") {
                   return (
-                    <button
-                      key={product.id}
-                      type="button"
-                      onClick={() => setActiveProduct(product)}
-                      className="group rounded-[1.5rem] border border-white/70 bg-white/92 p-3 text-left shadow-[0_18px_48px_-40px_rgba(15,23,42,0.26)] transition hover:-translate-y-0.5"
-                    >
-                      <div className="relative aspect-[0.92] overflow-hidden rounded-[1.25rem] bg-[linear-gradient(135deg,#fff1f1,#f8fbff)]">
-                        {product.images?.[0]?.url ? (
-                          <img
-                            src={product.images[0].url}
-                            alt={t(product.name, lang)}
-                            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.03]"
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center text-4xl">
-                            📦
-                          </div>
-                        )}
-
-                        {product.category?.name ? (
-                          <span className="absolute left-2 top-2 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold text-slate-700 shadow-sm">
-                            {t(product.category.name, lang)}
-                          </span>
-                        ) : null}
-
-                        {childCount > 0 ? (
-                          <span className="absolute right-2 top-2 rounded-full bg-slate-950/86 px-2.5 py-1 text-[11px] font-semibold text-white">
-                            {childCount} variant
-                          </span>
-                        ) : null}
-                      </div>
-
-                      <div className="mt-3">
-                        <p className="line-clamp-2 min-h-10 text-sm font-semibold text-slate-950">
-                          {t(product.name, lang)}
-                        </p>
-                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
-                          {t(product.description, lang) || t(product.category?.name, lang) || "Mahsulot tafsiloti"}
-                        </p>
-                        <div className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary">
-                          {childCount > 0 ? "Variant tanlash" : "Savatga qo'shish"}
-                          <ChevronRightIcon className="h-3.5 w-3.5" />
-                        </div>
-                      </div>
-                    </button>
+                    <PrimeStoreInline
+                      key={`store-${item.data.id}-${index}`}
+                      store={item.data}
+                    />
                   );
-                })}
+                }
+
+                const product = item.data;
+                const price = (product as any).store_products?.[0]?.price;
+                const img = product.images?.[0]?.url;
+
+                return (
+                  <button
+                    key={`product-${product.id}`}
+                    type="button"
+                    onClick={() => setActiveProduct(product)}
+                    className="relative overflow-hidden rounded-2xl bg-white text-left shadow-sm transition hover:shadow-md"
+                  >
+                    {img ? (
+                      <img
+                        src={imageUrl(img)!}
+                        alt={t(product.name)}
+                        className="aspect-square w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex aspect-square w-full items-center justify-center bg-gray-100">
+                        <ShoppingBagIcon className="h-9 w-9 text-red-200" />
+                      </div>
+                    )}
+
+                    <div className="p-3 pb-4">
+                      <p className="line-clamp-2 text-[13px] font-medium leading-snug text-gray-900">
+                        {t(product.name)}
+                      </p>
+                      {price != null && (
+                        <p className="mt-1 text-sm font-bold text-red-600">
+                          {formatMoney(price)}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* + button */}
+                    <div className="absolute bottom-3 right-3 flex h-7 w-7 items-center justify-center rounded-full bg-red-600 shadow-sm">
+                      <PlusIcon className="h-4 w-4 text-white" />
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {isFetchingNextPage && (
+              <div className="grid grid-cols-2 gap-3">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <ProductCardSkeleton key={`next-${i}`} />
+                ))}
               </div>
+            )}
 
-              {isFetchingNextPage ? (
-                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                  {Array.from({ length: 4 }).map((_, index) => (
-                    <ProductFeedSkeleton key={`next-page-${index}`} />
-                  ))}
-                </div>
-              ) : null}
-
-              {hasNextPage ? <div ref={loadMoreRef} className="h-4 w-full" /> : null}
-            </>
-          )}
-        </section>
+            {hasNextPage && <div ref={loadMoreRef} className="h-4 w-full" />}
+          </>
+        )}
       </div>
 
-      {totalCartItems > 0 ? (
+      {/* ── Floating cart button ──────────────────────────────────────────── */}
+      {totalCartItems > 0 && (
         <div className="fixed inset-x-0 bottom-24 z-20 px-4 sm:bottom-6">
           <Button
-            className="h-14 w-full rounded-[1.4rem] shadow-[0_24px_60px_-36px_rgba(15,23,42,0.45)]"
+            className="h-14 w-full rounded-2xl shadow-lg"
             onClick={() => setCartOpen(true)}
           >
             <ShoppingBagIcon />
-            Savatni yuborish
+            {tr("cart_send")}
             <span className="rounded-full bg-white/16 px-2 py-0.5 text-xs">
               {totalCartItems}
             </span>
           </Button>
         </div>
-      ) : null}
+      )}
 
+      {/* ── Drawers / Sheets ─────────────────────────────────────────────── */}
       <ProductDrawer
         open={!!activeProduct}
         product={activeProduct}
         onOpenChange={(nextOpen) => {
-          if (!nextOpen) {
-            setActiveProduct(null);
-          }
+          if (!nextOpen) setActiveProduct(null);
         }}
       />
 

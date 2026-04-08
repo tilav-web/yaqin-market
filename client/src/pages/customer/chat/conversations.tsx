@@ -1,17 +1,23 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowLeftIcon, MessageCircleIcon, PlusIcon } from "lucide-react";
 import { api } from "@/api/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Conversation } from "@/interfaces/market.interface";
-import { formatDateTime } from "@/lib/market";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { formatDateTime, extractErrorMessage } from "@/lib/market";
 import { toast } from "sonner";
-import { extractErrorMessage } from "@/lib/market";
+import { useSocket } from "@/hooks/use-socket";
 
 export default function ConversationsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Socket — yangi xabar kelganda ro'yxat yangilanadi
+  useSocket("customer", (event) => {
+    if (event === "chat:new-message") {
+      queryClient.invalidateQueries({ queryKey: ["conversations", "my"] });
+    }
+  });
   const [searchParams] = useSearchParams();
   const storeId = searchParams.get("store_id");
   const storeName = searchParams.get("store_name");

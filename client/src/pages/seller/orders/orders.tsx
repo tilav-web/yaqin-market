@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../../api/api";
 import { Button } from "../../../components/ui/button";
+import { useSocket } from "@/hooks/use-socket";
 
 interface Order {
   id: string;
@@ -24,6 +25,13 @@ interface Order {
 
 export default function SellerOrders() {
   const queryClient = useQueryClient();
+
+  // Socket — yangi buyurtma yoki status o'zgarishi
+  useSocket("seller", (event) => {
+    if (event === "order:status-changed" || event === "order:new-direct") {
+      queryClient.invalidateQueries({ queryKey: ["seller", "orders"] });
+    }
+  });
 
   const { data: ordersRes, isLoading } = useQuery({
     queryKey: ["seller", "orders"],

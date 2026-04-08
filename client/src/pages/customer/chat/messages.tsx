@@ -9,6 +9,7 @@ import type { PaginatedResponse } from "@/interfaces/market.interface";
 import { useAuthStore } from "@/stores/auth.store";
 import { extractErrorMessage } from "@/lib/market";
 import { toast } from "sonner";
+import { useSocket } from "@/hooks/use-socket";
 
 export default function ChatMessagesPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +18,13 @@ export default function ChatMessagesPage() {
   const me = useAuthStore((state) => state.me);
   const [text, setText] = useState("");
   const bottomRef = useRef<HTMLDivElement | null>(null);
+
+  // Socket — yangi xabar real-time keladi
+  useSocket("customer", (event, data) => {
+    if (event === "chat:new-message" && data?.conversation_id === id) {
+      queryClient.invalidateQueries({ queryKey: ["conversation", id, "messages"] });
+    }
+  });
 
   const { data: conversation } = useQuery({
     queryKey: ["conversation", id],

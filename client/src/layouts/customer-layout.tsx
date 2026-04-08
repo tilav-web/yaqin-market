@@ -2,24 +2,27 @@ import { useMemo } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { HomeIcon, MessageCircleIcon, ShoppingBagIcon, SendIcon, UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLang } from "@/context/lang.context";
+import type { TranslationKey } from "@/lib/translations";
 
 type CustomerTab = "home" | "requests" | "orders" | "chat" | "profile";
 
 const tabs: Array<{
   key: CustomerTab;
-  label: string;
+  labelKey: TranslationKey;
   to: string;
   icon: typeof HomeIcon;
 }> = [
-  { key: "home", label: "Asosiy", to: "/mobile", icon: HomeIcon },
-  { key: "requests", label: "So'rovlar", to: "/mobile/requests", icon: SendIcon },
-  { key: "orders", label: "Buyurtmalar", to: "/mobile/orders", icon: ShoppingBagIcon },
-  { key: "chat", label: "Xabarlar", to: "/mobile/chat", icon: MessageCircleIcon },
-  { key: "profile", label: "Profil", to: "/mobile/profile", icon: UserIcon },
+  { key: "home", labelKey: "tab_home", to: "/mobile", icon: HomeIcon },
+  { key: "requests", labelKey: "tab_requests", to: "/mobile/requests", icon: SendIcon },
+  { key: "orders", labelKey: "tab_orders", to: "/mobile/orders", icon: ShoppingBagIcon },
+  { key: "chat", labelKey: "tab_chat", to: "/mobile/chat", icon: MessageCircleIcon },
+  { key: "profile", labelKey: "tab_profile", to: "/mobile/profile", icon: UserIcon },
 ];
 
 export default function CustomerLayout() {
   const location = useLocation();
+  const { tr } = useLang();
 
   const activeTab = useMemo<CustomerTab>(() => {
     const path = location.pathname;
@@ -98,7 +101,7 @@ export default function CustomerLayout() {
                         isActive ? "translate-y-0" : "translate-y-0.5",
                       )}
                     >
-                      {tab.label}
+                      {tr(tab.labelKey)}
                     </span>
                     <span
                       className={cn(

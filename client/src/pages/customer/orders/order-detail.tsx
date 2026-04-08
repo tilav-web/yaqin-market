@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
-import { MessageCircleIcon } from "lucide-react";
+import { BikeIcon, MessageCircleIcon, NavigationIcon } from "lucide-react";
 import { api } from "@/api/api";
 import StatusPill from "@/components/common/status-pill";
 import { Button } from "@/components/ui/button";
@@ -15,12 +15,32 @@ import {
   getOrderStatusLabel,
   getPaymentMethodLabel,
 } from "@/lib/market";
+import { useSocket } from "@/hooks/use-socket";
 
 export default function CustomerOrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isPaying, setIsPaying] = useState(false);
+  const [courierLocation, setCourierLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Socket — real-time buyurtma yangilash va kuryer tracking
+  const { subscribeToOrder } = useSocket("customer", (event, data) => {
+    if (data?.order_id === id || data?.orderId === id) {
+      if (event === "order:status-changed") {
+        queryClient.invalidateQueries({ queryKey: ["order", id] });
+        queryClient.invalidateQueries({ queryKey: ["orders", "my"] });
+        toast.info(`Buyurtma holati: ${data.status}`);
+      }
+      if (event === "courier:location-changed") {
+        setCourierLocation({ lat: data.lat, lng: data.lng });
+      }
+    }
+  });
+
+  useEffect(() => {
+    if (id) subscribeToOrder(id);
+  }, [id, subscribeToOrder]);
 
   const startChat = useMutation({
     mutationFn: async (orderId: string) =>
@@ -64,6 +84,27 @@ export default function CustomerOrderDetailPage() {
 
   return (
     <div className="space-y-5 px-4 pb-28 pt-4">
+      {/* Courier tracking — faqat yetkazish paytida */}
+      {order.status === "DELIVERING" && courierLocation && (
+        <section className="rounded-[2rem] border border-emerald-200 bg-gradient-to-br from-emerald-50 to-white p-5 shadow-[0_20px_50px_-30px_rgba(16,185,129,0.3)]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-[1.15rem] bg-emerald-500 text-white shadow-[0_12px_28px_-12px_rgba(16,185,129,0.7)]">
+              <BikeIcon className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">Kuryer yo'lda</p>
+              <p className="text-xs text-emerald-600">
+                Joylashuv: {courierLocation.lat.toFixed(5)}, {courierLocation.lng.toFixed(5)}
+              </p>
+            </div>
+            <span className="ml-auto flex h-3 w-3 items-center justify-center">
+              <span className="absolute h-3 w-3 animate-ping rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative h-2 w-2 rounded-full bg-emerald-500" />
+            </span>
+          </div>
+        </section>
+      )}
+
       <section className="rounded-[2rem] border border-white/70 bg-white/90 p-5 shadow-[0_24px_80px_-54px_rgba(15,23,42,0.3)]">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
