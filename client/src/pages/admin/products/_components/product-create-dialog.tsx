@@ -1,6 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImageIcon, Plus, ShieldCheckIcon, Trash2, Upload, X } from "lucide-react";
+import { ShieldCheckIcon, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/api/api";
 import { Button } from "@/components/ui/button";
