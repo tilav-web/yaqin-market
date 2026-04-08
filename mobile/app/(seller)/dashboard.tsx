@@ -11,17 +11,18 @@ import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
 import { storesApi } from '../../src/api/stores';
 import { useSocket } from '../../src/hooks/useSocket';
+import { useTranslation } from '../../src/i18n';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-const STATUS_CFG: Record<string, { label: string; color: string; bg: string }> = {
-  PENDING:    { label: 'Kutilmoqda',   color: Colors.statusPending,    bg: '#FFF3E0' },
-  ACCEPTED:   { label: 'Qabul',        color: Colors.statusAccepted,   bg: '#E3F2FD' },
-  READY:      { label: 'Tayyor',       color: Colors.statusReady,      bg: '#F3E5F5' },
-  DELIVERING: { label: 'Yetkazmoqda', color: Colors.statusDelivering, bg: '#FBE9E7' },
-  DELIVERED:  { label: 'Yetkazildi',  color: Colors.statusDelivered,  bg: '#E8F5E9' },
-  CANCELLED:  { label: 'Bekor',       color: Colors.statusCancelled,  bg: '#F5F5F5' },
-};
+const STATUS_CFG = (lang: string): Record<string, { label: string; color: string; bg: string }> => ({
+  PENDING:    { label: lang === 'ru' ? 'Ожидает' : 'Kutilmoqda',     color: Colors.statusPending,    bg: '#FFF3E0' },
+  ACCEPTED:   { label: lang === 'ru' ? 'Принят' : 'Qabul',           color: Colors.statusAccepted,   bg: '#E3F2FD' },
+  READY:      { label: lang === 'ru' ? 'Готов' : 'Tayyor',           color: Colors.statusReady,      bg: '#F3E5F5' },
+  DELIVERING: { label: lang === 'ru' ? 'Доставляется' : 'Yetkazmoqda', color: Colors.statusDelivering, bg: '#FBE9E7' },
+  DELIVERED:  { label: lang === 'ru' ? 'Доставлен' : 'Yetkazildi',   color: Colors.statusDelivered,  bg: '#E8F5E9' },
+  CANCELLED:  { label: lang === 'ru' ? 'Отменён' : 'Bekor',          color: Colors.statusCancelled,  bg: '#F5F5F5' },
+});
 
 function fmt(n: number) { return n.toLocaleString(); }
 function timeStr(iso: string) {
@@ -32,6 +33,7 @@ function timeStr(iso: string) {
 export default function SellerDashboard() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { lang, t } = useTranslation();
 
   const { data: myStores, isLoading: loadingStore } = useQuery({ queryKey: ['my-stores'], queryFn: storesApi.getMyStores });
   const { data: pendingOrders, refetch, isLoading } = useQuery({
@@ -63,9 +65,9 @@ export default function SellerDashboard() {
   const acceptedCount = orders.filter((o: any) => o.status === 'ACCEPTED').length;
 
   const quickActions: { icon: IoniconsName; label: string; color: string; bg: string; path: string }[] = [
-    { icon: 'megaphone-outline', label: 'Umumiy',     color: '#FF9800', bg: '#FFF3E0', path: '/(seller)/broadcast-feed' },
-    { icon: 'cube-outline',      label: 'Buyurtmalar', color: '#2196F3', bg: '#E3F2FD', path: '/(seller)/orders' },
-    { icon: 'bag-outline',       label: 'Mahsulotlar', color: Colors.primary, bg: Colors.primarySurface, path: '/(seller)/products' },
+    { icon: 'megaphone-outline', label: lang === 'ru' ? 'Общие' : 'Umumiy',         color: '#FF9800', bg: '#FFF3E0', path: '/(seller)/broadcast-feed' },
+    { icon: 'cube-outline',      label: lang === 'ru' ? 'Заказы' : 'Buyurtmalar',   color: '#2196F3', bg: '#E3F2FD', path: '/(seller)/orders' },
+    { icon: 'bag-outline',       label: lang === 'ru' ? 'Товары' : 'Mahsulotlar',   color: Colors.primary, bg: Colors.primarySurface, path: '/(seller)/products' },
   ];
 
   return (
@@ -76,14 +78,14 @@ export default function SellerDashboard() {
         <View style={s.decorCircle2} />
         <View style={s.headerTop}>
           <View>
-            <Text style={s.greeting}>Assalomu alaykum 👋</Text>
-            <Text style={s.storeName}>{store?.name ?? "Do'konim"}</Text>
+            <Text style={s.greeting}>{lang === 'ru' ? 'Здравствуйте 👋' : 'Assalomu alaykum 👋'}</Text>
+            <Text style={s.storeName}>{store?.name ?? (lang === 'ru' ? 'Мой магазин' : "Do'konim")}</Text>
           </View>
           <View style={s.headerRight}>
             <View style={[s.statusPill, { backgroundColor: store?.is_active ? '#C8E6C9' : '#FFCDD2' }]}>
               <View style={[s.statusDot, { backgroundColor: store?.is_active ? Colors.success : Colors.error }]} />
               <Text style={[s.statusTxt, { color: store?.is_active ? Colors.success : Colors.error }]}>
-                {store?.is_active ? 'Faol' : 'Nofaol'}
+                {store?.is_active ? (lang === 'ru' ? 'Активен' : 'Faol') : (lang === 'ru' ? 'Неактивен' : 'Nofaol')}
               </Text>
             </View>
             <TouchableOpacity style={s.notifBtn}>
@@ -95,9 +97,9 @@ export default function SellerDashboard() {
         {/* Stats row */}
         <View style={s.statsRow}>
           {[
-            { label: "Bugun buyurtma", value: String(todayOrders.length), icon: 'cube-outline' as IoniconsName, color: Colors.white },
-            { label: 'Kutilmoqda',     value: String(pending.length),      icon: 'time-outline' as IoniconsName, color: '#FFD54F' },
-            { label: 'Daromad',        value: fmt(todayRevenue),           icon: 'cash-outline' as IoniconsName, color: '#A5D6A7' },
+            { label: lang === 'ru' ? 'Заказы сегодня' : "Bugun buyurtma", value: String(todayOrders.length), icon: 'cube-outline' as IoniconsName, color: Colors.white },
+            { label: lang === 'ru' ? 'Ожидает' : 'Kutilmoqda',            value: String(pending.length),      icon: 'time-outline' as IoniconsName, color: '#FFD54F' },
+            { label: lang === 'ru' ? 'Доход' : 'Daromad',                 value: fmt(todayRevenue),           icon: 'cash-outline' as IoniconsName, color: '#A5D6A7' },
           ].map((stat, i) => (
             <View key={i} style={[s.statCard, i > 0 && { borderLeftWidth: 1, borderLeftColor: 'rgba(255,255,255,0.15)' }]}>
               <Ionicons name={stat.icon} size={16} color={stat.color} />
@@ -115,7 +117,7 @@ export default function SellerDashboard() {
       >
         {/* Quick actions */}
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Tezkor amallar</Text>
+          <Text style={s.sectionTitle}>{lang === 'ru' ? 'Быстрые действия' : 'Tezkor amallar'}</Text>
           <View style={s.actionsRow}>
             {quickActions.map(a => (
               <TouchableOpacity key={a.label} style={s.actionCard} onPress={() => router.push(a.path as any)} activeOpacity={0.85}>
@@ -134,7 +136,7 @@ export default function SellerDashboard() {
             <View style={s.activePulse}>
               <Ionicons name="checkmark-circle" size={20} color={Colors.success} />
             </View>
-            <Text style={s.activeBannerTxt}>{acceptedCount} ta buyurtma tayyorlanmoqda</Text>
+            <Text style={s.activeBannerTxt}>{lang === 'ru' ? `${acceptedCount} заказов готовятся` : `${acceptedCount} ta buyurtma tayyorlanmoqda`}</Text>
             <Ionicons name="chevron-forward" size={18} color={Colors.success} />
           </TouchableOpacity>
         )}
@@ -142,21 +144,21 @@ export default function SellerDashboard() {
         {/* Pending orders */}
         <View style={s.section}>
           <View style={s.sectionRow}>
-            <Text style={s.sectionTitle}>Yangi buyurtmalar</Text>
+            <Text style={s.sectionTitle}>{lang === 'ru' ? 'Новые заказы' : 'Yangi buyurtmalar'}</Text>
             {pending.length > 0 && (
               <View style={s.countBadge}>
                 <Text style={s.countBadgeTxt}>{pending.length}</Text>
               </View>
             )}
             <TouchableOpacity onPress={() => router.push('/(seller)/orders')} style={{ marginLeft: 'auto' }}>
-              <Text style={s.seeAll}>Barchasi</Text>
+              <Text style={s.seeAll}>{lang === 'ru' ? 'Все' : 'Barchasi'}</Text>
             </TouchableOpacity>
           </View>
 
           {pending.length === 0 ? (
             <View style={s.emptyCard}>
               <Ionicons name="checkmark-circle-outline" size={28} color={Colors.success} />
-              <Text style={s.emptyCardTxt}>Hozircha yangi buyurtma yo'q</Text>
+              <Text style={s.emptyCardTxt}>{lang === 'ru' ? 'Пока нет новых заказов' : "Hozircha yangi buyurtma yo'q"}</Text>
             </View>
           ) : (
             pending.slice(0, 5).map((order: any) => (
@@ -176,13 +178,13 @@ export default function SellerDashboard() {
                   </View>
                   <View>
                     <Text style={s.orderNum}>{order.order_number}</Text>
-                    <Text style={s.orderMeta}>{order.items?.length ?? 0} ta mahsulot · {timeStr(order.created_at ?? order.createdAt)}</Text>
+                    <Text style={s.orderMeta}>{order.items?.length ?? 0} {lang === 'ru' ? 'товаров' : 'ta mahsulot'} · {timeStr(order.created_at ?? order.createdAt)}</Text>
                   </View>
                 </View>
                 <View style={s.orderRight}>
-                  <Text style={s.orderPrice}>{fmt(Number(order.total_price))} so'm</Text>
-                  <View style={[s.statusChip, { backgroundColor: STATUS_CFG['PENDING'].bg }]}>
-                    <Text style={[s.statusChipTxt, { color: STATUS_CFG['PENDING'].color }]}>Yangi</Text>
+                  <Text style={s.orderPrice}>{fmt(Number(order.total_price))} {lang === 'ru' ? 'сум' : "so'm"}</Text>
+                  <View style={[s.statusChip, { backgroundColor: STATUS_CFG(lang)['PENDING'].bg }]}>
+                    <Text style={[s.statusChipTxt, { color: STATUS_CFG(lang)['PENDING'].color }]}>{lang === 'ru' ? 'Новый' : 'Yangi'}</Text>
                   </View>
                 </View>
               </TouchableOpacity>
@@ -193,7 +195,7 @@ export default function SellerDashboard() {
         {/* Store info card */}
         {store && (
           <View style={s.section}>
-            <Text style={s.sectionTitle}>Do'kon ma'lumotlari</Text>
+            <Text style={s.sectionTitle}>{lang === 'ru' ? 'Информация о магазине' : "Do'kon ma'lumotlari"}</Text>
             <View style={s.storeCard}>
               <View style={s.storeCardRow}>
                 <View style={s.storeCardIcon}>
@@ -209,9 +211,9 @@ export default function SellerDashboard() {
               </View>
               <View style={s.storeStats}>
                 {[
-                  { label: 'Jami buyurtma', value: String(orders.length) },
-                  { label: "Yetkazilgan", value: String(orders.filter((o: any) => o.status === 'DELIVERED').length) },
-                  { label: 'Bekor qilingan', value: String(orders.filter((o: any) => o.status === 'CANCELLED').length) },
+                  { label: lang === 'ru' ? 'Всего заказов' : 'Jami buyurtma', value: String(orders.length) },
+                  { label: lang === 'ru' ? 'Доставлено' : "Yetkazilgan", value: String(orders.filter((o: any) => o.status === 'DELIVERED').length) },
+                  { label: lang === 'ru' ? 'Отменено' : 'Bekor qilingan', value: String(orders.filter((o: any) => o.status === 'CANCELLED').length) },
                 ].map((item, i) => (
                   <View key={i} style={[s.storeStat, i > 0 && { borderLeftWidth: 1, borderLeftColor: Colors.divider }]}>
                     <Text style={s.storeStatVal}>{item.value}</Text>

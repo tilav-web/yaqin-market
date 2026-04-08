@@ -11,12 +11,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
 import { useLocation } from '../../src/hooks/useLocation';
+import { useTranslation } from '../../src/i18n';
 
 const COURIER_COLOR = '#FF5722';
 
 export default function NearbyOrdersScreen() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { lang } = useTranslation();
   const [mapVisible, setMapVisible] = useState(false);
   const [accepting, setAccepting] = useState<string | null>(null);
   const { lat, lng, permissionGranted } = useLocation();
@@ -36,12 +38,16 @@ export default function NearbyOrdersScreen() {
       await ordersApi.assignCourier(orderId);
       qc.invalidateQueries({ queryKey: ['nearby-orders'] });
       qc.invalidateQueries({ queryKey: ['courier-active'] });
-      Alert.alert('Qabul qilindi!', 'Buyurtma qabul qilindi.', [
-        { text: 'Yetkazishga o\'tish', onPress: () => router.push('/(courier)/active') },
-        { text: 'OK' },
-      ]);
+      Alert.alert(
+        lang === 'ru' ? 'Принято!' : 'Qabul qilindi!',
+        lang === 'ru' ? 'Заказ принят.' : 'Buyurtma qabul qilindi.',
+        [
+          { text: lang === 'ru' ? 'Перейти к доставке' : "Yetkazishga o'tish", onPress: () => router.push('/(courier)/active') },
+          { text: 'OK' },
+        ],
+      );
     } catch (err: any) {
-      Alert.alert('Xato', err?.response?.data?.message ?? 'Buyurtma allaqachon qabul qilingan');
+      Alert.alert(lang === 'ru' ? 'Ошибка' : 'Xato', err?.response?.data?.message ?? (lang === 'ru' ? 'Заказ уже принят' : 'Buyurtma allaqachon qabul qilingan'));
     } finally {
       setAccepting(null);
     }
@@ -51,14 +57,14 @@ export default function NearbyOrdersScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['top']}>
         <View style={s.header}>
-          <Text style={s.title}>Yaqin buyurtmalar</Text>
+          <Text style={s.title}>{lang === 'ru' ? 'Ближайшие заказы' : 'Yaqin buyurtmalar'}</Text>
         </View>
         <View style={s.permBox}>
           <View style={s.permIconBox}>
             <Ionicons name="location-outline" size={44} color={COURIER_COLOR} />
           </View>
-          <Text style={s.permTitle}>Joylashuv ruxsati kerak</Text>
-          <Text style={s.permSub}>Yaqin buyurtmalarni ko'rish uchun joylashuvga ruxsat bering</Text>
+          <Text style={s.permTitle}>{lang === 'ru' ? 'Нужен доступ к геолокации' : 'Joylashuv ruxsati kerak'}</Text>
+          <Text style={s.permSub}>{lang === 'ru' ? 'Разрешите доступ к местоположению для просмотра ближайших заказов' : "Yaqin buyurtmalarni ko'rish uchun joylashuvga ruxsat bering"}</Text>
         </View>
       </SafeAreaView>
     );
@@ -69,22 +75,22 @@ export default function NearbyOrdersScreen() {
       <View style={s.header}>
         <View style={s.headerTop}>
           <View>
-            <Text style={s.title}>Yaqin buyurtmalar</Text>
-            <Text style={s.subtitle}>{orders.length} ta buyurtma · 10km radius</Text>
+            <Text style={s.title}>{lang === 'ru' ? 'Ближайшие заказы' : 'Yaqin buyurtmalar'}</Text>
+            <Text style={s.subtitle}>{orders.length} {lang === 'ru' ? 'заказов' : 'ta buyurtma'} · {lang === 'ru' ? 'радиус 10км' : '10km radius'}</Text>
           </View>
           <TouchableOpacity
             style={s.mapToggle}
             onPress={() => setMapVisible(!mapVisible)}
           >
             <Ionicons name={mapVisible ? 'list' : 'map-outline'} size={16} color={Colors.white} />
-            <Text style={s.mapToggleTxt}>{mapVisible ? 'Ro\'yxat' : 'Xarita'}</Text>
+            <Text style={s.mapToggleTxt}>{mapVisible ? (lang === 'ru' ? 'Список' : "Ro'yxat") : (lang === 'ru' ? 'Карта' : 'Xarita')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Online badge */}
         <View style={s.onlinePill}>
           <View style={s.onlineDot} />
-          <Text style={s.onlineTxt}>Online · Buyurtma qabul qilinmoqda</Text>
+          <Text style={s.onlineTxt}>{lang === 'ru' ? 'Онлайн · Приём заказов' : 'Online · Buyurtma qabul qilinmoqda'}</Text>
         </View>
       </View>
 
@@ -94,7 +100,7 @@ export default function NearbyOrdersScreen() {
             style={s.map}
             initialRegion={{ latitude: lat, longitude: lng, latitudeDelta: 0.05, longitudeDelta: 0.05 }}
           >
-            <Marker coordinate={{ latitude: lat, longitude: lng }} title="Siz">
+            <Marker coordinate={{ latitude: lat, longitude: lng }} title={lang === 'ru' ? 'Вы' : 'Siz'}>
               <View style={s.myMarker}>
                 <Ionicons name="bicycle" size={18} color={Colors.white} />
               </View>
@@ -104,7 +110,7 @@ export default function NearbyOrdersScreen() {
                 key={o.id}
                 coordinate={{ latitude: Number(o.delivery_lat), longitude: Number(o.delivery_lng) }}
                 title={o.order_number}
-                description={`${Number(o.total_price).toLocaleString()} so'm`}
+                description={`${Number(o.total_price).toLocaleString()} ${lang === 'ru' ? 'сум' : "so'm"}`}
               >
                 <View style={s.orderMarker}>
                   <Ionicons name="cube" size={14} color={Colors.white} />
@@ -127,8 +133,8 @@ export default function NearbyOrdersScreen() {
                 <View style={s.emptyIconBox}>
                   <Ionicons name="bicycle-outline" size={44} color="#FFCCBC" />
                 </View>
-                <Text style={s.emptyTitle}>Yaqinda buyurtma yo'q</Text>
-                <Text style={s.emptySub}>10km radius ichida tayyor buyurtmalar yo'q. Avtomatik yangilanadi.</Text>
+                <Text style={s.emptyTitle}>{lang === 'ru' ? 'Нет заказов поблизости' : "Yaqinda buyurtma yo'q"}</Text>
+                <Text style={s.emptySub}>{lang === 'ru' ? 'Нет готовых заказов в радиусе 10км. Обновляется автоматически.' : "10km radius ichida tayyor buyurtmalar yo'q. Avtomatik yangilanadi."}</Text>
               </View>
             ) : null
           }
@@ -144,7 +150,7 @@ export default function NearbyOrdersScreen() {
                     <Text style={s.storeName}>{order.store?.name}</Text>
                   </View>
                 </View>
-                <Text style={s.price}>{Number(order.total_price).toLocaleString()} so'm</Text>
+                <Text style={s.price}>{Number(order.total_price).toLocaleString()} {lang === 'ru' ? 'сум' : "so'm"}</Text>
               </View>
 
               <View style={s.divider} />
@@ -168,7 +174,7 @@ export default function NearbyOrdersScreen() {
               >
                 <Ionicons name="checkmark-circle" size={18} color={Colors.white} />
                 <Text style={s.acceptBtnTxt}>
-                  {accepting === order.id ? 'Qabul qilinmoqda...' : 'Qabul qilish'}
+                  {accepting === order.id ? (lang === 'ru' ? 'Принимается...' : 'Qabul qilinmoqda...') : (lang === 'ru' ? 'Принять' : 'Qabul qilish')}
                 </Text>
               </TouchableOpacity>
             </View>

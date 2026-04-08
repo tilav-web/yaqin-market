@@ -12,12 +12,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
 import { useSocket } from '../../src/hooks/useSocket';
+import { useTranslation } from '../../src/i18n';
 
 const COURIER_COLOR = '#FF5722';
 
 export default function ActiveDeliveryScreen() {
   const router = useRouter();
   const qc = useQueryClient();
+  const { lang } = useTranslation();
   const locationRef = useRef<Location.LocationSubscription | null>(null);
 
   const { data: activeOrders, isLoading } = useQuery({
@@ -44,18 +46,21 @@ export default function ActiveDeliveryScreen() {
 
   const handleDeliver = () => {
     if (!activeOrder) return;
-    Alert.alert('Yetkazildi', 'Buyurtma muvaffaqiyatli yetkazilganini tasdiqlaysizmi?', [
-      { text: 'Bekor qilish', style: 'cancel' },
+    Alert.alert(
+      lang === 'ru' ? 'Доставлено' : 'Yetkazildi',
+      lang === 'ru' ? 'Подтверждаете успешную доставку заказа?' : 'Buyurtma muvaffaqiyatli yetkazilganini tasdiqlaysizmi?',
+      [
+      { text: lang === 'ru' ? 'Отмена' : 'Bekor qilish', style: 'cancel' },
       {
-        text: 'Ha, yetkazildi',
+        text: lang === 'ru' ? 'Да, доставлено' : 'Ha, yetkazildi',
         onPress: async () => {
           try {
             await ordersApi.deliverOrder(activeOrder.id);
             qc.invalidateQueries({ queryKey: ['courier-active'] });
             qc.invalidateQueries({ queryKey: ['courier-history'] });
-            Alert.alert('Barakalla!', 'Buyurtma muvaffaqiyatli yetkazildi!');
+            Alert.alert(lang === 'ru' ? 'Отлично!' : 'Barakalla!', lang === 'ru' ? 'Заказ успешно доставлен!' : 'Buyurtma muvaffaqiyatli yetkazildi!');
           } catch (e: any) {
-            Alert.alert('Xato', e?.response?.data?.message ?? 'Xato');
+            Alert.alert(lang === 'ru' ? 'Ошибка' : 'Xato', e?.response?.data?.message ?? (lang === 'ru' ? 'Ошибка' : 'Xato'));
           }
         },
       },
@@ -66,17 +71,17 @@ export default function ActiveDeliveryScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['top']}>
         <View style={s.header}>
-          <Text style={s.title}>Faol yetkazish</Text>
+          <Text style={s.title}>{lang === 'ru' ? 'Активная доставка' : 'Faol yetkazish'}</Text>
         </View>
         <View style={s.emptyWrap}>
           <View style={s.emptyIconBox}>
             <Ionicons name="bicycle-outline" size={44} color="#FFCCBC" />
           </View>
-          <Text style={s.emptyTitle}>Faol yetkazish yo'q</Text>
-          <Text style={s.emptySub}>Yaqin buyurtmalardan birini qabul qiling</Text>
+          <Text style={s.emptyTitle}>{lang === 'ru' ? 'Нет активной доставки' : "Faol yetkazish yo'q"}</Text>
+          <Text style={s.emptySub}>{lang === 'ru' ? 'Примите один из ближайших заказов' : 'Yaqin buyurtmalardan birini qabul qiling'}</Text>
           <TouchableOpacity style={s.nearbyBtn} onPress={() => router.push('/(courier)/nearby')}>
             <Ionicons name="map-outline" size={16} color={Colors.white} />
-            <Text style={s.nearbyBtnTxt}>Yaqin buyurtmalar</Text>
+            <Text style={s.nearbyBtnTxt}>{lang === 'ru' ? 'Ближайшие заказы' : 'Yaqin buyurtmalar'}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -92,12 +97,12 @@ export default function ActiveDeliveryScreen() {
       <View style={s.header}>
         <View style={s.headerTop}>
           <View>
-            <Text style={s.title}>Yetkazib berish</Text>
+            <Text style={s.title}>{lang === 'ru' ? 'Доставка' : 'Yetkazib berish'}</Text>
             <Text style={s.orderNum}>{activeOrder?.order_number}</Text>
           </View>
           <View style={s.trackingPill}>
             <View style={s.trackingDot} />
-            <Text style={s.trackingTxt}>Jonli tracking</Text>
+            <Text style={s.trackingTxt}>{lang === 'ru' ? 'Живое отслеживание' : 'Jonli tracking'}</Text>
           </View>
         </View>
       </View>
@@ -109,7 +114,7 @@ export default function ActiveDeliveryScreen() {
           initialRegion={{ latitude: deliveryLat || 41.2995, longitude: deliveryLng || 69.2401, latitudeDelta: 0.02, longitudeDelta: 0.02 }}
         >
           {deliveryLat && deliveryLng && (
-            <Marker coordinate={{ latitude: deliveryLat, longitude: deliveryLng }} title="Yetkazish manzili">
+            <Marker coordinate={{ latitude: deliveryLat, longitude: deliveryLng }} title={lang === 'ru' ? 'Адрес доставки' : 'Yetkazish manzili'}>
               <View style={s.destMarker}>
                 <Ionicons name="location" size={16} color={Colors.white} />
               </View>
@@ -118,7 +123,7 @@ export default function ActiveDeliveryScreen() {
         </MapView>
         <View style={s.mapOverlay}>
           <Ionicons name="navigate" size={14} color={Colors.white} />
-          <Text style={s.mapOverlayTxt}>Joylashuvingiz mijozga ko'rsatilmoqda</Text>
+          <Text style={s.mapOverlayTxt}>{lang === 'ru' ? 'Ваше местоположение видно клиенту' : "Joylashuvingiz mijozga ko'rsatilmoqda"}</Text>
         </View>
       </View>
 
@@ -130,7 +135,7 @@ export default function ActiveDeliveryScreen() {
               <Ionicons name="person-outline" size={18} color="#2196F3" />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.infoLabel}>Mijoz</Text>
+              <Text style={s.infoLabel}>{lang === 'ru' ? 'Клиент' : 'Mijoz'}</Text>
               <Text style={s.infoVal}>
                 {activeOrder?.customer?.first_name} {activeOrder?.customer?.last_name}
               </Text>
@@ -145,7 +150,7 @@ export default function ActiveDeliveryScreen() {
               <Ionicons name="location-outline" size={18} color={Colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={s.infoLabel}>Yetkazish manzili</Text>
+              <Text style={s.infoLabel}>{lang === 'ru' ? 'Адрес доставки' : 'Yetkazish manzili'}</Text>
               <Text style={s.infoVal}>{activeOrder?.delivery_address}</Text>
               {activeOrder?.delivery_details && (
                 <Text style={s.infoSub}>{activeOrder.delivery_details}</Text>
@@ -160,7 +165,7 @@ export default function ActiveDeliveryScreen() {
             <View style={[s.infoIcon, { backgroundColor: '#FBE9E7' }]}>
               <Ionicons name="cube-outline" size={18} color={COURIER_COLOR} />
             </View>
-            <Text style={s.infoLabel}>Mahsulotlar ({activeOrder?.items?.length ?? 0} ta)</Text>
+            <Text style={s.infoLabel}>{lang === 'ru' ? 'Товары' : 'Mahsulotlar'} ({activeOrder?.items?.length ?? 0} {lang === 'ru' ? 'шт' : 'ta'})</Text>
           </View>
           {activeOrder?.items?.map((item: any) => (
             <View key={item.id} style={s.itemRow}>
@@ -175,13 +180,13 @@ export default function ActiveDeliveryScreen() {
         <View style={s.infoCard}>
           <View style={s.payRow}>
             <View>
-              <Text style={s.infoLabel}>Jami to'lov</Text>
-              <Text style={s.payPrice}>{Number(activeOrder?.total_price ?? 0).toLocaleString()} so'm</Text>
+              <Text style={s.infoLabel}>{lang === 'ru' ? 'Итого к оплате' : "Jami to'lov"}</Text>
+              <Text style={s.payPrice}>{Number(activeOrder?.total_price ?? 0).toLocaleString()} {lang === 'ru' ? 'сум' : "so'm"}</Text>
             </View>
             <View style={s.payMethodPill}>
               <Ionicons name={activeOrder?.payment_method === 'CASH' ? 'cash-outline' : 'card-outline'} size={14} color={Colors.success} />
               <Text style={s.payMethodTxt}>
-                {activeOrder?.payment_method === 'CASH' ? 'Naqd pul' : 'Karta'}
+                {activeOrder?.payment_method === 'CASH' ? (lang === 'ru' ? 'Наличные' : 'Naqd pul') : (lang === 'ru' ? 'Карта' : 'Karta')}
               </Text>
             </View>
           </View>
@@ -190,7 +195,7 @@ export default function ActiveDeliveryScreen() {
         {/* Deliver button */}
         <TouchableOpacity style={s.deliverBtn} onPress={handleDeliver} activeOpacity={0.85}>
           <Ionicons name="checkmark-circle" size={22} color={Colors.white} />
-          <Text style={s.deliverBtnTxt}>Yetkazib berdim</Text>
+          <Text style={s.deliverBtnTxt}>{lang === 'ru' ? 'Доставлено' : 'Yetkazib berdim'}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 32 }} />

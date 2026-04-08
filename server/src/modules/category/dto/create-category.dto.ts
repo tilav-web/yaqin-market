@@ -9,7 +9,6 @@ function normalizeBoolean({ value }: TransformFnParams): unknown {
 }
 
 export class CreateCategoryDto {
-  @Transform(({ value }) => typeof value === 'string' ? JSON.parse(value) : value)
   @ValidateNested()
   @Type(() => TranslatableStringDto)
   name: TranslatableStringDto;

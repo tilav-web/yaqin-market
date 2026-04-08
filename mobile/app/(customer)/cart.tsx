@@ -16,6 +16,7 @@ import { useCartStore } from '../../src/store/cart.store';
 import { useLocationStore } from '../../src/store/location.store';
 import { useAuthStore } from '../../src/store/auth.store';
 import { ordersApi } from '../../src/api/orders';
+import { useTranslation } from '../../src/i18n';
 
 type Tab = 'direct' | 'broadcast';
 
@@ -26,6 +27,7 @@ export default function CartScreen() {
   const { lat, lng, address } = useLocationStore();
   const { isAuthenticated } = useAuthStore();
 
+  const { lang, t, tr } = useTranslation();
   const {
     directItems, directStoreName, broadcastItems,
     removeDirectItem, updateDirectQuantity, clearDirectCart,
@@ -42,7 +44,7 @@ export default function CartScreen() {
       return;
     }
     if (!lat || !lng) {
-      Alert.alert('Joylashuv kerak', 'Yetkazib berish uchun joylashuvingizni yoqing');
+      Alert.alert(tr('cart_location_required'), tr('cart_location_msg'));
       return;
     }
     setLoading(true);
@@ -53,13 +55,13 @@ export default function CartScreen() {
         items: directItems.map(i => ({ store_product_id: i.store_product_id, quantity: i.quantity })),
         delivery_lat: lat,
         delivery_lng: lng,
-        delivery_address: address ?? 'Manzil kiritilmadi',
+        delivery_address: address ?? (lang === 'ru' ? 'Адрес не указан' : 'Manzil kiritilmadi'),
         payment_method: 'CASH',
       });
       clearDirectCart();
       router.push({ pathname: '/(customer)/order/[id]', params: { id: order.id } });
     } catch (e: any) {
-      Alert.alert('Xato', e?.response?.data?.message ?? 'Xato yuz berdi');
+      Alert.alert(tr('error'), e?.response?.data?.message ?? (lang === 'ru' ? 'Произошла ошибка' : 'Xato yuz berdi'));
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export default function CartScreen() {
     <SafeAreaView style={s.safe} edges={['top']}>
       {/* ── Header ── */}
       <View style={s.header}>
-        <Text style={s.title}>Savatcha</Text>
+        <Text style={s.title}>{tr('cart_title')}</Text>
         {/* Tab switcher */}
         <View style={s.switcher}>
           {(['direct', 'broadcast'] as Tab[]).map(tab => {
@@ -87,7 +89,7 @@ export default function CartScreen() {
                   color={active ? Colors.primary : 'rgba(255,255,255,0.7)'}
                 />
                 <Text style={[s.switchTxt, active && s.switchTxtActive]}>
-                  {tab === 'direct' ? "Do'kon" : 'Umumiy'}
+                  {tab === 'direct' ? tr('cart_store') : tr('cart_broadcast')}
                 </Text>
                 {count > 0 && (
                   <View style={[s.switchBadge, active && s.switchBadgeActive]}>
@@ -104,9 +106,10 @@ export default function CartScreen() {
         directItems.length === 0 ? (
           <EmptyCart
             icon="storefront-outline"
-            title="Savatcha bo'sh"
-            sub="Do'kondan mahsulot qo'shing"
+            title={tr('cart_empty')}
+            sub={tr('cart_empty_sub')}
             onBrowse={() => router.push('/(customer)/home')}
+            browseTxt={tr('order_shop')}
           />
         ) : (
           <>
@@ -116,10 +119,13 @@ export default function CartScreen() {
                 <View style={s.storeIconBox}>
                   <Ionicons name="storefront" size={16} color={Colors.primary} />
                 </View>
-                <Text style={s.storeName}>{directStoreName ?? "Do'kon"}</Text>
-                <TouchableOpacity onPress={() => Alert.alert('Tozalash', 'Savatchani tozalaysizmi?', [
-                  { text: 'Bekor', style: 'cancel' },
-                  { text: 'Tozalash', style: 'destructive', onPress: clearDirectCart },
+                <Text style={s.storeName}>{directStoreName ?? tr('cart_store')}</Text>
+                <TouchableOpacity onPress={() => Alert.alert(
+                  lang === 'ru' ? 'Очистить' : 'Tozalash',
+                  lang === 'ru' ? 'Очистить корзину?' : 'Savatchani tozalaysizmi?',
+                  [
+                  { text: tr('cancel'), style: 'cancel' },
+                  { text: lang === 'ru' ? 'Очистить' : 'Tozalash', style: 'destructive', onPress: clearDirectCart },
                 ])}>
                   <Ionicons name="trash-outline" size={18} color={Colors.error} />
                 </TouchableOpacity>
@@ -162,16 +168,16 @@ export default function CartScreen() {
               {/* Summary */}
               <View style={s.summaryCard}>
                 <View style={s.summaryRow}>
-                  <Text style={s.summaryLabel}>Mahsulotlar ({directItems.length} ta)</Text>
+                  <Text style={s.summaryLabel}>{lang === 'ru' ? 'Товары' : 'Mahsulotlar'} ({directItems.length} {lang === 'ru' ? 'шт' : 'ta'})</Text>
                   <Text style={s.summaryValue}>{directTotal.toLocaleString()} so'm</Text>
                 </View>
                 <View style={s.summaryRow}>
-                  <Text style={s.summaryLabel}>Yetkazib berish</Text>
-                  <Text style={[s.summaryValue, { color: Colors.success }]}>Bepul</Text>
+                  <Text style={s.summaryLabel}>{tr('cart_delivery')}</Text>
+                  <Text style={[s.summaryValue, { color: Colors.success }]}>{tr('cart_free')}</Text>
                 </View>
                 <View style={s.divider} />
                 <View style={s.summaryRow}>
-                  <Text style={s.totalLabel}>Jami to'lov</Text>
+                  <Text style={s.totalLabel}>{tr('cart_total')}</Text>
                   <Text style={s.totalValue}>{directTotal.toLocaleString()} so'm</Text>
                 </View>
               </View>
@@ -180,7 +186,7 @@ export default function CartScreen() {
               <View style={s.addressCard}>
                 <Ionicons name="location" size={18} color={Colors.primary} />
                 <Text style={s.addressTxt} numberOfLines={1}>
-                  {address ?? 'Joylashuvni aniqlash...'}
+                  {address ?? tr('cart_address')}
                 </Text>
               </View>
               <View style={{ height: 100 }} />
@@ -189,7 +195,7 @@ export default function CartScreen() {
             {/* Sticky checkout */}
             <View style={s.checkoutBar}>
               <View>
-                <Text style={s.checkoutSub}>Jami</Text>
+                <Text style={s.checkoutSub}>{tr('cart_total')}</Text>
                 <Text style={s.checkoutTotal}>{directTotal.toLocaleString()} so'm</Text>
               </View>
               <TouchableOpacity
@@ -199,7 +205,7 @@ export default function CartScreen() {
                 activeOpacity={0.85}
               >
                 <Ionicons name="checkmark-circle" size={18} color={Colors.white} />
-                <Text style={s.checkoutTxt}>{loading ? 'Yuklanmoqda...' : 'Buyurtma berish'}</Text>
+                <Text style={s.checkoutTxt}>{loading ? tr('loading') + '...' : tr('cart_checkout')}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -208,9 +214,10 @@ export default function CartScreen() {
         broadcastItems.length === 0 ? (
           <EmptyCart
             icon="megaphone-outline"
-            title="Umumiy savat bo'sh"
-            sub="Qidirish orqali mahsulot qo'shing"
+            title={tr('cart_empty')}
+            sub={tr('cart_empty_sub')}
             onBrowse={() => router.push('/(customer)/search')}
+            browseTxt={tr('order_shop')}
           />
         ) : (
           <>
@@ -218,7 +225,7 @@ export default function CartScreen() {
               <View style={s.broadcastBanner}>
                 <Ionicons name="megaphone" size={20} color={Colors.white} />
                 <Text style={s.broadcastBannerTxt}>
-                  Bu mahsulotlar barcha yaqin do'konlarga yuboriladi
+                  {tr('cart_broadcast_banner')}
                 </Text>
               </View>
               {broadcastItems.map((item, idx) => (
@@ -228,11 +235,9 @@ export default function CartScreen() {
                   </View>
                   <View style={s.itemInfo}>
                     <Text style={s.itemName} numberOfLines={2}>
-                      {typeof item.product_name === 'object'
-                        ? (item.product_name as any).uz ?? JSON.stringify(item.product_name)
-                        : item.product_name}
+                      {t(item.product_name)}
                     </Text>
-                    <Text style={s.itemPrice}>{item.quantity} dona</Text>
+                    <Text style={s.itemPrice}>{item.quantity} {lang === 'ru' ? 'шт' : 'dona'}</Text>
                   </View>
                   <View style={s.qtyRow}>
                     <TouchableOpacity
@@ -257,8 +262,8 @@ export default function CartScreen() {
             </ScrollView>
             <View style={s.checkoutBar}>
               <View>
-                <Text style={s.checkoutSub}>{broadcastCount} ta mahsulot</Text>
-                <Text style={s.checkoutTotal}>Umumiy buyurtma</Text>
+                <Text style={s.checkoutSub}>{broadcastCount} {lang === 'ru' ? 'шт' : 'ta'} {lang === 'ru' ? 'товар' : 'mahsulot'}</Text>
+                <Text style={s.checkoutTotal}>{tr('cart_broadcast')}</Text>
               </View>
               <TouchableOpacity
                 style={s.checkoutBtn}
@@ -269,7 +274,7 @@ export default function CartScreen() {
                 activeOpacity={0.85}
               >
                 <Ionicons name="megaphone" size={18} color={Colors.white} />
-                <Text style={s.checkoutTxt}>Yuborish</Text>
+                <Text style={s.checkoutTxt}>{lang === 'ru' ? 'Отправить' : 'Yuborish'}</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -279,9 +284,9 @@ export default function CartScreen() {
   );
 }
 
-function EmptyCart({ icon, title, sub, onBrowse }: {
+function EmptyCart({ icon, title, sub, onBrowse, browseTxt }: {
   icon: React.ComponentProps<typeof Ionicons>['name'];
-  title: string; sub: string; onBrowse: () => void;
+  title: string; sub: string; onBrowse: () => void; browseTxt?: string;
 }) {
   return (
     <View style={empty.wrap}>
@@ -291,7 +296,7 @@ function EmptyCart({ icon, title, sub, onBrowse }: {
       <Text style={empty.title}>{title}</Text>
       <Text style={empty.sub}>{sub}</Text>
       <TouchableOpacity style={empty.btn} onPress={onBrowse}>
-        <Text style={empty.btnTxt}>Xarid qilish</Text>
+        <Text style={empty.btnTxt}>{browseTxt ?? 'Xarid qilish'}</Text>
       </TouchableOpacity>
     </View>
   );

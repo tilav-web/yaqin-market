@@ -14,9 +14,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Typography, Radius } from '../../src/theme';
 import { Button, Input } from '../../src/components/ui';
 import { authApi } from '../../src/api/auth';
+import { useTranslation } from '../../src/i18n';
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { lang, tr } = useTranslation();
   const [phone, setPhone] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -40,7 +42,7 @@ export default function LoginScreen() {
   const handleSendOtp = async () => {
     const digits = phone.replace(/\D/g, '');
     if (digits.length < 9) {
-      setError("To'liq telefon raqam kiriting");
+      setError(lang === 'ru' ? 'Введите полный номер телефона' : "To'liq telefon raqam kiriting");
       return;
     }
 
@@ -56,7 +58,8 @@ export default function LoginScreen() {
         },
       });
     } catch (err: any) {
-      const msg = err?.response?.data?.message ?? "Xato yuz berdi. Qayta urinib ko'ring";
+      const fallback = lang === 'ru' ? 'Ошибка. Попробуйте ещё раз' : "Xato yuz berdi. Qayta urinib ko'ring";
+      const msg = err?.response?.data?.message ?? fallback;
       setError(Array.isArray(msg) ? msg[0] : msg);
     } finally {
       setLoading(false);
@@ -71,7 +74,7 @@ export default function LoginScreen() {
       >
         {/* Back */}
         <TouchableOpacity style={styles.back} onPress={() => router.back()}>
-          <Text style={styles.backText}>← Orqaga</Text>
+          <Text style={styles.backText}>← {tr('back')}</Text>
         </TouchableOpacity>
 
         {/* Header */}
@@ -79,9 +82,9 @@ export default function LoginScreen() {
           <View style={styles.iconCircle}>
             <Ionicons name="phone-portrait-outline" size={36} color={Colors.primary} />
           </View>
-          <Text style={styles.title}>Telefon raqamingizni kiriting</Text>
+          <Text style={styles.title}>{lang === 'ru' ? 'Введите номер телефона' : 'Telefon raqamingizni kiriting'}</Text>
           <Text style={styles.subtitle}>
-            Raqamga OTP kod yuboriladi
+            {lang === 'ru' ? 'На номер будет отправлен OTP-код' : 'Raqamga OTP kod yuboriladi'}
           </Text>
         </View>
 
@@ -96,7 +99,7 @@ export default function LoginScreen() {
               <Input
                 value={phone}
                 onChangeText={handlePhoneChange}
-                placeholder="90 123 45 67"
+                placeholder={tr('phone_placeholder')}
                 keyboardType="phone-pad"
                 error={error}
                 autoFocus
@@ -106,11 +109,11 @@ export default function LoginScreen() {
           </View>
 
           <Text style={styles.hint}>
-            Agar Telegram botingiz ulangan bo'lsa, kod Telegram orqali yuboriladi
+            {lang === 'ru' ? 'Если ваш Telegram-бот подключён, код будет отправлен через Telegram' : "Agar Telegram botingiz ulangan bo'lsa, kod Telegram orqali yuboriladi"}
           </Text>
 
           <Button
-            title="Kodni yuborish"
+            title={tr('send_code')}
             onPress={handleSendOtp}
             loading={loading}
             disabled={phone.replace(/\D/g, '').length < 9}

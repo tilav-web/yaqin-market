@@ -21,6 +21,7 @@ import { RolesGuard } from '../auth/guard/roles.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ImageService } from '../image/image.service';
 import { UploadFolderEnum } from '../image/enums/upload-folder.enum';
+import { ParseJsonBodyPipe } from 'src/common/pipes/parse-json-body.pipe';
 
 @Controller('categories')
 export class CategoryController {
@@ -44,11 +45,9 @@ export class CategoryController {
   @Roles(AuthRoleEnum.SUPER_ADMIN)
   @UseInterceptors(FileInterceptor('image'))
   async create(
-    @Body() dto: CreateCategoryDto,
+    @Body(new ParseJsonBodyPipe()) dto: CreateCategoryDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
-    console.log('Received DTO:', dto);
-    console.log('Received File:', file);
     let imageUrl: string | undefined;
     if (file) {
       imageUrl = await this.imageService.processAndSaveImage(
@@ -65,7 +64,7 @@ export class CategoryController {
   @UseInterceptors(FileInterceptor('image'))
   async update(
     @Param('id', new ParseUUIDPipe()) id: string,
-    @Body() dto: UpdateCategoryDto,
+    @Body(new ParseJsonBodyPipe()) dto: UpdateCategoryDto,
     @UploadedFile() file: Express.Multer.File,
   ) {
     let imageUrl: string | undefined;

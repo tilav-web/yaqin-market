@@ -16,6 +16,7 @@ import { Colors, Spacing, Typography, Radius, Shadow } from '../../src/theme';
 import { Button } from '../../src/components/ui';
 import { authApi } from '../../src/api/auth';
 import { useAuthStore } from '../../src/store/auth.store';
+import { useTranslation } from '../../src/i18n';
 
 const OTP_LENGTH = 6;
 
@@ -27,6 +28,7 @@ export default function OtpScreen() {
     preview_otp: string;
   }>();
   const { setTokens, setRole } = useAuthStore();
+  const { lang, tr } = useTranslation();
 
   const [otp, setOtp] = useState<string[]>(Array(OTP_LENGTH).fill(''));
   const [loading, setLoading] = useState(false);
@@ -79,7 +81,7 @@ export default function OtpScreen() {
   const handleVerify = async (code?: string) => {
     const finalOtp = code ?? otp.join('');
     if (finalOtp.length < OTP_LENGTH) {
-      setError("To'liq kodni kiriting");
+      setError(lang === 'ru' ? 'Введите полный код' : "To'liq kodni kiriting");
       return;
     }
 
@@ -102,8 +104,9 @@ export default function OtpScreen() {
       // All roles go to customer home; panels accessible via profile
       router.replace('/(customer)/home');
     } catch (err: any) {
+      const fallback = lang === 'ru' ? 'Неверный код. Попробуйте ещё раз' : 'Noto\'g\'ri kod. Qayta urinib ko\'ring';
       const msg =
-        err?.response?.data?.message ?? 'Noto\'g\'ri kod. Qayta urinib ko\'ring';
+        err?.response?.data?.message ?? fallback;
       setError(Array.isArray(msg) ? msg[0] : msg);
       setOtp(Array(OTP_LENGTH).fill(''));
       inputs.current[0]?.focus();
@@ -112,11 +115,17 @@ export default function OtpScreen() {
     }
   };
 
-  const channelText = {
-    telegram: 'Telegram botga',
-    sms: 'SMS orqali',
-    preview: 'Test (avtomatik)',
-  }[params.channel] ?? 'Telefoningizga';
+  const channelText = lang === 'ru'
+    ? ({
+        telegram: 'В Telegram-бот',
+        sms: 'По SMS',
+        preview: 'Тест (авто)',
+      }[params.channel] ?? 'На ваш телефон')
+    : ({
+        telegram: 'Telegram botga',
+        sms: 'SMS orqali',
+        preview: 'Test (avtomatik)',
+      }[params.channel] ?? 'Telefoningizga');
 
   return (
     <SafeAreaView style={styles.container}>
@@ -125,16 +134,16 @@ export default function OtpScreen() {
         style={styles.flex}
       >
         <TouchableOpacity style={styles.back} onPress={() => router.back()}>
-          <Text style={styles.backText}>← Orqaga</Text>
+          <Text style={styles.backText}>← {tr('back')}</Text>
         </TouchableOpacity>
 
         <View style={styles.header}>
           <View style={styles.iconCircle}>
             <Ionicons name="lock-closed-outline" size={36} color={Colors.primary} />
           </View>
-          <Text style={styles.title}>Kodni kiriting</Text>
+          <Text style={styles.title}>{lang === 'ru' ? 'Введите код' : 'Kodni kiriting'}</Text>
           <Text style={styles.subtitle}>
-            {channelText} +998 {params.phone} raqamiga 6 xonali kod yuborildi
+            {channelText} +998 {params.phone} {tr('otp_sent_to')}
           </Text>
         </View>
 
@@ -163,7 +172,7 @@ export default function OtpScreen() {
 
         <View style={styles.actions}>
           <Button
-            title="Tasdiqlash"
+            title={tr('verify')}
             onPress={() => handleVerify()}
             loading={loading}
             disabled={otp.join('').length < OTP_LENGTH}
@@ -172,7 +181,7 @@ export default function OtpScreen() {
 
           {timer > 0 ? (
             <Text style={styles.timerText}>
-              Qayta yuborish: {timer}s
+              {tr('resend_in')}: {timer}s
             </Text>
           ) : (
             <TouchableOpacity
@@ -181,7 +190,7 @@ export default function OtpScreen() {
                 authApi.sendOtp(params.phone);
               }}
             >
-              <Text style={styles.resendText}>Kodni qayta yuborish</Text>
+              <Text style={styles.resendText}>{lang === 'ru' ? 'Отправить код повторно' : 'Kodni qayta yuborish'}</Text>
             </TouchableOpacity>
           )}
         </View>

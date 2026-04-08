@@ -174,14 +174,14 @@ function CategoryChip({ item, lang }: { item: any; lang: any }) {
 }
 
 // ─── Promo Banner ─────────────────────────────────────────────────────────────
-function PromoBanner({ onPress }: { onPress: () => void }) {
+function PromoBanner({ onPress, tr }: { onPress: () => void; tr: (key: import('../../src/i18n/translations').TranslationKey) => string }) {
   return (
     <TouchableOpacity style={promoStyles.banner} onPress={onPress} activeOpacity={0.9}>
       <View style={promoStyles.textBlock}>
-        <Text style={promoStyles.label}>Umumiy buyurtma</Text>
-        <Text style={promoStyles.title}>Tez va arzon{'\n'}yetkazib berish</Text>
+        <Text style={promoStyles.label}>{tr('promo_label')}</Text>
+        <Text style={promoStyles.title}>{tr('promo_title')}</Text>
         <View style={promoStyles.btn}>
-          <Text style={promoStyles.btnText}>Buyurtma berish</Text>
+          <Text style={promoStyles.btnText}>{tr('promo_btn')}</Text>
           <Ionicons name="arrow-forward" size={14} color={Colors.white} />
         </View>
       </View>
@@ -193,13 +193,13 @@ function PromoBanner({ onPress }: { onPress: () => void }) {
 }
 
 // ─── Section Header ───────────────────────────────────────────────────────────
-function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => void }) {
+function SectionHeader({ title, onSeeAll, seeAllLabel }: { title: string; onSeeAll?: () => void; seeAllLabel?: string }) {
   return (
     <View style={sectionStyles.row}>
       <Text style={sectionStyles.title}>{title}</Text>
       {onSeeAll && (
         <TouchableOpacity style={sectionStyles.seeAllBtn} onPress={onSeeAll}>
-          <Text style={sectionStyles.seeAll}>Barchasi</Text>
+          <Text style={sectionStyles.seeAll}>{seeAllLabel ?? 'Barchasi'}</Text>
           <Ionicons name="chevron-forward" size={14} color={Colors.primary} />
         </TouchableOpacity>
       )}
@@ -211,7 +211,7 @@ function SectionHeader({ title, onSeeAll }: { title: string; onSeeAll?: () => vo
 export default function HomeScreen() {
   const router = useRouter();
   const { address, permissionGranted } = useLocation();
-  const { lang, t } = useTranslation();
+  const { lang, t, tr } = useTranslation();
   const scrollY = useRef(new Animated.Value(0)).current;
   const { data: primeStores, isLoading: loadingStores, refetch: refetchPrime } = useQuery({
     queryKey: ['prime-stores'],
@@ -243,7 +243,7 @@ export default function HomeScreen() {
           <View style={styles.locationRow}>
             <Ionicons name="location" size={14} color="rgba(255,255,255,0.9)" />
             <Text style={styles.locationText} numberOfLines={1}>
-              {address ?? (permissionGranted ? (lang === 'ru' ? 'Определение местоположения...' : 'Joylashuv aniqlanmoqda...') : (lang === 'ru' ? 'Разрешите геолокацию' : 'Joylashuvga ruxsat bering'))}
+              {address ?? (permissionGranted ? tr('location_detecting') : tr('location_allow'))}
             </Text>
           </View>
         </View>
@@ -273,7 +273,7 @@ export default function HomeScreen() {
             activeOpacity={0.9}
           >
             <Ionicons name="search" size={18} color={Colors.textHint} />
-            <Text style={styles.searchPlaceholder}>{lang === 'ru' ? 'Поиск товара или магазина...' : "Mahsulot yoki do'kon qidiring..."}</Text>
+            <Text style={styles.searchPlaceholder}>{tr('search_placeholder')}</Text>
             <View style={styles.searchFilter}>
               <Ionicons name="options-outline" size={16} color={Colors.primary} />
             </View>
@@ -282,14 +282,14 @@ export default function HomeScreen() {
 
         {/* Promo Banner */}
         <View style={styles.section}>
-          <PromoBanner onPress={() => router.push('/(customer)/broadcast-cart')} />
+          <PromoBanner onPress={() => router.push('/(customer)/broadcast-cart')} tr={tr} />
         </View>
 
         {/* Categories */}
         {(categories?.length ?? 0) > 0 && (
           <View style={[styles.section, { paddingHorizontal: 0 }]}>
             <View style={{ paddingHorizontal: Spacing.md }}>
-              <SectionHeader title="Kategoriyalar" />
+              <SectionHeader title={tr('categories')} />
             </View>
             <FlatList
               data={categories}
@@ -306,8 +306,9 @@ export default function HomeScreen() {
         <View style={[styles.section, { paddingHorizontal: 0 }]}>
           <View style={{ paddingHorizontal: Spacing.md }}>
             <SectionHeader
-              title="Premium do'konlar"
+              title={tr('premium_stores')}
               onSeeAll={() => router.push('/(customer)/search')}
+              seeAllLabel={tr('see_all')}
             />
           </View>
           {loadingStores ? (
@@ -341,8 +342,8 @@ export default function HomeScreen() {
                 <Ionicons name="storefront-outline" size={20} color={Colors.textHint} />
               </View>
               <View>
-                <Text style={styles.emptyRowTitle}>Do'konlar topilmadi</Text>
-                <Text style={styles.emptyRowSub}>Joylashuv aniqlanganda ko'rinadi</Text>
+                <Text style={styles.emptyRowTitle}>{lang === 'ru' ? 'Магазины не найдены' : "Do'konlar topilmadi"}</Text>
+                <Text style={styles.emptyRowSub}>{lang === 'ru' ? 'Появятся после определения местоположения' : "Joylashuv aniqlanganda ko'rinadi"}</Text>
               </View>
             </View>
           )}
@@ -350,7 +351,7 @@ export default function HomeScreen() {
 
         {/* All Products */}
         <View style={styles.section}>
-          <SectionHeader title="Barcha mahsulotlar" />
+          <SectionHeader title={lang === 'ru' ? 'Все товары' : 'Barcha mahsulotlar'} />
           {loadingProducts ? (
             <View style={styles.productGrid}>
               {[1, 2, 3, 4].map((i) => <ProductCardSkeleton key={i} />)}
@@ -373,8 +374,8 @@ export default function HomeScreen() {
               <View style={styles.emptyIconBox}>
                 <Ionicons name="cube-outline" size={32} color={Colors.primaryLight} />
               </View>
-              <Text style={styles.emptyTitle}>Mahsulotlar topilmadi</Text>
-              <Text style={styles.emptySubtitle}>Server bilan ulanishni tekshiring</Text>
+              <Text style={styles.emptyTitle}>{tr('empty_products')}</Text>
+              <Text style={styles.emptySubtitle}>{tr('empty_products_sub')}</Text>
             </View>
           )}
         </View>

@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
 import { useAuthStore } from '../../src/store/auth.store';
+import { useTranslation } from '../../src/i18n';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -25,27 +26,34 @@ interface StatusConfig {
   icon: IoniconsName;
 }
 
-const STATUS_MAP: Record<string, StatusConfig> = {
-  PENDING:    { label: 'Kutilmoqda',  color: Colors.statusPending,    bg: '#FFF3E0', icon: 'time-outline' },
-  ACCEPTED:   { label: 'Qabul qilindi', color: Colors.statusAccepted, bg: '#E3F2FD', icon: 'checkmark-circle-outline' },
-  READY:      { label: 'Tayyor',      color: Colors.statusReady,      bg: '#F3E5F5', icon: 'cube-outline' },
-  DELIVERING: { label: 'Yetkazilmoqda', color: Colors.statusDelivering, bg: '#FBE9E7', icon: 'bicycle-outline' },
-  DELIVERED:  { label: 'Yetkazildi', color: Colors.statusDelivered,   bg: '#E8F5E9', icon: 'checkmark-done-outline' },
-  CANCELLED:  { label: 'Bekor qilindi', color: Colors.statusCancelled, bg: '#F5F5F5', icon: 'close-circle-outline' },
-};
+function getStatusMap(tr: (key: string) => string): Record<string, StatusConfig> {
+  return {
+    PENDING:    { label: tr('status_pending'),    color: Colors.statusPending,    bg: '#FFF3E0', icon: 'time-outline' },
+    ACCEPTED:   { label: tr('status_accepted'),   color: Colors.statusAccepted,   bg: '#E3F2FD', icon: 'checkmark-circle-outline' },
+    READY:      { label: tr('status_ready'),      color: Colors.statusReady,      bg: '#F3E5F5', icon: 'cube-outline' },
+    DELIVERING: { label: tr('status_delivering'), color: Colors.statusDelivering, bg: '#FBE9E7', icon: 'bicycle-outline' },
+    DELIVERED:  { label: tr('status_delivered'),  color: Colors.statusDelivered,  bg: '#E8F5E9', icon: 'checkmark-done-outline' },
+    CANCELLED:  { label: tr('status_cancelled'),  color: Colors.statusCancelled,  bg: '#F5F5F5', icon: 'close-circle-outline' },
+  };
+}
 
-const FILTER_TABS = [
-  { label: 'Barchasi', value: undefined },
-  { label: 'Faol',     value: 'ACCEPTED' },
-  { label: 'Kutmoqda', value: 'PENDING' },
-  { label: 'Yetkazildi', value: 'DELIVERED' },
-  { label: 'Bekor',    value: 'CANCELLED' },
-];
+function getFilterTabs(tr: (key: string) => string) {
+  return [
+    { label: tr('filter_all'),       value: undefined },
+    { label: tr('filter_active'),    value: 'ACCEPTED' },
+    { label: tr('filter_waiting'),   value: 'PENDING' },
+    { label: tr('filter_delivered'), value: 'DELIVERED' },
+    { label: tr('filter_cancelled'), value: 'CANCELLED' },
+  ];
+}
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const { lang, t, tr } = useTranslation();
   const { isAuthenticated } = useAuthStore();
   const [activeFilter, setActiveFilter] = useState<string | undefined>(undefined);
+  const STATUS_MAP = getStatusMap(tr);
+  const FILTER_TABS = getFilterTabs(tr);
 
   const { data: orders, isLoading, refetch } = useQuery({
     queryKey: ['my-orders', activeFilter],
@@ -60,17 +68,17 @@ export default function OrdersScreen() {
     return (
       <SafeAreaView style={s.safe} edges={['top']}>
         <View style={s.header}>
-          <Text style={s.title}>Buyurtmalarim</Text>
+          <Text style={s.title}>{tr('orders_title')}</Text>
         </View>
         <View style={s.loginWrap}>
           <View style={s.loginIconBox}>
             <Ionicons name="cube-outline" size={44} color={Colors.primaryLight} />
           </View>
-          <Text style={s.loginTitle}>Buyurtmalarni ko'rish uchun kiring</Text>
-          <Text style={s.loginSub}>Barcha buyurtmalaringiz shu yerda ko'rinadi</Text>
+          <Text style={s.loginTitle}>{lang === 'ru' ? 'Войдите, чтобы видеть заказы' : "Buyurtmalarni ko'rish uchun kiring"}</Text>
+          <Text style={s.loginSub}>{lang === 'ru' ? 'Все ваши заказы будут здесь' : "Barcha buyurtmalaringiz shu yerda ko'rinadi"}</Text>
           <TouchableOpacity style={s.loginBtn} onPress={() => router.push('/(auth)/login')} activeOpacity={0.85}>
             <Ionicons name="log-in-outline" size={18} color={Colors.white} />
-            <Text style={s.loginBtnTxt}>Kirish</Text>
+            <Text style={s.loginBtnTxt}>{tr('login')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -81,8 +89,8 @@ export default function OrdersScreen() {
     <SafeAreaView style={s.safe} edges={['top']}>
       {/* ── Header ── */}
       <View style={s.header}>
-        <Text style={s.title}>Buyurtmalarim</Text>
-        <Text style={s.subtitle}>{list.length} ta buyurtma</Text>
+        <Text style={s.title}>{tr('orders_title')}</Text>
+        <Text style={s.subtitle}>{list.length} {lang === 'ru' ? 'заказов' : 'ta buyurtma'}</Text>
 
         {/* Filter tabs */}
         <FlatList
@@ -119,17 +127,19 @@ export default function OrdersScreen() {
               <View style={s.emptyIconBox}>
                 <Ionicons name="cube-outline" size={44} color={Colors.primaryLight} />
               </View>
-              <Text style={s.emptyTitle}>Buyurtmalar yo'q</Text>
+              <Text style={s.emptyTitle}>{tr('order_empty')}</Text>
               <Text style={s.emptySub}>
-                {activeFilter ? 'Bu holat bo\'yicha buyurtma topilmadi' : 'Hali birorta buyurtma bermadingiz'}
+                {activeFilter
+                  ? (lang === 'ru' ? 'Заказов с этим статусом не найдено' : "Bu holat bo'yicha buyurtma topilmadi")
+                  : tr('order_empty_sub')}
               </Text>
               <TouchableOpacity style={s.shopBtn} onPress={() => router.push('/(customer)/home')}>
-                <Text style={s.shopBtnTxt}>Xarid qilish</Text>
+                <Text style={s.shopBtnTxt}>{tr('order_shop')}</Text>
               </TouchableOpacity>
             </View>
           ) : null
         }
-        renderItem={({ item }) => <OrderCard item={item} onPress={() =>
+        renderItem={({ item }) => <OrderCard item={item} statusMap={STATUS_MAP} lang={lang} onPress={() =>
           router.push({ pathname: '/(customer)/order/[id]', params: { id: item.id } })
         } />}
       />
@@ -137,8 +147,8 @@ export default function OrdersScreen() {
   );
 }
 
-function OrderCard({ item, onPress }: { item: any; onPress: () => void }) {
-  const cfg = STATUS_MAP[item.status] ?? STATUS_MAP.PENDING;
+function OrderCard({ item, statusMap, lang, onPress }: { item: any; statusMap: Record<string, StatusConfig>; lang: string; onPress: () => void }) {
+  const cfg = statusMap[item.status] ?? statusMap.PENDING;
   const isDirectOrder = item.order_type !== 'BROADCAST';
 
   return (
@@ -171,7 +181,7 @@ function OrderCard({ item, onPress }: { item: any; onPress: () => void }) {
       <View style={s.cardBottom}>
         <View style={s.metaItem}>
           <Ionicons name="layers-outline" size={13} color={Colors.textHint} />
-          <Text style={s.metaTxt}>{item.items?.length ?? 0} ta mahsulot</Text>
+          <Text style={s.metaTxt}>{item.items?.length ?? 0} {lang === 'ru' ? 'товаров' : 'ta mahsulot'}</Text>
         </View>
         <View style={s.metaItem}>
           <Ionicons name="time-outline" size={13} color={Colors.textHint} />

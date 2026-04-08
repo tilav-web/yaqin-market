@@ -17,8 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { productsApi } from '../../src/api/products';
 import { useCartStore } from '../../src/store/cart.store';
-import { t } from '../../src/i18n';
-import { useLangStore } from '../../src/store/lang.store';
+import { useTranslation } from '../../src/i18n';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 function imageUrl(path?: string) {
@@ -29,20 +28,20 @@ function imageUrl(path?: string) {
 
 const RECENT = ['Tuxum', 'Non', 'Yogʻ', 'Sabzi'];
 
-const FILTER_CHIPS = [
-  { label: 'Barchasi', value: '' },
-  { label: 'Oziq-ovqat', value: 'food' },
-  { label: 'Ichimliklar', value: 'drinks' },
-  { label: 'Shirinliklar', value: 'sweets' },
-];
-
 export default function SearchScreen() {
   const router = useRouter();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('');
-  const lang = useLangStore(s => s.lang);
+  const { lang, t, tr } = useTranslation();
   const { addBroadcastItem } = useCartStore();
+
+  const FILTER_CHIPS = [
+    { label: lang === 'ru' ? 'Все' : 'Barchasi', value: '' },
+    { label: lang === 'ru' ? 'Продукты' : 'Oziq-ovqat', value: 'food' },
+    { label: lang === 'ru' ? 'Напитки' : 'Ichimliklar', value: 'drinks' },
+    { label: lang === 'ru' ? 'Сладости' : 'Shirinliklar', value: 'sweets' },
+  ];
 
   const { data, isLoading } = useQuery({
     queryKey: ['search-products', query],
@@ -65,7 +64,7 @@ export default function SearchScreen() {
               style={s.input}
               value={query}
               onChangeText={setQuery}
-              placeholder="Mahsulot yoki do'kon..."
+              placeholder={tr('search_placeholder')}
               placeholderTextColor={Colors.textHint}
               autoFocus
               returnKeyType="search"
@@ -78,7 +77,7 @@ export default function SearchScreen() {
           </View>
           {query.length > 0 && (
             <TouchableOpacity onPress={() => setQuery('')} style={s.cancelBtn}>
-              <Text style={s.cancelTxt}>Bekor</Text>
+              <Text style={s.cancelTxt}>{tr('cancel')}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -107,7 +106,7 @@ export default function SearchScreen() {
       {query.length === 0 ? (
         // Recent / suggestions
         <View style={s.suggestions}>
-          <Text style={s.suggTitle}>Oxirgi qidiruvlar</Text>
+          <Text style={s.suggTitle}>{tr('recent_searches')}</Text>
           <View style={s.recentRow}>
             {RECENT.map(r => (
               <TouchableOpacity key={r} style={s.recentChip} onPress={() => setQuery(r)}>
@@ -116,15 +115,15 @@ export default function SearchScreen() {
               </TouchableOpacity>
             ))}
           </View>
-          <Text style={[s.suggTitle, { marginTop: Spacing.lg }]}>Mashhur kategoriyalar</Text>
+          <Text style={[s.suggTitle, { marginTop: Spacing.lg }]}>{lang === 'ru' ? 'Популярные категории' : 'Mashhur kategoriyalar'}</Text>
           <View style={s.catGrid}>
             {[
-              { icon: '🥦', label: 'Sabzavot' },
-              { icon: '🍎', label: 'Meva' },
-              { icon: '🥛', label: 'Sut mahsuloti' },
-              { icon: '🍞', label: 'Non-bulka' },
-              { icon: '🥩', label: 'Go\'sht' },
-              { icon: '🍬', label: 'Shirinlik' },
+              { icon: '🥦', label: lang === 'ru' ? 'Овощи' : 'Sabzavot' },
+              { icon: '🍎', label: lang === 'ru' ? 'Фрукты' : 'Meva' },
+              { icon: '🥛', label: lang === 'ru' ? 'Молочные' : 'Sut mahsuloti' },
+              { icon: '🍞', label: lang === 'ru' ? 'Хлеб' : 'Non-bulka' },
+              { icon: '🥩', label: lang === 'ru' ? 'Мясо' : 'Go\'sht' },
+              { icon: '🍬', label: lang === 'ru' ? 'Сладости' : 'Shirinlik' },
             ].map(c => (
               <TouchableOpacity key={c.label} style={s.catCard} onPress={() => setQuery(c.label)}>
                 <Text style={{ fontSize: 28 }}>{c.icon}</Text>
@@ -136,13 +135,13 @@ export default function SearchScreen() {
       ) : isLoading ? (
         <View style={s.center}>
           <ActivityIndicator color={Colors.primary} size="large" />
-          <Text style={s.loadingTxt}>Qidirilmoqda...</Text>
+          <Text style={s.loadingTxt}>{tr('loading')}...</Text>
         </View>
       ) : showEmpty ? (
         <View style={s.center}>
           <Text style={{ fontSize: 52 }}>🔍</Text>
-          <Text style={s.emptyTitle}>"{query}" topilmadi</Text>
-          <Text style={s.emptySub}>Boshqa so'z bilan qayta urinib ko'ring</Text>
+          <Text style={s.emptyTitle}>"{query}" {tr('no_results')}</Text>
+          <Text style={s.emptySub}>{lang === 'ru' ? 'Попробуйте другое слово' : "Boshqa so'z bilan qayta urinib ko'ring"}</Text>
         </View>
       ) : (
         <FlatList
@@ -170,7 +169,7 @@ export default function SearchScreen() {
                   </View>
                 )}
                 <View style={s.cardBody}>
-                  <Text style={s.cardName} numberOfLines={2}>{t(item.name, lang)}</Text>
+                  <Text style={s.cardName} numberOfLines={2}>{t(item.name)}</Text>
                   {price != null && (
                     <Text style={s.cardPrice}>{Number(price).toLocaleString()} so'm</Text>
                   )}
@@ -186,7 +185,7 @@ export default function SearchScreen() {
                     }
                   >
                     <Ionicons name="add" size={16} color={Colors.white} />
-                    <Text style={s.addTxt}>Qo'shish</Text>
+                    <Text style={s.addTxt}>{tr('add_to_cart')}</Text>
                   </TouchableOpacity>
                 </View>
               </TouchableOpacity>

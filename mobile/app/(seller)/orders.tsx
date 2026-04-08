@@ -9,24 +9,25 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
+import { useTranslation } from '../../src/i18n';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
-const STATUS_CFG: Record<string, { label: string; color: string; bg: string; icon: IoniconsName }> = {
-  PENDING:    { label: 'Yangi',        color: Colors.statusPending,    bg: '#FFF3E0', icon: 'time-outline' },
-  ACCEPTED:   { label: 'Qabul qilindi', color: Colors.statusAccepted,  bg: '#E3F2FD', icon: 'checkmark-circle-outline' },
-  READY:      { label: 'Tayyor',       color: Colors.statusReady,      bg: '#F3E5F5', icon: 'cube-outline' },
-  DELIVERING: { label: 'Yetkazmoqda', color: Colors.statusDelivering, bg: '#FBE9E7', icon: 'bicycle-outline' },
-  DELIVERED:  { label: 'Yetkazildi',  color: Colors.statusDelivered,  bg: '#E8F5E9', icon: 'checkmark-done-outline' },
-  CANCELLED:  { label: 'Bekor',       color: Colors.statusCancelled,  bg: '#F5F5F5', icon: 'close-circle-outline' },
-};
+const STATUS_CFG = (lang: string): Record<string, { label: string; color: string; bg: string; icon: IoniconsName }> => ({
+  PENDING:    { label: lang === 'ru' ? 'Новый' : 'Yangi',              color: Colors.statusPending,    bg: '#FFF3E0', icon: 'time-outline' },
+  ACCEPTED:   { label: lang === 'ru' ? 'Принят' : 'Qabul qilindi',    color: Colors.statusAccepted,   bg: '#E3F2FD', icon: 'checkmark-circle-outline' },
+  READY:      { label: lang === 'ru' ? 'Готов' : 'Tayyor',            color: Colors.statusReady,      bg: '#F3E5F5', icon: 'cube-outline' },
+  DELIVERING: { label: lang === 'ru' ? 'Доставляется' : 'Yetkazmoqda', color: Colors.statusDelivering, bg: '#FBE9E7', icon: 'bicycle-outline' },
+  DELIVERED:  { label: lang === 'ru' ? 'Доставлен' : 'Yetkazildi',    color: Colors.statusDelivered,  bg: '#E8F5E9', icon: 'checkmark-done-outline' },
+  CANCELLED:  { label: lang === 'ru' ? 'Отменён' : 'Bekor',           color: Colors.statusCancelled,  bg: '#F5F5F5', icon: 'close-circle-outline' },
+});
 
-const TABS = [
-  { label: 'Barchasi', value: undefined },
-  { label: 'Yangi',     value: 'PENDING' },
-  { label: 'Qabul',     value: 'ACCEPTED' },
-  { label: 'Tayyor',    value: 'READY' },
-  { label: "Yetkazildi", value: 'DELIVERED' },
+const TABS = (lang: string) => [
+  { label: lang === 'ru' ? 'Все' : 'Barchasi',        value: undefined },
+  { label: lang === 'ru' ? 'Новые' : 'Yangi',         value: 'PENDING' },
+  { label: lang === 'ru' ? 'Принят' : 'Qabul',        value: 'ACCEPTED' },
+  { label: lang === 'ru' ? 'Готов' : 'Tayyor',         value: 'READY' },
+  { label: lang === 'ru' ? 'Доставлен' : "Yetkazildi", value: 'DELIVERED' },
 ];
 
 function fmt(iso: string) {
@@ -36,6 +37,7 @@ function fmt(iso: string) {
 
 export default function SellerOrdersScreen() {
   const router = useRouter();
+  const { lang } = useTranslation();
   const [activeTab, setActiveTab] = useState<string | undefined>(undefined);
 
   const { data, isLoading, refetch } = useQuery({
@@ -48,10 +50,10 @@ export default function SellerOrdersScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.title}>Buyurtmalar</Text>
-        <Text style={s.subtitle}>{orders.length} ta buyurtma</Text>
+        <Text style={s.title}>{lang === 'ru' ? 'Заказы' : 'Buyurtmalar'}</Text>
+        <Text style={s.subtitle}>{orders.length} {lang === 'ru' ? 'заказов' : 'ta buyurtma'}</Text>
         <FlatList
-          data={TABS}
+          data={TABS(lang)}
           horizontal
           showsHorizontalScrollIndicator={false}
           keyExtractor={i => String(i.value ?? 'all')}
@@ -79,13 +81,14 @@ export default function SellerOrdersScreen() {
           !isLoading ? (
             <View style={s.empty}>
               <View style={s.emptyIcon}><Ionicons name="cube-outline" size={40} color={Colors.primaryLight} /></View>
-              <Text style={s.emptyTitle}>Buyurtma yo'q</Text>
-              <Text style={s.emptySub}>{activeTab ? 'Bu holatda buyurtma topilmadi' : 'Hali birorta buyurtma kelmagan'}</Text>
+              <Text style={s.emptyTitle}>{lang === 'ru' ? 'Нет заказов' : "Buyurtma yo'q"}</Text>
+              <Text style={s.emptySub}>{activeTab ? (lang === 'ru' ? 'Заказы с этим статусом не найдены' : 'Bu holatda buyurtma topilmadi') : (lang === 'ru' ? 'Пока не поступило ни одного заказа' : 'Hali birorta buyurtma kelmagan')}</Text>
             </View>
           ) : null
         }
         renderItem={({ item }) => {
-          const cfg = STATUS_CFG[item.status] ?? STATUS_CFG.PENDING;
+          const statusCfg = STATUS_CFG(lang);
+          const cfg = statusCfg[item.status] ?? statusCfg.PENDING;
           const isBroadcast = item.order_type === 'BROADCAST';
           return (
             <TouchableOpacity
@@ -124,7 +127,7 @@ export default function SellerOrdersScreen() {
                   <Ionicons name="time-outline" size={13} color={Colors.textHint} />
                   <Text style={s.metaTxt}>{fmt(item.created_at ?? item.createdAt)}</Text>
                 </View>
-                <Text style={s.price}>{Number(item.total_price).toLocaleString()} so'm</Text>
+                <Text style={s.price}>{Number(item.total_price).toLocaleString()} {lang === 'ru' ? 'сум' : "so'm"}</Text>
               </View>
             </TouchableOpacity>
           );
