@@ -58,7 +58,8 @@
           "color": "#E53935",
           "androidMode": "default"
         }
-      ]
+      ],
+      "expo-font"
     ],
     "extra": {
       "router": {},
