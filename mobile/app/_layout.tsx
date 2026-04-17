@@ -39,7 +39,7 @@ function AuthGuard() {
     const inSellerGroup   = group === '(seller)';
     const inCourierGroup  = group === '(courier)';
 
-    // Authenticated user on auth pages (login/otp/welcome) → go to home
+    // Authenticated user on auth pages (login/otp) → go to home
     if (isAuthenticated && inAuthGroup) {
       router.replace('/(customer)/home');
       return;
@@ -70,7 +70,7 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryClientProvider client={queryClient}>
-        <StatusBar style="light" backgroundColor={Colors.primary} />
+        <StatusBar style="light" backgroundColor={Colors.primary} translucent={false} />
         <PushNotificationsSetup />
         <AuthGuard />
         <Stack

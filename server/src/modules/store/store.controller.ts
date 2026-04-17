@@ -76,6 +76,15 @@ export class StoreServiceController {
     return this.service.update(id, auth, data);
   }
 
+  @Get(':id/delivery-quote')
+  async getDeliveryQuote(
+    @Param('id') id: string,
+    @Query('lat') lat: string,
+    @Query('lng') lng: string,
+  ) {
+    return this.service.getDeliveryQuote(id, Number(lat), Number(lng));
+  }
+
   @Put(':id/delivery-settings')
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)

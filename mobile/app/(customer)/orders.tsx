@@ -216,7 +216,7 @@ function formatDate(iso?: string) {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
 
   header: {
     backgroundColor: Colors.primary,
@@ -240,7 +240,7 @@ const s = StyleSheet.create({
   filterTxt: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
   filterTxtActive: { color: Colors.primary },
 
-  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
+  list: { flexGrow: 1, backgroundColor: Colors.background, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
 
   card: {
     backgroundColor: Colors.white,
@@ -298,7 +298,7 @@ const s = StyleSheet.create({
   },
   shopBtnTxt: { fontSize: 15, fontWeight: '700', color: Colors.white },
 
-  loginWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.md },
+  loginWrap: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.md },
   loginIconBox: { width: 96, height: 96, borderRadius: 28, backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
   loginTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center' },
   loginSub: { fontSize: 13, color: Colors.textHint, textAlign: 'center', lineHeight: 19 },

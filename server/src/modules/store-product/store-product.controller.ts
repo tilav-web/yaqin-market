@@ -34,19 +34,19 @@ export class StoreProductController {
   @Get()
   async findByStore(
     @Query('store_id') storeId: string,
-    @Query('include_inactive') includeInactive: boolean = false,
+    @Query('include_unavailable') includeUnavailable?: string,
   ) {
-    return this.service.findByStore(storeId, includeInactive);
+    return this.service.findByStore(storeId, includeUnavailable === 'true');
   }
 
   @Get('categories')
   async findCategoriesByStore(
     @Query('store_id') storeId: string,
-    @Query('include_inactive') includeInactive?: string,
+    @Query('include_unavailable') includeUnavailable?: string,
   ) {
     return this.service.findCategoriesByStore(
       storeId,
-      includeInactive === 'true',
+      includeUnavailable === 'true',
     );
   }
 
@@ -57,7 +57,7 @@ export class StoreProductController {
     @Query('category_id') categoryId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
-    @Query('include_inactive') includeInactive?: string,
+    @Query('include_unavailable') includeUnavailable?: string,
   ) {
     return this.service.findCatalog({
       storeId,
@@ -65,7 +65,7 @@ export class StoreProductController {
       categoryId,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 12,
-      includeInactive: includeInactive === 'true',
+      includeUnavailable: includeUnavailable === 'true',
     });
   }
 
@@ -118,6 +118,17 @@ export class StoreProductController {
     @Body('price') price: number,
   ) {
     return this.service.setPrice(id, storeId, price);
+  }
+
+  @Post(':id/availability')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SELLER, AuthRoleEnum.SUPER_ADMIN)
+  async setAvailability(
+    @Param('id') id: string,
+    @Query('store_id') storeId: string,
+    @Body('is_available') isAvailable: boolean,
+  ) {
+    return this.service.setAvailability(id, storeId, isAvailable);
   }
 
   @Post(':id/prime')

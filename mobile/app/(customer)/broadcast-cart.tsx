@@ -10,16 +10,19 @@ import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useCartStore } from '../../src/store/cart.store';
 import { useLocationStore } from '../../src/store/location.store';
 import { ordersApi } from '../../src/api/orders';
+import { useRequireAuth } from '../../src/hooks/useRequireAuth';
 
 export default function BroadcastCartScreen() {
   const router = useRouter();
   const { broadcastItems, removeBroadcastItem, updateBroadcastQuantity, clearBroadcastCart } = useCartStore();
   const { lat, lng, address } = useLocationStore();
+  const requireAuth = useRequireAuth();
   const [loading, setLoading] = useState(false);
   const [deliveryAddress, setDeliveryAddress] = useState(address ?? '');
 
   const handleSubmit = async () => {
     if (broadcastItems.length === 0) { Alert.alert('Xato', "Savatcha bo'sh"); return; }
+    if (!requireAuth()) return;
     if (!lat || !lng) { Alert.alert('Xato', 'Joylashuvingiz aniqlanmagan'); return; }
     if (!deliveryAddress.trim()) { Alert.alert('Xato', 'Yetkazib berish manzilini kiriting'); return; }
 
@@ -160,7 +163,7 @@ export default function BroadcastCartScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     flexDirection: 'row', alignItems: 'center',
@@ -173,7 +176,7 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.white },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 1 },
 
-  list: { padding: Spacing.md, gap: Spacing.sm },
+  list: { flexGrow: 1, backgroundColor: Colors.background, padding: Spacing.md, gap: Spacing.sm },
 
   infoCard: {
     flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm,
@@ -217,7 +220,7 @@ const s = StyleSheet.create({
   },
   submitBtnTxt: { fontSize: 16, fontWeight: '700', color: Colors.white },
 
-  empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.md },
+  empty: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.md },
   emptyIconBox: { width: 96, height: 96, borderRadius: 28, backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   emptySub: { fontSize: 14, color: Colors.textHint, textAlign: 'center', lineHeight: 20 },

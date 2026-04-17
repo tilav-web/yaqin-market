@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsBoolean, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsBoolean } from 'class-validator';
 
 export class CreateStoreProductDto {
   @IsNumber()
@@ -7,10 +7,10 @@ export class CreateStoreProductDto {
   @IsNumber()
   price: number;
 
+  /** true = do'konda mavjud (AVAILABLE), false = hozircha yo'q (UNAVAILABLE). Default: true */
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  stock?: number;
+  @IsBoolean()
+  is_available?: boolean;
 
   @IsOptional()
   @IsBoolean()
@@ -23,15 +23,10 @@ export class UpdateStoreProductDto {
   price?: number;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  stock?: number;
+  @IsBoolean()
+  is_available?: boolean;
 
   @IsOptional()
   @IsBoolean()
   is_prime?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  status?: boolean;
 }

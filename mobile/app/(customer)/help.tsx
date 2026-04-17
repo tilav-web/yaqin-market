@@ -167,7 +167,7 @@ export default function HelpScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     flexDirection: 'row',
@@ -185,7 +185,7 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   title: { fontSize: 20, fontWeight: '800', color: Colors.white },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.md, gap: Spacing.sm },
   sectionTitle: {
     fontSize: 11, fontWeight: '700', color: Colors.textHint,

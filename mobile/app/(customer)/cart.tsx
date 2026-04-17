@@ -16,7 +16,10 @@ import { useCartStore } from '../../src/store/cart.store';
 import { useLocationStore } from '../../src/store/location.store';
 import { useAuthStore } from '../../src/store/auth.store';
 import { ordersApi } from '../../src/api/orders';
+import { storesApi } from '../../src/api/stores';
 import { useTranslation } from '../../src/i18n';
+import { useRequireAuth } from '../../src/hooks/useRequireAuth';
+import { useQuery } from '@tanstack/react-query';
 
 type Tab = 'direct' | 'broadcast';
 
@@ -26,6 +29,7 @@ export default function CartScreen() {
   const [loading, setLoading] = useState(false);
   const { lat, lng, address } = useLocationStore();
   const { isAuthenticated } = useAuthStore();
+  const requireAuth = useRequireAuth();
 
   const { lang, t, tr } = useTranslation();
   const {
@@ -37,12 +41,19 @@ export default function CartScreen() {
   const directTotal = directItems.reduce((s, i) => s + i.price * i.quantity, 0);
   const broadcastCount = broadcastItems.reduce((s, i) => s + i.quantity, 0);
 
+  const directStoreId = directItems[0]?.store_id;
+  const { data: deliveryQuote } = useQuery({
+    queryKey: ['delivery-quote', directStoreId, lat, lng],
+    queryFn: () => storesApi.getDeliveryQuote(directStoreId!, lat!, lng!),
+    enabled: !!directStoreId && lat != null && lng != null,
+  });
+  const deliveryFee = deliveryQuote?.fee ?? 0;
+  const deliveryFree = deliveryQuote?.is_free ?? false;
+  const deliveryBlocked = deliveryQuote && !deliveryQuote.is_deliverable;
+
   const handleOrder = async () => {
     if (!directItems.length) return;
-    if (!isAuthenticated) {
-      router.push('/(auth)/login');
-      return;
-    }
+    if (!requireAuth()) return;
     if (!lat || !lng) {
       Alert.alert(tr('cart_location_required'), tr('cart_location_msg'));
       return;
@@ -173,12 +184,25 @@ export default function CartScreen() {
                 </View>
                 <View style={s.summaryRow}>
                   <Text style={s.summaryLabel}>{tr('cart_delivery')}</Text>
-                  <Text style={[s.summaryValue, { color: Colors.success }]}>{tr('cart_free')}</Text>
+                  {deliveryBlocked ? (
+                    <Text style={[s.summaryValue, { color: Colors.error }]}>
+                      {lang === 'ru' ? 'Вне зоны' : "Radius tashqarisida"}
+                    </Text>
+                  ) : deliveryFree ? (
+                    <Text style={[s.summaryValue, { color: Colors.success }]}>{tr('cart_free')}</Text>
+                  ) : (
+                    <Text style={s.summaryValue}>{deliveryFee.toLocaleString()} so'm</Text>
+                  )}
                 </View>
+                {deliveryQuote && !deliveryBlocked && (
+                  <Text style={s.deliveryNote}>
+                    {lang === 'ru' ? 'Расстояние' : 'Masofa'}: {(deliveryQuote.distance_meters / 1000).toFixed(2)} km
+                  </Text>
+                )}
                 <View style={s.divider} />
                 <View style={s.summaryRow}>
                   <Text style={s.totalLabel}>{tr('cart_total')}</Text>
-                  <Text style={s.totalValue}>{directTotal.toLocaleString()} so'm</Text>
+                  <Text style={s.totalValue}>{(directTotal + deliveryFee).toLocaleString()} so'm</Text>
                 </View>
               </View>
 
@@ -196,12 +220,12 @@ export default function CartScreen() {
             <View style={s.checkoutBar}>
               <View>
                 <Text style={s.checkoutSub}>{tr('cart_total')}</Text>
-                <Text style={s.checkoutTotal}>{directTotal.toLocaleString()} so'm</Text>
+                <Text style={s.checkoutTotal}>{(directTotal + deliveryFee).toLocaleString()} so'm</Text>
               </View>
               <TouchableOpacity
-                style={[s.checkoutBtn, loading && { opacity: 0.7 }]}
+                style={[s.checkoutBtn, (loading || deliveryBlocked) && { opacity: 0.5 }]}
+                disabled={loading || !!deliveryBlocked}
                 onPress={handleOrder}
-                disabled={loading}
                 activeOpacity={0.85}
               >
                 <Ionicons name="checkmark-circle" size={18} color={Colors.white} />
@@ -268,7 +292,7 @@ export default function CartScreen() {
               <TouchableOpacity
                 style={s.checkoutBtn}
                 onPress={() => {
-                  if (!isAuthenticated) { router.push('/(auth)/login'); return; }
+                  if (!requireAuth()) return;
                   router.push('/(customer)/broadcast-cart');
                 }}
                 activeOpacity={0.85}
@@ -303,7 +327,7 @@ function EmptyCart({ icon, title, sub, onBrowse, browseTxt }: {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
@@ -345,7 +369,7 @@ const s = StyleSheet.create({
   switchBadgeActive: { backgroundColor: Colors.primarySurface },
   switchBadgeTxt: { fontSize: 10, fontWeight: '700', color: Colors.white },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   scrollContent: { padding: Spacing.md },
 
   storeRow: {
@@ -399,6 +423,7 @@ const s = StyleSheet.create({
   summaryRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   summaryLabel: { fontSize: 14, color: Colors.textSecondary },
   summaryValue: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary },
+  deliveryNote: { fontSize: 11, color: Colors.textHint, marginTop: -6 },
   divider: { height: 1, backgroundColor: Colors.divider },
   totalLabel: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
   totalValue: { fontSize: 18, fontWeight: '800', color: Colors.primary },
@@ -459,7 +484,7 @@ const s = StyleSheet.create({
 });
 
 const empty = StyleSheet.create({
-  wrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.xl },
+  wrap: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.xl },
   iconBox: {
     width: 96, height: 96, borderRadius: 28,
     backgroundColor: Colors.primarySurface,

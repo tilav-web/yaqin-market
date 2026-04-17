@@ -171,7 +171,7 @@ export default function WalletScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
 
   header: {
     backgroundColor: Colors.primary,
@@ -250,7 +250,7 @@ const s = StyleSheet.create({
     paddingLeft: 4,
   },
 
-  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100, paddingTop: 0 },
+  list: { flexGrow: 1, backgroundColor: Colors.background, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100, paddingTop: 0 },
 
   txCard: {
     backgroundColor: Colors.white,
@@ -286,7 +286,7 @@ const s = StyleSheet.create({
   emptyTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary },
   emptySub: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingHorizontal: 40 },
 
-  loginWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.md },
+  loginWrap: { flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center', padding: Spacing.xl, gap: Spacing.md },
   loginIconBox: { width: 96, height: 96, borderRadius: 28, backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
   loginTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, textAlign: 'center' },
   loginSub: { fontSize: 13, color: Colors.textHint, textAlign: 'center', lineHeight: 19 },

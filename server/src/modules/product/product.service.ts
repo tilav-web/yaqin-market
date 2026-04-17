@@ -8,11 +8,23 @@ import { Unit } from '../unit/unit.entity';
 import { ProductTax } from './product-tax.entity';
 import { ProductTaxDto } from './dto/product-tax.dto';
 
+type ProductCatalogSort = 'new' | 'price_asc' | 'price_desc' | 'popular';
+
 type ProductCatalogQuery = {
   q?: string;
   categoryId?: string;
   page?: number;
   limit?: number;
+  priceMin?: number;
+  priceMax?: number;
+  sort?: ProductCatalogSort;
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
+  /** Faqat user joylashuviga yetkazib beradigan do'konlardagi mahsulotlarni ko'rsatish. */
+  deliverableOnly?: boolean;
+  /** Faqat tekin yetkazib beradigan do'konlardagi mahsulotlar. */
+  freeDeliveryOnly?: boolean;
 };
 
 type ProductAdminCatalogSummary = {
@@ -110,11 +122,112 @@ export class ProductService {
         .setParameter('search', normalizedSearch);
     }
 
+    // ── StoreProduct-based filters (price, availability, nearby, delivery) ─
+    // Har bir product (yoki uning variant-childrenlari) uchun store_products
+    // dan kamida bitta AVAILABLE mos yozuvlari bor yoki yo'qligini tekshiradi.
+    const hasUserLocation = query.lat != null && query.lng != null;
+    const hasDeliveryFilter = hasUserLocation &&
+      (query.deliverableOnly || query.freeDeliveryOnly);
+    const needsSpFilter =
+      query.priceMin != null ||
+      query.priceMax != null ||
+      (hasUserLocation && (query.radiusKm ?? 0) > 0) ||
+      hasDeliveryFilter;
+
+    if (needsSpFilter) {
+      const spQuery = baseQuery
+        .subQuery()
+        .select('1')
+        .from('store_products', 'sp')
+        .leftJoin('stores', 'st', 'st.id = sp.store_id')
+        .leftJoin(
+          'store_delivery_settings',
+          'dset',
+          'dset.store_id = st.id',
+        )
+        .where(
+          '(sp.product_id = product.id OR sp.product_id IN ' +
+            '(SELECT c.id FROM products c WHERE c.parent_id = product.id))',
+        )
+        .andWhere("sp.status = 'AVAILABLE'")
+        .andWhere('st.is_active = true');
+
+      if (query.priceMin != null) {
+        spQuery.andWhere('sp.price >= :priceMin', { priceMin: query.priceMin });
+      }
+      if (query.priceMax != null) {
+        spQuery.andWhere('sp.price <= :priceMax', { priceMax: query.priceMax });
+      }
+
+      // Distance calculation (meters via Haversine)
+      if (hasUserLocation) {
+        const distanceExpr = `(6371000 * acos(
+          LEAST(1, cos(radians(:lat)) * cos(radians(st.lat)) *
+          cos(radians(st.lng) - radians(:lng)) +
+          sin(radians(:lat)) * sin(radians(st.lat)))
+        ))`;
+
+        // radius_km: oddiy "nearby" filter
+        if ((query.radiusKm ?? 0) > 0) {
+          spQuery.andWhere(`${distanceExpr} <= :radiusMeters`, {
+            radiusMeters: (query.radiusKm as number) * 1000,
+          });
+        }
+
+        // deliverable: do'kon max_delivery_radius ichiga userni tushiradimi
+        if (query.deliverableOnly) {
+          spQuery.andWhere(
+            `dset.is_delivery_enabled = true AND ${distanceExpr} <= COALESCE(dset.max_delivery_radius, 5000)`,
+          );
+        }
+
+        // free_delivery: do'kon free_delivery_radius ichiga userni tushiradimi
+        if (query.freeDeliveryOnly) {
+          spQuery.andWhere(
+            `dset.is_delivery_enabled = true AND ${distanceExpr} <= COALESCE(dset.free_delivery_radius, 0)`,
+          );
+        }
+
+        spQuery.setParameters({ lat: query.lat, lng: query.lng });
+      }
+
+      baseQuery.andWhere(`EXISTS ${spQuery.getQuery()}`);
+      baseQuery.setParameters(spQuery.getParameters());
+    }
+
+    // ── Sort ──────────────────────────────────────────────────────────────
+    const sort: ProductCatalogSort = query.sort ?? 'new';
+    const sortedQuery = baseQuery.clone().select('product.id', 'id');
+
+    if (sort === 'price_asc' || sort === 'price_desc') {
+      sortedQuery
+        .addSelect(
+          `(SELECT MIN(sp2.price) FROM store_products sp2
+            WHERE sp2.status = 'AVAILABLE' AND (
+              sp2.product_id = product.id OR
+              sp2.product_id IN (SELECT c2.id FROM products c2 WHERE c2.parent_id = product.id)
+            ))`,
+          'min_price',
+        )
+        .orderBy('min_price', sort === 'price_asc' ? 'ASC' : 'DESC', 'NULLS LAST');
+    } else if (sort === 'popular') {
+      sortedQuery
+        .addSelect(
+          `(SELECT COUNT(*) FROM store_products sp3
+            WHERE sp3.status = 'AVAILABLE' AND (
+              sp3.product_id = product.id OR
+              sp3.product_id IN (SELECT c3.id FROM products c3 WHERE c3.parent_id = product.id)
+            ))`,
+          'sp_count',
+        )
+        .orderBy('sp_count', 'DESC', 'NULLS LAST')
+        .addOrderBy('product.createdAt', 'DESC');
+    } else {
+      sortedQuery.orderBy('product.createdAt', 'DESC');
+    }
+
     const total = await baseQuery.clone().getCount();
-    const rows = await baseQuery
-      .clone()
-      .select('product.id', 'id')
-      .orderBy('product.createdAt', 'DESC')
+    const rows = await sortedQuery
       .offset((page - 1) * limit)
       .limit(limit)
       .getRawMany<{ id: string | number }>();
@@ -146,6 +259,10 @@ export class ProductService {
         'children.category',
         'children.unit',
         'children.tax',
+        'storeProducts',
+        'storeProducts.store',
+        'children.storeProducts',
+        'children.storeProducts.store',
       ],
     });
 

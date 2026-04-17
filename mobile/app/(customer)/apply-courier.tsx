@@ -158,7 +158,7 @@ export default function ApplyCourierScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: '#FF5722',
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
@@ -174,7 +174,7 @@ const s = StyleSheet.create({
   },
   title: { fontSize: 20, fontWeight: '800', color: Colors.white },
   subtitle: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   content: { padding: Spacing.md, gap: Spacing.md },
 
   infoBanner: {

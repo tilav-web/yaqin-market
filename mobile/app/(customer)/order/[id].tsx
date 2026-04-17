@@ -183,7 +183,7 @@ export default function OrderDetailScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     flexDirection: 'row', alignItems: 'center',
@@ -195,7 +195,7 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.white },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 1 },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   card: { backgroundColor: Colors.white, marginHorizontal: Spacing.md, marginTop: Spacing.sm, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   cardSectionTitle: { flex: 1, fontSize: 14, fontWeight: '700', color: Colors.textPrimary },

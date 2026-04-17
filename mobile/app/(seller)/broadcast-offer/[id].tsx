@@ -209,7 +209,7 @@ export default function BroadcastOfferScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     flexDirection: 'row', alignItems: 'center',
@@ -222,7 +222,7 @@ const s = StyleSheet.create({
   headerTitle: { fontSize: 18, fontWeight: '700', color: Colors.white },
   headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 1 },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   card: { backgroundColor: Colors.white, marginHorizontal: Spacing.md, marginTop: Spacing.sm, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },
   cardHeaderRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm },
   cardTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, flex: 1 },

@@ -173,25 +173,15 @@ export class OrderService {
           );
         }
 
-        if (
-          storeProduct.status === StoreProductStatus.INACTIVE ||
-          storeProduct.stock < item.quantity
-        ) {
+        if (storeProduct.status !== StoreProductStatus.AVAILABLE) {
           throw new BadRequestException(
-            `Insufficient stock for product: ${storeProduct.product_id}`,
+            `Product is not available: ${storeProduct.product_id}`,
           );
         }
 
         const product = await queryRunner.manager.findOne(Product, {
           where: { id: storeProduct.product_id },
         });
-
-        storeProduct.stock -= item.quantity;
-        storeProduct.status = this.resolveStoreProductStatus(
-          Number(storeProduct.price),
-          Number(storeProduct.stock),
-        );
-        await queryRunner.manager.save(storeProduct);
 
         orderItems.push({
           order_id: savedOrder.id,
@@ -282,22 +272,18 @@ export class OrderService {
           lock: { mode: 'pessimistic_write' },
         });
 
-        if (!storeProduct || storeProduct.stock < item.quantity) {
+        if (
+          !storeProduct ||
+          storeProduct.status !== StoreProductStatus.AVAILABLE
+        ) {
           throw new BadRequestException(
-            `Insufficient stock for: ${item.store_product_id}`,
+            `Product is not available: ${item.store_product_id}`,
           );
         }
 
         const product = await queryRunner.manager.findOne(Product, {
           where: { id: storeProduct.product_id },
         });
-
-        storeProduct.stock -= item.quantity;
-        storeProduct.status = this.resolveStoreProductStatus(
-          Number(storeProduct.price),
-          Number(storeProduct.stock),
-        );
-        await queryRunner.manager.save(storeProduct);
 
         await queryRunner.manager.save(OrderItem, {
           order_id: savedOrder.id,
@@ -355,9 +341,9 @@ export class OrderService {
         );
       }
 
-      if (storeProduct.stock < item.quantity) {
+      if (storeProduct.status !== StoreProductStatus.AVAILABLE) {
         throw new BadRequestException(
-          `Insufficient stock for product: ${storeProduct.product_id}`,
+          `Product is not available: ${storeProduct.product_id}`,
         );
       }
 
@@ -414,8 +400,7 @@ export class OrderService {
         store.storeProducts?.some(
           (sp) =>
             sp.id === item.store_product_id &&
-            sp.status === StoreProductStatus.ACTIVE &&
-            sp.stock >= item.quantity,
+            sp.status === StoreProductStatus.AVAILABLE,
         ),
       );
     });
@@ -1185,18 +1170,14 @@ export class OrderService {
             lock: { mode: 'pessimistic_write' },
           });
 
-          if (!storeProduct || storeProduct.stock < item.quantity) {
+          if (
+            !storeProduct ||
+            storeProduct.status !== StoreProductStatus.AVAILABLE
+          ) {
             throw new BadRequestException(
-              `Insufficient stock for product: ${item.product_name}`,
+              `Product is not available: ${item.product_name}`,
             );
           }
-
-          storeProduct.stock -= item.quantity;
-          storeProduct.status = this.resolveStoreProductStatus(
-            Number(storeProduct.price),
-            Number(storeProduct.stock),
-          );
-          await queryRunner.manager.save(storeProduct);
         }
 
         await queryRunner.manager.save(OrderItem, {
@@ -1342,18 +1323,6 @@ export class OrderService {
     if (request.expires_at && request.expires_at.getTime() < Date.now()) {
       throw new BadRequestException('Broadcast request expired');
     }
-  }
-
-  private resolveStoreProductStatus(price: number, stock: number) {
-    if (price <= 0) {
-      return StoreProductStatus.INACTIVE;
-    }
-
-    if (stock <= 0) {
-      return StoreProductStatus.OUT_OF_STOCK;
-    }
-
-    return StoreProductStatus.ACTIVE;
   }
 
   private getStoreServiceRadiusMeters(store: Store | null | undefined) {
@@ -1508,30 +1477,12 @@ export class OrderService {
   }
 
   private async restoreInventoryForOrderItems(
-    queryRunner: QueryRunner,
-    items: OrderItem[],
+    _queryRunner: QueryRunner,
+    _items: OrderItem[],
   ) {
-    for (const item of items) {
-      if (!item.store_product_id) {
-        continue;
-      }
-
-      const storeProduct = await queryRunner.manager.findOne(StoreProduct, {
-        where: { id: item.store_product_id },
-        lock: { mode: 'pessimistic_write' },
-      });
-
-      if (!storeProduct) {
-        continue;
-      }
-
-      storeProduct.stock += Number(item.quantity);
-      storeProduct.status = this.resolveStoreProductStatus(
-        Number(storeProduct.price),
-        Number(storeProduct.stock),
-      );
-      await queryRunner.manager.save(storeProduct);
-    }
+    // Stock tracking olib tashlandi — availability seller qo'lida.
+    // Buyurtma bekor qilinganda hech narsa "qaytarilmaydi".
+    return;
   }
 
   private async reopenBroadcastRequestSelection(

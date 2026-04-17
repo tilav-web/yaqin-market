@@ -35,7 +35,6 @@ function AddProductModal({
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<any>(null);
   const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('');
 
   const { data: catalog, isLoading } = useQuery({
     queryKey: ['product-catalog-search', query],
@@ -48,8 +47,8 @@ function AddProductModal({
     : Array.isArray(catalog?.items) ? catalog.items : [];
 
   const addMutation = useMutation({
-    mutationFn: (data: { product_id: string; price: number; stock: number }) =>
-      storeProductsApi.create({ ...data, store_id: storeId }),
+    mutationFn: (data: { product_id: number; price: number }) =>
+      storeProductsApi.create({ ...data, store_id: storeId, is_available: true }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['store-products'] });
       Alert.alert(
@@ -83,7 +82,6 @@ function AddProductModal({
   const resetAndClose = () => {
     setSelected(null);
     setPrice('');
-    setStock('');
     setQuery('');
     onClose();
   };
@@ -95,14 +93,10 @@ function AddProductModal({
       Alert.alert(lang === 'ru' ? 'Введите цену' : 'Narx kiriting');
       return;
     }
-    addMutation.mutate({
-      product_id: selected.id,
-      price: p,
-      stock: parseInt(stock) || 0,
-    });
+    addMutation.mutate({ product_id: Number(selected.id), price: p });
   };
 
-  // Step 2: price/stock form
+  // Step 2: price form
   if (selected) {
     const img = selected.images?.[0]?.url;
     return (
@@ -113,8 +107,12 @@ function AddProductModal({
         <Animated.View style={[m.sheet, m.sheetSmall, { transform: [{ translateY: slideY }] }]}>
           <View style={m.handle} />
           <Text style={m.title}>{lang === 'ru' ? 'Установить цену' : 'Narx belgilash'}</Text>
+          <Text style={m.subtitle}>
+            {lang === 'ru'
+              ? 'Товар по умолчанию — в наличии'
+              : "Mahsulot avtomatik mavjud deb belgilanadi"}
+          </Text>
 
-          {/* Selected product preview */}
           <View style={m.selectedCard}>
             {img ? (
               <Image source={{ uri: imageUrl(img)! }} style={m.selectedImg} resizeMode="cover" />
@@ -131,7 +129,6 @@ function AddProductModal({
             </View>
           </View>
 
-          {/* Price input */}
           <View style={m.inputWrap}>
             <Ionicons name="pricetag-outline" size={18} color={Colors.primary} />
             <TextInput
@@ -145,20 +142,6 @@ function AddProductModal({
             />
           </View>
 
-          {/* Stock input */}
-          <View style={m.inputWrap}>
-            <Ionicons name="layers-outline" size={18} color={Colors.primary} />
-            <TextInput
-              style={m.input}
-              placeholder={lang === 'ru' ? 'Количество (шт)' : 'Soni (dona)'}
-              placeholderTextColor={Colors.textHint}
-              keyboardType="numeric"
-              value={stock}
-              onChangeText={setStock}
-            />
-          </View>
-
-          {/* Add button */}
           <TouchableOpacity
             style={[m.addBtn, addMutation.isPending && { opacity: 0.7 }]}
             onPress={handleAdd}
@@ -170,7 +153,7 @@ function AddProductModal({
             ) : (
               <>
                 <Ionicons name="checkmark-circle" size={18} color={Colors.white} />
-                <Text style={m.addBtnTxt}>{lang === 'ru' ? "Добавить в магазин" : "Do'konga qo'shish"}</Text>
+                <Text style={m.addBtnTxt}>{lang === 'ru' ? "Добавить" : "Do'konga qo'shish"}</Text>
               </>
             )}
           </TouchableOpacity>
@@ -191,7 +174,6 @@ function AddProductModal({
         <View style={m.handle} />
         <Text style={m.title}>{lang === 'ru' ? 'Выберите товар' : 'Mahsulot tanlang'}</Text>
 
-        {/* Search */}
         <View style={m.searchBar}>
           <Ionicons name="search" size={18} color={Colors.textHint} />
           <TextInput
@@ -209,7 +191,6 @@ function AddProductModal({
           )}
         </View>
 
-        {/* Catalog list */}
         {isLoading ? (
           <View style={{ paddingTop: 40, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={Colors.primary} />
@@ -260,21 +241,209 @@ function AddProductModal({
   );
 }
 
+// ─── Edit Sheet ──────────────────────────────────────────────────────────
+function EditProductSheet({
+  visible, storeId, item, onClose,
+}: {
+  visible: boolean;
+  storeId: string;
+  item: any | null;
+  onClose: () => void;
+}) {
+  const { lang, t } = useTranslation();
+  const queryClient = useQueryClient();
+  const slideY = useRef(new Animated.Value(600)).current;
+  const bgOpacity = useRef(new Animated.Value(0)).current;
+  const [price, setPrice] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setPrice(item?.price != null ? String(Math.round(Number(item.price))) : '');
+      Animated.parallel([
+        Animated.timing(bgOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.spring(slideY, { toValue: 0, friction: 9, tension: 80, useNativeDriver: true }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(bgOpacity, { toValue: 0, duration: 180, useNativeDriver: true }),
+        Animated.timing(slideY, { toValue: 600, duration: 180, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [visible, item]);
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ['store-products'] });
+
+  const priceMutation = useMutation({
+    mutationFn: (p: number) => storeProductsApi.setPrice(item.id, storeId, p),
+    onSuccess: invalidate,
+  });
+
+  const availMutation = useMutation({
+    mutationFn: (avail: boolean) =>
+      storeProductsApi.setAvailability(item.id, storeId, avail),
+    onSuccess: invalidate,
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: () => storeProductsApi.remove(item.id, storeId),
+    onSuccess: () => { invalidate(); onClose(); },
+  });
+
+  const isAvailable = item?.status === 'AVAILABLE';
+
+  const confirmRemove = () =>
+    Alert.alert(
+      lang === 'ru' ? 'Удалить товар?' : 'Mahsulotni olib tashlash?',
+      lang === 'ru'
+        ? 'Товар полностью удалится из вашего магазина'
+        : "Mahsulot do'koningizdan butunlay olib tashlanadi",
+      [
+        { text: lang === 'ru' ? 'Отмена' : 'Bekor', style: 'cancel' },
+        {
+          text: lang === 'ru' ? 'Удалить' : 'Olib tashlash',
+          style: 'destructive',
+          onPress: () => removeMutation.mutate(),
+        },
+      ],
+    );
+
+  const savePrice = () => {
+    const p = parseFloat(price);
+    if (!p || p <= 0) return;
+    priceMutation.mutate(p);
+  };
+
+  if (!item) return null;
+
+  const img = item.product?.images?.[0]?.url;
+
+  return (
+    <Modal transparent visible={visible} onRequestClose={onClose} animationType="none">
+      <Animated.View style={[m.backdrop, { opacity: bgOpacity }]}>
+        <Pressable style={StyleSheet.absoluteFillObject} onPress={onClose} />
+      </Animated.View>
+      <Animated.View style={[m.sheet, m.sheetSmall, { transform: [{ translateY: slideY }] }]}>
+        <View style={m.handle} />
+        <Text style={m.title}>{t(item.product?.name)}</Text>
+
+        <View style={m.selectedCard}>
+          {img ? (
+            <Image source={{ uri: imageUrl(img)! }} style={m.selectedImg} resizeMode="cover" />
+          ) : (
+            <View style={[m.selectedImg, { backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center' }]}>
+              <Ionicons name="cube-outline" size={24} color={Colors.primaryLight} />
+            </View>
+          )}
+          <View style={{ flex: 1 }}>
+            <Text style={m.selectedName} numberOfLines={2}>{t(item.product?.name)}</Text>
+            {item.product?.category?.name && (
+              <Text style={m.catalogCat}>{t(item.product.category.name)}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Price */}
+        <Text style={m.fieldLabel}>{lang === 'ru' ? 'Цена' : 'Narx'}</Text>
+        <View style={{ flexDirection: 'row', gap: Spacing.sm }}>
+          <View style={[m.inputWrap, { flex: 1 }]}>
+            <Ionicons name="pricetag-outline" size={18} color={Colors.primary} />
+            <TextInput
+              style={m.input}
+              placeholder={lang === 'ru' ? "Цена (сум)" : "Narx (so'm)"}
+              placeholderTextColor={Colors.textHint}
+              keyboardType="numeric"
+              value={price}
+              onChangeText={setPrice}
+            />
+          </View>
+          <TouchableOpacity
+            style={m.savePriceBtn}
+            onPress={savePrice}
+            disabled={priceMutation.isPending}
+            activeOpacity={0.85}
+          >
+            {priceMutation.isPending ? (
+              <ActivityIndicator size="small" color={Colors.white} />
+            ) : (
+              <Ionicons name="checkmark" size={20} color={Colors.white} />
+            )}
+          </TouchableOpacity>
+        </View>
+
+        {/* Availability */}
+        <Text style={m.fieldLabel}>{lang === 'ru' ? 'Статус' : 'Holati'}</Text>
+        <View style={m.availRow}>
+          <TouchableOpacity
+            style={[m.availBtn, isAvailable && m.availBtnActive]}
+            onPress={() => availMutation.mutate(true)}
+            disabled={availMutation.isPending}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name="checkmark-circle"
+              size={18}
+              color={isAvailable ? Colors.white : Colors.success}
+            />
+            <Text style={[m.availTxt, isAvailable && { color: Colors.white }]}>
+              {lang === 'ru' ? 'В наличии' : 'Mavjud'}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[m.availBtn, !isAvailable && m.availBtnInactive]}
+            onPress={() => availMutation.mutate(false)}
+            disabled={availMutation.isPending}
+            activeOpacity={0.85}
+          >
+            <Ionicons
+              name="close-circle"
+              size={18}
+              color={!isAvailable ? Colors.white : Colors.error}
+            />
+            <Text style={[m.availTxt, !isAvailable && { color: Colors.white }]}>
+              {lang === 'ru' ? 'Нет пока' : "Hozircha yo'q"}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Remove */}
+        <TouchableOpacity
+          style={m.removeBtn}
+          onPress={confirmRemove}
+          disabled={removeMutation.isPending}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="trash-outline" size={18} color={Colors.error} />
+          <Text style={m.removeBtnTxt}>
+            {lang === 'ru' ? 'Удалить из магазина' : "Do'kondan olib tashlash"}
+          </Text>
+        </TouchableOpacity>
+
+        <View style={{ height: Platform.OS === 'ios' ? 28 : 16 }} />
+      </Animated.View>
+    </Modal>
+  );
+}
+
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function SellerProductsScreen() {
   const { lang, t } = useTranslation();
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editItem, setEditItem] = useState<any | null>(null);
+
   const { data: myStores } = useQuery({ queryKey: ['my-stores'], queryFn: storesApi.getMyStores });
   const storeId = myStores?.[0]?.id;
 
   const { data: products, isLoading, refetch } = useQuery({
     queryKey: ['store-products', storeId],
-    queryFn: () => storeProductsApi.getByStore(storeId!),
+    queryFn: () =>
+      storeProductsApi.getByStore(storeId!).then((r) => r) ??
+      Promise.resolve([]),
     enabled: !!storeId,
   });
 
   const items = Array.isArray(products) ? products : [];
-  const activeCount = items.filter((p: any) => p.status === 'ACTIVE').length;
+  const availCount = items.filter((p: any) => p.status === 'AVAILABLE').length;
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -283,7 +452,7 @@ export default function SellerProductsScreen() {
           <View>
             <Text style={s.title}>{lang === 'ru' ? 'Товары' : 'Mahsulotlar'}</Text>
             <Text style={s.subtitle}>
-              {items.length} {lang === 'ru' ? 'шт' : 'ta'} · {activeCount} {lang === 'ru' ? 'активных' : 'faol'}
+              {items.length} {lang === 'ru' ? 'шт' : 'ta'} · {availCount} {lang === 'ru' ? 'в наличии' : 'mavjud'}
             </Text>
           </View>
           <TouchableOpacity
@@ -318,9 +487,13 @@ export default function SellerProductsScreen() {
         }
         renderItem={({ item }) => {
           const img = item.product?.images?.[0]?.url;
-          const isActive = item.status === 'ACTIVE';
+          const isAvailable = item.status === 'AVAILABLE';
           return (
-            <TouchableOpacity style={s.card} activeOpacity={0.88}>
+            <TouchableOpacity
+              style={s.card}
+              activeOpacity={0.88}
+              onPress={() => setEditItem(item)}
+            >
               {img ? (
                 <Image source={{ uri: imageUrl(img)! }} style={s.image} resizeMode="cover" />
               ) : (
@@ -332,32 +505,53 @@ export default function SellerProductsScreen() {
                 <Text style={s.name} numberOfLines={2}>{t(item.product?.name)}</Text>
                 <Text style={s.price}>{Number(item.price).toLocaleString()} {lang === 'ru' ? 'сум' : "so'm"}</Text>
                 <View style={s.bottomRow}>
-                  <View style={s.stockPill}>
-                    <Ionicons name="layers-outline" size={12} color={Colors.textHint} />
-                    <Text style={s.stockTxt}>{item.stock} {lang === 'ru' ? 'шт' : 'ta'}</Text>
-                  </View>
-                  <View style={[s.statusPill, { backgroundColor: isActive ? '#E8F5E9' : '#FFEBEE' }]}>
-                    <View style={[s.statusDot, { backgroundColor: isActive ? Colors.success : Colors.error }]} />
-                    <Text style={[s.statusTxt, { color: isActive ? Colors.success : Colors.error }]}>
-                      {isActive ? (lang === 'ru' ? 'Актив' : 'Faol') : (lang === 'ru' ? 'Неактив' : 'Nofaol')}
+                  <View
+                    style={[
+                      s.statusPill,
+                      { backgroundColor: isAvailable ? '#E8F5E9' : '#FFEBEE' },
+                    ]}
+                  >
+                    <View
+                      style={[
+                        s.statusDot,
+                        { backgroundColor: isAvailable ? Colors.success : Colors.error },
+                      ]}
+                    />
+                    <Text
+                      style={[
+                        s.statusTxt,
+                        { color: isAvailable ? Colors.success : Colors.error },
+                      ]}
+                    >
+                      {isAvailable
+                        ? (lang === 'ru' ? 'В наличии' : 'Mavjud')
+                        : (lang === 'ru' ? 'Нет пока' : "Hozircha yo'q")}
                     </Text>
                   </View>
                 </View>
               </View>
-              <TouchableOpacity style={s.editBtn} activeOpacity={0.7}>
-                <Ionicons name="ellipsis-vertical" size={16} color={Colors.textHint} />
-              </TouchableOpacity>
+              <View style={s.editBtn}>
+                <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
+              </View>
             </TouchableOpacity>
           );
         }}
       />
 
-      {/* Add product modal */}
       {storeId && (
         <AddProductModal
           visible={addModalOpen}
           onClose={() => setAddModalOpen(false)}
           storeId={storeId}
+        />
+      )}
+
+      {storeId && (
+        <EditProductSheet
+          visible={!!editItem}
+          storeId={storeId}
+          item={editItem}
+          onClose={() => setEditItem(null)}
         />
       )}
     </SafeAreaView>
@@ -366,7 +560,7 @@ export default function SellerProductsScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
@@ -383,38 +577,33 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center', justifyContent: 'center',
   },
-  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
+  list: { flexGrow: 1, backgroundColor: Colors.background, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
+
   card: {
     backgroundColor: Colors.white, borderRadius: Radius.lg,
     flexDirection: 'row', ...Shadow.sm, overflow: 'hidden',
   },
-  image: { width: 88, height: 88, backgroundColor: Colors.background },
-  imagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  info: { flex: 1, padding: Spacing.sm, justifyContent: 'space-between' },
-  name: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 18 },
-  price: { fontSize: 15, fontWeight: '800', color: Colors.primary, marginVertical: 3 },
-  bottomRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  stockPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: Colors.background,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: Radius.full,
-  },
-  stockTxt: { fontSize: 11, color: Colors.textHint, fontWeight: '500' },
+  image: { width: 90, height: 90 },
+  imagePlaceholder: { backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
+  info: { flex: 1, padding: Spacing.sm, gap: 4 },
+  name: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, lineHeight: 18 },
+  price: { fontSize: 15, fontWeight: '700', color: Colors.primary },
+  bottomRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginTop: 4 },
   statusPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: Radius.full,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 8, paddingVertical: 4, borderRadius: Radius.full,
   },
-  statusDot: { width: 5, height: 5, borderRadius: 3 },
-  statusTxt: { fontSize: 11, fontWeight: '600' },
-  editBtn: { width: 40, alignItems: 'center', justifyContent: 'center' },
-  empty: { alignItems: 'center', paddingTop: 80, gap: Spacing.sm },
-  emptyIconBox: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusTxt: { fontSize: 11, fontWeight: '700' },
+  editBtn: { padding: Spacing.md, alignItems: 'center', justifyContent: 'center' },
+
+  empty: { alignItems: 'center', paddingTop: 80, gap: 12 },
+  emptyIconBox: { width: 80, height: 80, borderRadius: 24, backgroundColor: Colors.primarySurface, alignItems: 'center', justifyContent: 'center' },
   emptyTitle: { fontSize: 17, fontWeight: '700', color: Colors.textPrimary },
-  emptySub: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingHorizontal: 40, lineHeight: 19 },
+  emptySub: { fontSize: 13, color: Colors.textHint, textAlign: 'center', paddingHorizontal: Spacing.xl },
 });
 
+// ─── Modal Styles ──────────────────────────────────────────────────────────────
 const m = StyleSheet.create({
   backdrop: {
     ...StyleSheet.absoluteFillObject,
@@ -425,52 +614,87 @@ const m = StyleSheet.create({
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: Colors.white,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingTop: 12, paddingHorizontal: Spacing.md,
-    maxHeight: '85%', ...Shadow.lg,
+    paddingTop: 12,
+    paddingHorizontal: Spacing.md,
+    height: '80%',
+    ...Shadow.lg,
   },
-  sheetSmall: { maxHeight: undefined },
+  sheetSmall: { height: undefined, paddingBottom: Platform.OS === 'ios' ? 28 : 16 },
   handle: {
     width: 40, height: 4, borderRadius: 2,
-    backgroundColor: Colors.divider,
-    alignSelf: 'center', marginBottom: Spacing.md,
+    backgroundColor: Colors.divider, alignSelf: 'center',
+    marginBottom: Spacing.md,
   },
-  title: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.md },
+  title: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
+  subtitle: { fontSize: 12, color: Colors.textHint, marginBottom: Spacing.md },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.background,
-    borderRadius: Radius.lg, paddingHorizontal: Spacing.md, height: 46,
-    marginBottom: Spacing.sm,
+    backgroundColor: Colors.background, borderRadius: Radius.lg,
+    height: 44, paddingHorizontal: Spacing.md, marginBottom: Spacing.sm,
   },
   searchInput: { flex: 1, fontSize: 14, color: Colors.textPrimary },
+
   catalogCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.white, borderRadius: Radius.lg,
-    padding: Spacing.sm, ...Shadow.sm,
+    flexDirection: 'row', gap: Spacing.sm, alignItems: 'center',
+    backgroundColor: Colors.background, borderRadius: Radius.lg,
+    padding: Spacing.sm,
   },
-  catalogImg: { width: 52, height: 52, borderRadius: Radius.md, backgroundColor: Colors.background },
-  catalogName: { fontSize: 14, fontWeight: '500', color: Colors.textPrimary, lineHeight: 19 },
+  catalogImg: { width: 48, height: 48, borderRadius: Radius.md },
+  catalogName: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, lineHeight: 18 },
   catalogCat: { fontSize: 11, color: Colors.textHint, marginTop: 2 },
+
   selectedCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    backgroundColor: Colors.primarySurface, borderRadius: Radius.lg,
-    padding: Spacing.md, marginBottom: Spacing.md,
-    borderWidth: 1.5, borderColor: Colors.primary,
+    flexDirection: 'row', gap: Spacing.sm, alignItems: 'center',
+    backgroundColor: Colors.background, borderRadius: Radius.lg,
+    padding: Spacing.sm, marginBottom: Spacing.md,
   },
   selectedImg: { width: 56, height: 56, borderRadius: Radius.md },
-  selectedName: { fontSize: 15, fontWeight: '600', color: Colors.textPrimary, lineHeight: 20 },
-  changeBtn: { fontSize: 12, color: Colors.primary, fontWeight: '600', marginTop: 4 },
+  selectedName: { fontSize: 14, fontWeight: '600', color: Colors.textPrimary, lineHeight: 18 },
+  changeBtn: { fontSize: 12, color: Colors.primary, marginTop: 4, fontWeight: '600' },
+
+  fieldLabel: {
+    fontSize: 12, fontWeight: '700', color: Colors.textHint,
+    textTransform: 'uppercase', letterSpacing: 0.8,
+    marginBottom: 8, marginTop: Spacing.sm, paddingLeft: 4,
+  },
   inputWrap: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
-    backgroundColor: Colors.background,
-    borderRadius: Radius.lg, paddingHorizontal: Spacing.md, height: 52,
-    marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border,
+    backgroundColor: Colors.background, borderRadius: Radius.lg,
+    height: 48, paddingHorizontal: Spacing.md,
   },
-  input: { flex: 1, fontSize: 16, fontWeight: '600', color: Colors.textPrimary },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+  input: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '600' },
+
+  savePriceBtn: {
+    width: 48, height: 48, borderRadius: Radius.lg,
     backgroundColor: Colors.primary,
-    paddingVertical: 15, borderRadius: Radius.lg,
-    marginTop: Spacing.sm, ...Shadow.md,
+    alignItems: 'center', justifyContent: 'center',
+    ...Shadow.sm,
   },
-  addBtnTxt: { fontSize: 16, fontWeight: '700', color: Colors.white },
+
+  availRow: { flexDirection: 'row', gap: Spacing.sm, marginBottom: Spacing.md },
+  availBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 7, height: 46, borderRadius: Radius.lg,
+    backgroundColor: Colors.background,
+    borderWidth: 1.5, borderColor: Colors.divider,
+  },
+  availBtnActive: { backgroundColor: Colors.success, borderColor: Colors.success },
+  availBtnInactive: { backgroundColor: Colors.error, borderColor: Colors.error },
+  availTxt: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+
+  removeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 7, height: 46, borderRadius: Radius.lg,
+    backgroundColor: Colors.errorSurface,
+    borderWidth: 1, borderColor: Colors.errorSurface,
+  },
+  removeBtnTxt: { fontSize: 14, fontWeight: '600', color: Colors.error },
+
+  addBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 7, height: 50, borderRadius: Radius.lg,
+    backgroundColor: Colors.primary, ...Shadow.md,
+    marginTop: Spacing.sm,
+  },
+  addBtnTxt: { fontSize: 15, fontWeight: '700', color: Colors.white },
 });

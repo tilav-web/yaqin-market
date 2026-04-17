@@ -1365,11 +1365,8 @@ export class SeedService {
           continue;
         }
 
-        const stock =
-          (productIndex + storeIndex) % 9 === 0
-            ? 0
-            : 10 + ((productIndex * 7 + storeIndex * 5) % 36);
         const price = Math.round(seed.basePrice * factor);
+        const available = (productIndex + storeIndex) % 9 !== 0;
 
         let storeProduct = await storeProductRepo.findOne({
           where: {
@@ -1386,12 +1383,10 @@ export class SeedService {
         }
 
         storeProduct.price = price;
-        storeProduct.stock = stock;
         storeProduct.is_prime = store.is_prime && productIndex % 6 === 0;
-        storeProduct.status =
-          stock > 0
-            ? StoreProductStatus.ACTIVE
-            : StoreProductStatus.OUT_OF_STOCK;
+        storeProduct.status = available
+          ? StoreProductStatus.AVAILABLE
+          : StoreProductStatus.UNAVAILABLE;
 
         await storeProductRepo.save(storeProduct);
       }

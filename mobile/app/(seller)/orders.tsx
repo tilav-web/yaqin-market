@@ -138,7 +138,7 @@ export default function SellerOrdersScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
@@ -156,7 +156,7 @@ const s = StyleSheet.create({
   chipTxt: { fontSize: 12, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
   chipTxtActive: { color: Colors.primary },
 
-  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
+  list: { flexGrow: 1, backgroundColor: Colors.background, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
   card: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   orderTypeRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },

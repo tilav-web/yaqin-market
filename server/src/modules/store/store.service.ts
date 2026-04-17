@@ -401,6 +401,79 @@ export class StoreService {
     return Number(settings?.max_delivery_radius ?? 5000);
   }
 
+  /**
+   * User joylashuvi (lat/lng) asosida do'konning yetkazib berish narxini hisoblab
+   * beradi. Cart/product detail'da preview qilish uchun.
+   */
+  async getDeliveryQuote(storeId: string, lat: number, lng: number) {
+    const store = await this.storeRepo.findOne({
+      where: { id: storeId },
+      relations: ['deliverySettings'],
+    });
+    if (!store) throw new NotFoundException('Store not found');
+
+    const settings = store.deliverySettings?.[0];
+    const distance = calculateDistance(
+      Number(store.lat),
+      Number(store.lng),
+      lat,
+      lng,
+    );
+
+    if (!settings?.is_delivery_enabled) {
+      return {
+        distance_meters: distance,
+        is_deliverable: false,
+        is_free: false,
+        fee: 0,
+        max_radius_meters: 0,
+        free_radius_meters: 0,
+        reason: 'delivery_disabled',
+      };
+    }
+
+    const maxRadius = Number(settings.max_delivery_radius ?? 0);
+    const freeRadius = Number(settings.free_delivery_radius ?? 0);
+    const baseFee = Number(settings.delivery_fee ?? 0);
+    const pricePerKm = Number(settings.delivery_price_per_km ?? 0);
+
+    if (distance > maxRadius) {
+      return {
+        distance_meters: distance,
+        is_deliverable: false,
+        is_free: false,
+        fee: 0,
+        max_radius_meters: maxRadius,
+        free_radius_meters: freeRadius,
+        reason: 'out_of_range',
+      };
+    }
+
+    if (distance <= freeRadius) {
+      return {
+        distance_meters: distance,
+        is_deliverable: true,
+        is_free: true,
+        fee: 0,
+        max_radius_meters: maxRadius,
+        free_radius_meters: freeRadius,
+      };
+    }
+
+    const extraKm = Math.max(0, (distance - freeRadius) / 1000);
+    const fee = Math.ceil(baseFee + pricePerKm * extraKm);
+
+    return {
+      distance_meters: distance,
+      is_deliverable: true,
+      is_free: false,
+      fee,
+      max_radius_meters: maxRadius,
+      free_radius_meters: freeRadius,
+      min_order_amount: Number(settings.min_order_amount ?? 0),
+    };
+  }
+
   private async findManagedStore(id: string, auth: Auth) {
     const where =
       auth.role === AuthRoleEnum.SUPER_ADMIN

@@ -48,7 +48,7 @@ export default function SellerProfileScreen() {
         onPress: async () => {
           await authApi.logout().catch(() => {});
           await logout();
-          router.replace('/(auth)/welcome');
+          router.replace('/(customer)/home');
         },
       },
     ]);
@@ -59,6 +59,11 @@ export default function SellerProfileScreen() {
       icon: 'storefront-outline', color: Colors.primary, bg: Colors.primarySurface,
       label: 'Do\'kon sozlamalari', sub: store?.name ?? 'Do\'kon nomi va manzil',
       onPress: () => {},
+    },
+    {
+      icon: 'bicycle-outline', color: '#00897B', bg: '#E0F2F1',
+      label: 'Yetkazib berish', sub: 'Radius, narx va shartlar',
+      onPress: () => router.push('/(seller)/delivery-settings'),
     },
     {
       icon: 'person-outline', color: '#2196F3', bg: '#E3F2FD',
@@ -157,7 +162,7 @@ export default function SellerProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     alignItems: 'center',
@@ -208,7 +213,7 @@ const s = StyleSheet.create({
   statVal: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   statLabel: { fontSize: 10, color: Colors.textHint, fontWeight: '500' },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   section: { marginTop: Spacing.md, paddingHorizontal: Spacing.md },
   sectionTitle: {
     fontSize: 11, fontWeight: '700', color: Colors.textHint,

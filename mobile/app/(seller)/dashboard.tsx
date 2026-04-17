@@ -232,7 +232,7 @@ export default function SellerDashboard() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
@@ -258,7 +258,7 @@ const s = StyleSheet.create({
   statVal: { fontSize: 16, fontWeight: '800' },
   statLabel: { fontSize: 10, color: 'rgba(255,255,255,0.7)', textAlign: 'center' },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   section: { marginTop: Spacing.md, paddingHorizontal: Spacing.md },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.sm },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },

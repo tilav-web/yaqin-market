@@ -53,12 +53,28 @@ export class ProductController {
     @Query('category_id') categoryId?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('price_min') priceMin?: string,
+    @Query('price_max') priceMax?: string,
+    @Query('sort') sort?: string,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('radius_km') radiusKm?: string,
+    @Query('deliverable') deliverable?: string,
+    @Query('free_delivery') freeDelivery?: string,
   ) {
     return this.productService.findCatalog({
       q,
       categoryId,
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 12,
+      priceMin: priceMin ? Number(priceMin) : undefined,
+      priceMax: priceMax ? Number(priceMax) : undefined,
+      sort: sort as any,
+      lat: lat ? Number(lat) : undefined,
+      lng: lng ? Number(lng) : undefined,
+      radiusKm: radiusKm ? Number(radiusKm) : undefined,
+      deliverableOnly: deliverable === 'true' || deliverable === '1',
+      freeDeliveryOnly: freeDelivery === 'true' || freeDelivery === '1',
     });
   }
 

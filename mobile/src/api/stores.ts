@@ -40,4 +40,21 @@ export const storesApi = {
 
   getMySubscriptions: () =>
     apiClient.get('/stores/subscriptions/my').then((r) => r.data),
+
+  getDeliveryQuote: (id: string, lat: number, lng: number) =>
+    apiClient
+      .get(`/stores/${id}/delivery-quote`, { params: { lat, lng } })
+      .then(
+        (r) =>
+          r.data as {
+            distance_meters: number;
+            is_deliverable: boolean;
+            is_free: boolean;
+            fee: number;
+            max_radius_meters: number;
+            free_radius_meters: number;
+            min_order_amount?: number;
+            reason?: string;
+          },
+      ),
 };

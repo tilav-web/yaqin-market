@@ -118,6 +118,25 @@ export default function ProfileScreen() {
   });
 
   if (!isAuthenticated) {
+    const guestMenu: MenuItem[] = [
+      {
+        icon: 'language-outline', color: '#00897B', bg: '#E0F2F1',
+        label: tr('language'),
+        sub: lang === 'uz' ? "O'zbek tili" : 'Русский язык',
+        onPress: () => setLangDrawerOpen(true),
+      },
+      {
+        icon: 'help-circle-outline', color: '#00897B', bg: '#E0F2F1',
+        label: tr('help'), sub: tr('help_sub'),
+        onPress: () => router.push('/(customer)/help'),
+      },
+      {
+        icon: 'information-circle-outline', color: Colors.textSecondary, bg: Colors.background,
+        label: tr('about'), sub: tr('about_sub'),
+        onPress: () => router.push('/(customer)/about'),
+      },
+    ];
+
     return (
       <SafeAreaView style={s.safe} edges={['top']}>
         <View style={s.header}>
@@ -131,12 +150,50 @@ export default function ProfileScreen() {
           <Text style={s.name}>{tr('profile_not_logged')}</Text>
           <Text style={s.phone}>{tr('profile_login_required')}</Text>
         </View>
-        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.md, padding: Spacing.xl }}>
-          <TouchableOpacity style={s.loginBtn} onPress={() => router.push('/(auth)/login')}>
+
+        <ScrollView style={s.scroll} contentContainerStyle={{ paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
+          <View style={s.section}>
+            <Text style={s.sectionTitle}>{tr('settings')}</Text>
+            <View style={s.card}>
+              {guestMenu.map((item, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[s.row, idx < guestMenu.length - 1 && s.rowBorder]}
+                  onPress={item.onPress}
+                  activeOpacity={0.7}
+                >
+                  <View style={[s.iconBox, { backgroundColor: item.bg }]}>
+                    <Ionicons name={item.icon} size={18} color={item.color} />
+                  </View>
+                  <View style={s.rowText}>
+                    <Text style={s.rowLabel}>{item.label}</Text>
+                    {item.sub && <Text style={s.rowSub}>{item.sub}</Text>}
+                  </View>
+                  <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+          <Text style={s.version}>Yaqin Market v1.0.0</Text>
+        </ScrollView>
+
+        <View style={s.guestLoginBar}>
+          <TouchableOpacity
+            style={s.guestLoginBtn}
+            onPress={() => router.push('/(auth)/login')}
+            activeOpacity={0.88}
+          >
             <Ionicons name="log-in-outline" size={20} color={Colors.white} />
             <Text style={s.loginBtnTxt}>{tr('login')}</Text>
           </TouchableOpacity>
         </View>
+
+        <LangPickerDrawer
+          visible={langDrawerOpen}
+          onClose={() => setLangDrawerOpen(false)}
+          lang={lang}
+          onSelect={setLang}
+        />
       </SafeAreaView>
     );
   }
@@ -427,7 +484,7 @@ function ApplyCard({ icon, color, bg, title, sub, onPress }: {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: Colors.primary,
     alignItems: 'center',
@@ -483,7 +540,7 @@ const s = StyleSheet.create({
   statBorder: { borderRightWidth: 1, borderRightColor: Colors.divider },
   statVal: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   statLabel: { fontSize: 10, color: Colors.textHint, fontWeight: '500' },
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   section: { marginTop: Spacing.md, paddingHorizontal: Spacing.md },
   sectionTitle: {
     fontSize: 11, fontWeight: '700', color: Colors.textHint,
@@ -507,6 +564,23 @@ const s = StyleSheet.create({
     borderRadius: Radius.full, ...Shadow.md,
   },
   loginBtnTxt: { fontSize: 16, fontWeight: '700', color: Colors.white },
+  guestLoginBar: {
+    position: 'absolute', left: 0, right: 0, bottom: 0,
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Platform.OS === 'ios' ? Spacing.lg : Spacing.md,
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.divider,
+  },
+  guestLoginBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: Spacing.sm,
+    backgroundColor: Colors.primary,
+    height: 52,
+    borderRadius: Radius.lg,
+    ...Shadow.md,
+  },
   version: { textAlign: 'center', fontSize: 11, color: Colors.textHint, marginTop: Spacing.md },
 });
 

@@ -15,6 +15,7 @@ import { useLocationStore } from '../../../src/store/location.store';
 import { useAuthStore } from '../../../src/store/auth.store';
 import { ordersApi } from '../../../src/api/orders';
 import { useTranslation } from '../../../src/i18n';
+import { useRequireAuth } from '../../../src/hooks/useRequireAuth';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 12;
@@ -30,6 +31,7 @@ export default function StoreDetailScreen() {
   const router = useRouter();
   const { lang, t } = useTranslation();
   const { isAuthenticated } = useAuthStore();
+  const requireAuth = useRequireAuth();
   const { lat, lng, address } = useLocationStore();
   const { addDirectItem, directItems, directStoreId, clearDirectCart } = useCartStore();
 
@@ -106,10 +108,7 @@ export default function StoreDetailScreen() {
   };
 
   const handleOrder = async () => {
-    if (!isAuthenticated) {
-      router.push('/(auth)/login');
-      return;
-    }
+    if (!requireAuth()) return;
     if (!lat || !lng) {
       Alert.alert(
         lang === 'ru' ? 'Нужна геолокация' : 'Joylashuv kerak',
@@ -317,7 +316,7 @@ export default function StoreDetailScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   bannerWrap: { height: 200, position: 'relative' },
   banner: { width: '100%', height: '100%' },
   bannerOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.3)' },

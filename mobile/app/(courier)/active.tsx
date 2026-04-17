@@ -205,7 +205,7 @@ export default function ActiveDeliveryScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: COURIER_COLOR,
     paddingHorizontal: Spacing.md,
@@ -232,7 +232,7 @@ const s = StyleSheet.create({
   },
   mapOverlayTxt: { color: Colors.white, fontSize: 12, fontWeight: '600' },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   scrollContent: { padding: Spacing.md, gap: Spacing.sm },
 
   infoCard: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },

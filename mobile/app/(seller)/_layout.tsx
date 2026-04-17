@@ -25,6 +25,7 @@ export default function SellerLayout() {
       <Tabs.Screen name="broadcast-feed" />
       <Tabs.Screen name="products" />
       <Tabs.Screen name="profile" />
+      <Tabs.Screen name="delivery-settings" options={{ href: null }} />
     </Tabs>
   );
 }

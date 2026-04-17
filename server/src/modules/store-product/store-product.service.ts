@@ -9,7 +9,7 @@ import { StoreSubscriptionService } from '../store/store-subscription.service';
 
 type StoreProductCatalogQuery = {
   storeId: string;
-  includeInactive?: boolean;
+  includeUnavailable?: boolean;
   q?: string;
   categoryId?: string;
   page?: number;
@@ -54,33 +54,42 @@ export class StoreProductService {
       throw new Error('Product already exists in this store');
     }
 
-    const stock = dto.stock ?? 0;
     const storeProduct = this.repo.create({
       store_id: storeId,
       product_id: dto.product_id,
       price: dto.price,
-      stock,
       is_prime: dto.is_prime ?? false,
-      status: this.resolveStatus(dto.price, stock),
+      status:
+        dto.is_available === false
+          ? StoreProductStatus.UNAVAILABLE
+          : StoreProductStatus.AVAILABLE,
     });
 
     const saved = await this.repo.save(storeProduct);
 
     // Obunachilarga bildirishnoma yuborish (background)
-    const store = await this.storeRepo.findOne({ where: { id: storeId }, relations: ['storeProducts', 'storeProducts.product'] });
+    const store = await this.storeRepo.findOne({
+      where: { id: storeId },
+      relations: ['storeProducts', 'storeProducts.product'],
+    });
     if (store) {
-      const sp = await this.repo.findOne({ where: { id: saved.id }, relations: ['product'] });
+      const sp = await this.repo.findOne({
+        where: { id: saved.id },
+        relations: ['product'],
+      });
       const productName = sp?.product?.name?.uz ?? 'Yangi mahsulot';
-      this.subscriptionService.notifySubscribers(storeId, store.name, productName).catch(() => {});
+      this.subscriptionService
+        .notifySubscribers(storeId, store.name, productName)
+        .catch(() => {});
     }
 
     return saved;
   }
 
-  async findByStore(storeId: string, includeInactive: boolean = false) {
+  async findByStore(storeId: string, includeUnavailable: boolean = false) {
     const where: FindOptionsWhere<StoreProduct> = { store_id: storeId };
-    if (!includeInactive) {
-      where.status = StoreProductStatus.ACTIVE;
+    if (!includeUnavailable) {
+      where.status = StoreProductStatus.AVAILABLE;
     }
 
     return this.repo.find({
@@ -110,9 +119,9 @@ export class StoreProductService {
       })
       .andWhere('product.is_active = :isActive', { isActive: true });
 
-    if (!query.includeInactive) {
+    if (!query.includeUnavailable) {
       baseQuery.andWhere('storeProduct.status = :status', {
-        status: StoreProductStatus.ACTIVE,
+        status: StoreProductStatus.AVAILABLE,
       });
     }
 
@@ -187,7 +196,7 @@ export class StoreProductService {
 
   async findCategoriesByStore(
     storeId: string,
-    includeInactive: boolean = false,
+    includeUnavailable: boolean = false,
   ) {
     const baseQuery = this.repo
       .createQueryBuilder('storeProduct')
@@ -196,9 +205,9 @@ export class StoreProductService {
       .where('storeProduct.store_id = :storeId', { storeId })
       .andWhere('product.is_active = :isActive', { isActive: true });
 
-    if (!includeInactive) {
+    if (!includeUnavailable) {
       baseQuery.andWhere('storeProduct.status = :status', {
-        status: StoreProductStatus.ACTIVE,
+        status: StoreProductStatus.AVAILABLE,
       });
     }
 
@@ -259,19 +268,10 @@ export class StoreProductService {
       storeProduct.price = dto.price;
     }
 
-    if (dto.stock !== undefined) {
-      storeProduct.stock = dto.stock;
-    }
-
-    if (dto.status !== undefined) {
-      storeProduct.status = dto.status
-        ? StoreProductStatus.ACTIVE
-        : StoreProductStatus.INACTIVE;
-    } else if (dto.price !== undefined || dto.stock !== undefined) {
-      storeProduct.status = this.resolveStatus(
-        Number(storeProduct.price),
-        Number(storeProduct.stock),
-      );
+    if (dto.is_available !== undefined) {
+      storeProduct.status = dto.is_available
+        ? StoreProductStatus.AVAILABLE
+        : StoreProductStatus.UNAVAILABLE;
     }
 
     if (dto.is_prime !== undefined) {
@@ -299,8 +299,21 @@ export class StoreProductService {
     }
 
     storeProduct.price = price;
-    storeProduct.status = this.resolveStatus(price, Number(storeProduct.stock));
+    return this.repo.save(storeProduct);
+  }
 
+  async setAvailability(id: string, storeId: string, isAvailable: boolean) {
+    const storeProduct = await this.repo.findOne({
+      where: { id, store_id: storeId },
+    });
+
+    if (!storeProduct) {
+      throw new NotFoundException('Product not found in store');
+    }
+
+    storeProduct.status = isAvailable
+      ? StoreProductStatus.AVAILABLE
+      : StoreProductStatus.UNAVAILABLE;
     return this.repo.save(storeProduct);
   }
 
@@ -308,7 +321,7 @@ export class StoreProductService {
     return this.repo.find({
       where: {
         store_id: storeId,
-        status: StoreProductStatus.ACTIVE,
+        status: StoreProductStatus.AVAILABLE,
       },
       relations: ['product', 'product.category'],
     });
@@ -336,7 +349,7 @@ export class StoreProductService {
     const items = await this.repo.find({
       where: {
         product_id: productId,
-        status: StoreProductStatus.ACTIVE,
+        status: StoreProductStatus.AVAILABLE,
       },
       relations: [
         'product',
@@ -382,18 +395,6 @@ export class StoreProductService {
 
         return left.distance_meters - right.distance_meters;
       });
-  }
-
-  private resolveStatus(price: number, stock: number) {
-    if (price <= 0) {
-      return StoreProductStatus.INACTIVE;
-    }
-
-    if (stock <= 0) {
-      return StoreProductStatus.OUT_OF_STOCK;
-    }
-
-    return StoreProductStatus.ACTIVE;
   }
 
   private getStoreServiceRadiusMeters(store: Store | null | undefined) {

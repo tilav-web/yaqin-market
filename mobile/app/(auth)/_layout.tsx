@@ -13,7 +13,6 @@ export default function AuthLayout() {
         gestureDirection: 'horizontal',
       }}
     >
-      <Stack.Screen name="welcome" />
       <Stack.Screen name="login" />
       <Stack.Screen name="otp" />
     </Stack>

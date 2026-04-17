@@ -46,7 +46,7 @@ export default function CourierProfileScreen() {
         onPress: async () => {
           await authApi.logout().catch(() => {});
           await logout();
-          router.replace('/(auth)/welcome');
+          router.replace('/(customer)/home');
         },
       },
     ]);
@@ -150,7 +150,7 @@ export default function CourierProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: COURIER_COLOR,
     alignItems: 'center',
@@ -201,7 +201,7 @@ const s = StyleSheet.create({
   statVal: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
   statLabel: { fontSize: 10, color: Colors.textHint, fontWeight: '500' },
 
-  scroll: { flex: 1 },
+  scroll: { flex: 1, backgroundColor: Colors.background },
   section: { marginTop: Spacing.md, paddingHorizontal: Spacing.md },
   sectionTitle: {
     fontSize: 11, fontWeight: '700', color: Colors.textHint,

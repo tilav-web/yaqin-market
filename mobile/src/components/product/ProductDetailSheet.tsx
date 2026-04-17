@@ -83,7 +83,7 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
   const hasVariants = allVariants.length > 1;
   const img = activeProduct?.images?.[0]?.url;
   const images = activeProduct?.images ?? [];
-  const storeProduct = activeProduct?.store_products?.[0];
+  const storeProduct = activeProduct?.storeProducts?.[0];
   const price = storeProduct?.price;
   const unitName = t(product?.unit?.short_name) || t(product?.unit?.name);
 
@@ -177,9 +177,9 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
                           <Text style={[s.variantText, isActive && s.variantTextActive]}>
                             {t(variant.name)}
                           </Text>
-                          {variant.store_products?.[0]?.price != null && (
+                          {variant.storeProducts?.[0]?.price != null && (
                             <Text style={[s.variantPrice, isActive && { color: Colors.primary }]}>
-                              {Number(variant.store_products[0].price).toLocaleString()} so'm
+                              {Number(variant.storeProducts[0].price).toLocaleString()} so'm
                             </Text>
                           )}
                         </TouchableOpacity>

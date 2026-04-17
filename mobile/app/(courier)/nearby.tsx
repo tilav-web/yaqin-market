@@ -186,7 +186,7 @@ export default function NearbyOrdersScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Colors.background },
+  safe: { flex: 1, backgroundColor: Colors.primary },
   header: {
     backgroundColor: COURIER_COLOR,
     paddingHorizontal: Spacing.md,
@@ -221,7 +221,7 @@ const s = StyleSheet.create({
   myMarker: { width: 36, height: 36, borderRadius: 18, backgroundColor: COURIER_COLOR, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.white },
   orderMarker: { width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: Colors.white },
 
-  list: { padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
+  list: { flexGrow: 1, backgroundColor: Colors.background, padding: Spacing.md, gap: Spacing.sm, paddingBottom: 100 },
   card: { backgroundColor: Colors.white, borderRadius: Radius.lg, padding: Spacing.md, ...Shadow.sm, gap: Spacing.sm },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   orderInfo: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },

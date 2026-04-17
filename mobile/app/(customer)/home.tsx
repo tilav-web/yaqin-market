@@ -9,6 +9,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useLocation } from '../../src/hooks/useLocation';
+import { useLocationStore } from '../../src/store/location.store';
 import { storesApi } from '../../src/api/stores';
 import { productsApi, categoriesApi } from '../../src/api/products';
 import { useTranslation } from '../../src/i18n';
@@ -41,7 +42,7 @@ function SkeletonBox({ w, h, radius = 8, style }: { w: number | string; h: numbe
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function ProductCard({ product, onPress, t }: { product: any; onPress: () => void; t: (n: any) => string }) {
   const img = product.images?.[0]?.url;
-  const price = product.store_products?.[0]?.price;
+  const price = product.storeProducts?.[0]?.price;
   return (
     <TouchableOpacity style={productStyles.card} onPress={onPress} activeOpacity={0.9}>
       {img ? (
@@ -130,6 +131,7 @@ function CategoryChip({ item, active, onPress, t }: { item: any; active: boolean
 export default function HomeScreen() {
   const router = useRouter();
   const { address, permissionGranted } = useLocation();
+  const { lat, lng } = useLocationStore();
   const { lang, t, tr } = useTranslation();
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
@@ -152,13 +154,17 @@ export default function HomeScreen() {
     fetchNextPage,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['home-products', selectedCat],
+    queryKey: ['home-products', selectedCat, lat, lng],
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
       const res = await productsApi.getCatalog({
-        category_id: selectedCat ? Number(selectedCat) : undefined,
+        category_id: selectedCat ?? undefined,
         page: pageParam as number,
         limit: PAGE_SIZE,
+        // Location bor bo'lsa — faqat user'ga yetkazib beradigan do'konlar productlari
+        lat: lat ?? undefined,
+        lng: lng ?? undefined,
+        deliverable: lat != null && lng != null ? true : undefined,
       });
       return res;
     },

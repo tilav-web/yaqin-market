@@ -30,6 +30,8 @@ export const translations = {
     send_code: 'Kod yuborish',
     verify: 'Tasdiqlash',
     resend_in: 'Qayta yuborish',
+    auth_required_title: 'Kirish talab qilinadi',
+    auth_required_msg: 'Buyurtma berish uchun tizimga kiring. Savatingizdagi mahsulotlar saqlanib qoladi.',
 
     // Home
     location_detecting: 'Joylashuv aniqlanmoqda...',
@@ -147,6 +149,8 @@ export const translations = {
     send_code: 'Отправить код',
     verify: 'Подтвердить',
     resend_in: 'Отправить повторно',
+    auth_required_title: 'Требуется вход',
+    auth_required_msg: 'Войдите, чтобы оформить заказ. Товары в корзине сохранятся.',
 
     // Home
     location_detecting: 'Определение местоположения...',

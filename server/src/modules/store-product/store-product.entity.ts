@@ -10,10 +10,15 @@ import {
 import { Store } from '../store/entities/store.entity';
 import { Product } from '../product/product.entity';
 
+/**
+ * Seller stock sonini yuritmaydi — faqat "mavjud" yoki "yo'q" deb belgilaydi.
+ *  - AVAILABLE   — do'konda bor
+ *  - UNAVAILABLE — hozircha yo'q (tezda qayta ochilishi mumkin)
+ * Mahsulotni do'kondan butunlay olib tashlash = store_product rekordini DELETE qilish.
+ */
 export enum StoreProductStatus {
-  ACTIVE = 'ACTIVE',
-  INACTIVE = 'INACTIVE',
-  OUT_OF_STOCK = 'OUT_OF_STOCK',
+  AVAILABLE = 'AVAILABLE',
+  UNAVAILABLE = 'UNAVAILABLE',
 }
 
 @Entity('store_products')
@@ -42,13 +47,10 @@ export class StoreProduct {
   @Column({ type: 'decimal', precision: 12, scale: 2 })
   price: number;
 
-  @Column({ type: 'int', default: 0 })
-  stock: number;
-
   @Column({
     type: 'enum',
     enum: StoreProductStatus,
-    default: StoreProductStatus.ACTIVE,
+    default: StoreProductStatus.AVAILABLE,
   })
   status: StoreProductStatus;
 
