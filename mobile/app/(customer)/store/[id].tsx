@@ -161,7 +161,12 @@ export default function StoreDetailScreen() {
           )}
           <View style={ps.info}>
             <Text style={ps.name} numberOfLines={2}>{t(item.product?.name)}</Text>
-            <Text style={ps.price}>{Number(item.price).toLocaleString()} so'm</Text>
+            <Text style={ps.price}>
+              {Number(item.price).toLocaleString()} so'm
+              {item.product?.unit?.short_name && (
+                <Text style={ps.unit}>/{t(item.product.unit.short_name)}</Text>
+              )}
+            </Text>
             {outOfStock && (
               <Text style={ps.outOfStock}>{lang === 'ru' ? 'Нет в наличии' : 'Tugagan'}</Text>
             )}
@@ -379,6 +384,7 @@ const ps = StyleSheet.create({
   info: { padding: Spacing.sm, gap: 2 },
   name: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 17 },
   price: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  unit: { fontSize: 11, fontWeight: '500', color: Colors.textHint },
   outOfStock: { fontSize: 11, color: Colors.error, fontWeight: '600' },
   qtyRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end',

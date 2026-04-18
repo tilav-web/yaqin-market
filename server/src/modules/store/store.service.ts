@@ -215,9 +215,14 @@ export class StoreService {
       relations: ['deliverySettings', 'workingHours'],
     });
 
+    // Agar user lokatsiyasi yo'q bo'lsa — hamma prime do'konlarni qaytaramiz
+    const hasLocation = Number.isFinite(lat) && Number.isFinite(lng);
+
     return stores
       .filter((store) => {
         if (!store.lat || !store.lng) return false;
+        if (!hasLocation) return true;
+
         const distance = calculateDistance(lat, lng, store.lat, store.lng);
         const serviceRadiusMeters = this.getStoreServiceRadiusMeters(store);
         const withinStoreRadius = distance <= serviceRadiusMeters;

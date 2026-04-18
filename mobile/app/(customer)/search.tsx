@@ -364,6 +364,7 @@ export default function SearchScreen() {
   const renderProduct = ({ item }: { item: any }) => {
     const img = item.images?.[0]?.url;
     const price = item.storeProducts?.[0]?.price;
+    const unit = item.unit?.short_name ? t(item.unit.short_name) : null;
     return (
       <TouchableOpacity
         style={s.card}
@@ -380,7 +381,10 @@ export default function SearchScreen() {
         <View style={s.cardInfo}>
           <Text style={s.cardName} numberOfLines={2}>{t(item.name)}</Text>
           {price != null && (
-            <Text style={s.cardPrice}>{Number(price).toLocaleString()} so'm</Text>
+            <Text style={s.cardPrice}>
+              {Number(price).toLocaleString()} so'm
+              {unit && <Text style={s.cardUnit}>/{unit}</Text>}
+            </Text>
           )}
         </View>
         <View style={s.cardAddBtn}>
@@ -640,6 +644,7 @@ const s = StyleSheet.create({
   cardInfo: { padding: Spacing.sm, gap: 4, paddingBottom: 12 },
   cardName: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 17 },
   cardPrice: { fontSize: 14, fontWeight: '700', color: Colors.primary },
+  cardUnit: { fontSize: 11, fontWeight: '500', color: Colors.textHint },
   cardAddBtn: {
     position: 'absolute', bottom: 10, right: 10,
     width: 28, height: 28, borderRadius: 14,

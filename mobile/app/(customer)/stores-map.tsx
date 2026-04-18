@@ -3,13 +3,13 @@ import React, {
 } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Platform,
-  ActivityIndicator, ScrollView, Animated, Modal, Pressable,
+  ActivityIndicator, ScrollView, Animated, Modal, Pressable, Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
+import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as SecureStore from 'expo-secure-store';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useTranslation } from '../../src/i18n';
@@ -56,6 +56,22 @@ const ONBOARDING_KEY = 'map_onboarding_seen_v1';
 const MAX_VISIBLE_CIRCLES = 20; // optimizatsiya uchun
 const RADIUS_OPTIONS = [1, 3, 5, 10, 20];
 
+// Google Maps POI (sportzal, restoran, boshqa do'konlar va h.k.) va label'larni yashirish
+// Bu orqali xarita yaqin-market kontekstida toza ko'rinadi
+const MAP_STYLE: any[] = [
+  { featureType: 'poi', elementType: 'all', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.attraction', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.government', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.medical', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.school', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.sports_complex', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.place_of_worship', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+  // Ko'cha nomlarini saqlaymiz — user orientatsiya uchun kerak
+  // Park va tabiat qoldi — yaxshi landmark
+];
+
 // ─── Types ──────────────────────────────────────────────────────────────────
 interface MapStore {
   id: string;
@@ -92,35 +108,54 @@ const DEFAULT_FILTERS: MapFilters = {
 };
 
 // ─── Store Marker (memoized) ────────────────────────────────────────────────
+const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.yaqin-market.uz';
+const pinImgUrl = (p?: string | null) =>
+  p ? (p.startsWith('http') ? p : `${API_URL}/${p}`) : null;
+
 const StoreMarker = memo(function StoreMarker({
   store, onPress, isSelected,
 }: {
-  store: MapStore;
+  store: MapStore & { logo?: string };
   onPress: () => void;
   isSelected: boolean;
 }) {
-  const color = storeColor(store.id);
-  const lat = store.lat ?? store.latitude ?? 0;
-  const lng = store.lng ?? store.longitude ?? 0;
+  const lat = Number(store.lat ?? store.latitude);
+  const lng = Number(store.lng ?? store.longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  const logo = pinImgUrl(store.logo);
+
   return (
     <Marker
       coordinate={{ latitude: lat, longitude: lng }}
       onPress={onPress}
       tracksViewChanges={false}
-      anchor={{ x: 0.5, y: 0.5 }}
+      anchor={{ x: 0.5, y: 1 }}
     >
-      <View
-        style={[
-          mk.wrap,
-          { backgroundColor: color },
-          isSelected && mk.wrapActive,
-          store.is_prime && mk.wrapPrime,
-        ]}
-      >
-        <Ionicons
-          name={store.is_prime ? 'star' : 'storefront'}
-          size={isSelected ? 16 : 13}
-          color={Colors.white}
+      <View style={mk.pinWrap}>
+        <View
+          style={[
+            mk.pinHead,
+            isSelected && mk.pinHeadActive,
+            store.is_prime && mk.pinHeadPrime,
+          ]}
+        >
+          {logo ? (
+            <Image source={{ uri: logo }} style={mk.pinLogo} />
+          ) : (
+            <Ionicons
+              name={store.is_prime ? 'star' : 'storefront'}
+              size={isSelected ? 18 : 14}
+              color={Colors.white}
+            />
+          )}
+        </View>
+        <View
+          style={[
+            mk.pinTail,
+            isSelected && mk.pinTailActive,
+            store.is_prime && mk.pinTailPrime,
+          ]}
         />
       </View>
     </Marker>
@@ -269,11 +304,13 @@ export default function StoresMapScreen() {
 
     return arr
       .filter((s) => {
-        const lat = s.lat ?? s.latitude;
-        const lng = s.lng ?? s.longitude;
-        if (lat == null || lng == null) return false;
+        const lat = Number(s.lat ?? s.latitude);
+        const lng = Number(s.lng ?? s.longitude);
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+        if (lat === 0 && lng === 0) return false;
 
-        const distance = calcDistance(latitude, longitude, Number(lat), Number(lng));
+        const distance = calcDistance(latitude, longitude, lat, lng);
+        if (!Number.isFinite(distance)) return false;
         if (distance > radiusKm * 1000) return false;
 
         const ds = s.deliverySettings?.[0];
@@ -296,12 +333,6 @@ export default function StoresMapScreen() {
       }))
       .sort((a: any, b: any) => a._distance - b._distance);
   }, [stores, latitude, longitude, radiusKm, filters]);
-
-  // ── Optimization: ko'p do'kon bo'lsa faqat eng yaqin N tasini circle qilib ko'rsatamiz
-  const circleStores = useMemo(
-    () => filteredStores.slice(0, MAX_VISIBLE_CIRCLES),
-    [filteredStores],
-  );
 
   const selectedStore = useMemo(
     () => filteredStores.find((s) => s.id === selectedStoreId),
@@ -345,59 +376,19 @@ export default function StoresMapScreen() {
         provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFillObject}
         initialRegion={initialRegion}
+        customMapStyle={MAP_STYLE}
         showsUserLocation
         showsMyLocationButton={false}
         showsCompass={false}
+        showsPointsOfInterest={false}
+        showsBuildings={false}
+        showsIndoors={false}
+        showsTraffic={false}
         toolbarEnabled={false}
         moveOnMarkerPress={false}
         onPress={() => setSelectedStoreId(null)}
       >
-        {/* User radius circle (soft) */}
-        {userLat != null && userLng != null && (
-          <Circle
-            center={{ latitude: userLat, longitude: userLng }}
-            radius={radiusKm * 1000}
-            fillColor="rgba(229, 57, 53, 0.05)"
-            strokeColor="rgba(229, 57, 53, 0.3)"
-            strokeWidth={1}
-          />
-        )}
-
-        {/* Store delivery radius circles (top N nearest) */}
-        {circleStores.map((store) => {
-          const color = storeColor(store.id);
-          const ds = store.deliverySettings?.[0];
-          const maxR = Number(ds?.max_delivery_radius ?? store.max_delivery_radius ?? 2000);
-          const freeR = Number(ds?.free_delivery_radius ?? 0);
-          const sLat = Number(store.lat ?? store.latitude);
-          const sLng = Number(store.lng ?? store.longitude);
-          const isSelected = selectedStoreId === store.id;
-
-          return (
-            <React.Fragment key={`c-${store.id}`}>
-              {/* Max delivery radius */}
-              <Circle
-                center={{ latitude: sLat, longitude: sLng }}
-                radius={maxR}
-                fillColor={hexToRgba(color, isSelected ? 0.13 : 0.06)}
-                strokeColor={hexToRgba(color, isSelected ? 0.7 : 0.35)}
-                strokeWidth={isSelected ? 2 : 1}
-              />
-              {/* Free delivery radius (inner) */}
-              {freeR > 0 && (
-                <Circle
-                  center={{ latitude: sLat, longitude: sLng }}
-                  radius={freeR}
-                  fillColor="rgba(67, 160, 71, 0.12)"
-                  strokeColor="rgba(67, 160, 71, 0.6)"
-                  strokeWidth={1}
-                />
-              )}
-            </React.Fragment>
-          );
-        })}
-
-        {/* Store markers (all filtered) */}
+        {/* Store markers (all filtered) — radius doiralari ishlatilmaydi, xarita toza bo'lsin */}
         {filteredStores.map((store) => (
           <StoreMarker
             key={store.id}
@@ -495,20 +486,6 @@ export default function StoresMapScreen() {
       {isLoading && (
         <View style={s.loadingWrap}>
           <ActivityIndicator size="small" color={Colors.primary} />
-        </View>
-      )}
-
-      {/* ── Legend ───────────────────────────────────────────────── */}
-      {!selectedStore && !showOnboarding && circleStores.length > 0 && (
-        <View style={s.legend}>
-          <View style={s.legendRow}>
-            <View style={[s.legendDot, { backgroundColor: 'rgba(67, 160, 71, 0.6)' }]} />
-            <Text style={s.legendTxt}>{lang === 'ru' ? 'Бесплатная' : 'Tekin'}</Text>
-          </View>
-          <View style={s.legendRow}>
-            <View style={[s.legendDot, { backgroundColor: 'rgba(229, 57, 53, 0.5)' }]} />
-            <Text style={s.legendTxt}>{lang === 'ru' ? 'Доставка' : 'Yetkazish'}</Text>
-          </View>
         </View>
       )}
 
@@ -657,20 +634,6 @@ const s = StyleSheet.create({
     ...Shadow.md,
   },
 
-  legend: {
-    position: 'absolute',
-    top: 140,
-    right: Spacing.md,
-    backgroundColor: Colors.white,
-    padding: 8,
-    borderRadius: 10,
-    ...Shadow.sm,
-    gap: 4,
-  },
-  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 10, height: 10, borderRadius: 5 },
-  legendTxt: { fontSize: 10, fontWeight: '600', color: Colors.textSecondary },
-
   fab: {
     position: 'absolute',
     right: Spacing.md, bottom: 140,
@@ -712,16 +675,49 @@ const s = StyleSheet.create({
   },
 });
 
-// ─── Store marker styles ───────────────────────────────────────────────────
+// ─── Store marker styles (logo pin shape) ─────────────────────────────────
 const mk = StyleSheet.create({
-  wrap: {
-    width: 26, height: 26, borderRadius: 13,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: Colors.white,
-    ...Shadow.sm,
+  pinWrap: {
+    alignItems: 'center',
   },
-  wrapActive: { width: 34, height: 34, borderRadius: 17, borderWidth: 3 },
-  wrapPrime: { borderColor: '#F57F17' },
+  pinHead: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 3, borderColor: Colors.white,
+    overflow: 'hidden',
+    ...Shadow.md,
+  },
+  pinHeadActive: {
+    width: 50, height: 50, borderRadius: 25,
+  },
+  pinHeadPrime: {
+    borderColor: '#F57F17',
+    borderWidth: 3.5,
+  },
+  pinLogo: {
+    width: '100%', height: '100%',
+  },
+  pinTail: {
+    width: 0, height: 0,
+    backgroundColor: 'transparent',
+    borderStyle: 'solid',
+    borderLeftWidth: 7,
+    borderRightWidth: 7,
+    borderTopWidth: 9,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: Colors.white,
+    marginTop: -2,
+  },
+  pinTailActive: {
+    borderLeftWidth: 9,
+    borderRightWidth: 9,
+    borderTopWidth: 11,
+  },
+  pinTailPrime: {
+    borderTopColor: '#F57F17',
+  },
 });
 
 // ─── FilterSheet styles ────────────────────────────────────────────────────

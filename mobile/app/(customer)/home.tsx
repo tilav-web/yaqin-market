@@ -42,7 +42,7 @@ function SkeletonBox({ w, h, radius = 8, style }: { w: number | string; h: numbe
 // ─── Product Card ─────────────────────────────────────────────────────────────
 function ProductCard({ product, onPress, t }: { product: any; onPress: () => void; t: (n: any) => string }) {
   const img = product.images?.[0]?.url;
-  const price = product.storeProducts?.[0]?.price;
+  const unit = product.unit?.short_name ? t(product.unit.short_name) : null;
   return (
     <TouchableOpacity style={productStyles.card} onPress={onPress} activeOpacity={0.9}>
       {img ? (
@@ -54,8 +54,11 @@ function ProductCard({ product, onPress, t }: { product: any; onPress: () => voi
       )}
       <View style={productStyles.info}>
         <Text style={productStyles.name} numberOfLines={2}>{t(product.name)}</Text>
-        {price != null && (
-          <Text style={productStyles.price}>{Number(price).toLocaleString()} so'm</Text>
+        {unit && (
+          <View style={productStyles.unitPill}>
+            <Ionicons name="cube-outline" size={10} color={Colors.primary} />
+            <Text style={productStyles.unitPillTxt}>{unit}</Text>
+          </View>
         )}
       </View>
       <TouchableOpacity style={productStyles.addBtn} onPress={onPress} activeOpacity={0.85}>
@@ -137,8 +140,8 @@ export default function HomeScreen() {
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
 
   const { data: primeStores } = useQuery({
-    queryKey: ['prime-stores'],
-    queryFn: () => storesApi.getPrime(undefined, undefined),
+    queryKey: ['prime-stores', lat, lng],
+    queryFn: () => storesApi.getPrime(lat ?? null, lng ?? null),
   });
 
   const { data: categories } = useQuery({
@@ -179,14 +182,21 @@ export default function HomeScreen() {
     Array.isArray(p) ? p : Array.isArray(p?.items) ? p.items : []
   ) ?? [];
 
-  // Products + prime stores mixed
+  // Row-based layout: har qator 2 ta product yoki 1 ta to'liq prime store
+  type Row =
+    | { type: 'products'; items: any[] }
+    | { type: 'store'; store: any };
   const primeList = primeStores ?? [];
-  const mixedData: any[] = [];
+  const rows: Row[] = [];
   let storeIdx = 0;
-  for (let i = 0; i < allProducts.length; i++) {
-    mixedData.push({ _type: 'product', ...allProducts[i] });
-    if ((i + 1) % STORE_INSERT_EVERY === 0 && storeIdx < primeList.length) {
-      mixedData.push({ _type: 'store', ...primeList[storeIdx] });
+  let productIdx = 0;
+  while (productIdx < allProducts.length) {
+    const pair = allProducts.slice(productIdx, productIdx + 2);
+    rows.push({ type: 'products', items: pair });
+    productIdx += 2;
+    // Har 4 qatordan keyin (= ~8 product) prime store
+    if (rows.length % 4 === 0 && storeIdx < primeList.length) {
+      rows.push({ type: 'store', store: primeList[storeIdx] });
       storeIdx++;
     }
   }
@@ -195,24 +205,29 @@ export default function HomeScreen() {
     setSelectedCat(prev => prev === catId ? null : catId);
   };
 
-  const renderItem = useCallback(({ item }: { item: any }) => {
-    if (item._type === 'store') {
+  const renderItem = useCallback(({ item }: { item: Row }) => {
+    if (item.type === 'store') {
       return (
-        <View style={{ paddingHorizontal: Spacing.md, width: '100%', marginBottom: Spacing.sm }}>
+        <View style={{ paddingHorizontal: Spacing.md, marginBottom: Spacing.sm }}>
           <PrimeStoreInline
-            store={item}
-            onPress={() => router.push({ pathname: '/(customer)/store/[id]', params: { id: item.id } })}
+            store={item.store}
+            onPress={() => router.push({ pathname: '/(customer)/store/[id]', params: { id: item.store.id } })}
           />
         </View>
       );
     }
     return (
-      <View style={{ width: '50%', paddingHorizontal: Spacing.xs }}>
-        <ProductCard
-          product={item}
-          t={t}
-          onPress={() => setSelectedProductId(item.id)}
-        />
+      <View style={{ flexDirection: 'row', paddingHorizontal: Spacing.md - Spacing.xs }}>
+        {item.items.map((p, i) => (
+          <View key={p.id ?? i} style={{ flex: 1, paddingHorizontal: Spacing.xs }}>
+            <ProductCard
+              product={p}
+              t={t}
+              onPress={() => setSelectedProductId(p.id)}
+            />
+          </View>
+        ))}
+        {item.items.length === 1 && <View style={{ flex: 1, paddingHorizontal: Spacing.xs }} />}
       </View>
     );
   }, [t, router]);
@@ -295,13 +310,14 @@ export default function HomeScreen() {
         <Text style={styles.brand}>Yaqin Market</Text>
       </View>
 
-      {/* Content — FlatList with mixed data */}
+      {/* Content — FlatList (rows: 2 products per row yoki 1 prime store) */}
       <FlatList
-        data={mixedData}
-        keyExtractor={(item, idx) => `${item._type}-${item.id}-${idx}`}
-        numColumns={2}
+        data={rows}
+        keyExtractor={(item, idx) =>
+          item.type === 'store' ? `s-${item.store.id}` : `p-${idx}`
+        }
         renderItem={renderItem}
-        columnWrapperStyle={{ paddingHorizontal: Spacing.md - Spacing.xs }}
+        ItemSeparatorComponent={() => <View style={{ height: Spacing.sm }} />}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={
           isLoading ? (
@@ -405,7 +421,15 @@ const productStyles = StyleSheet.create({
   imagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
   info: { padding: Spacing.sm, paddingBottom: 4, gap: 3 },
   name: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 18 },
-  price: { fontSize: 14, fontWeight: '700', color: Colors.primary, marginTop: 2 },
+  unitPill: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    alignSelf: 'flex-start',
+    backgroundColor: Colors.primarySurface,
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: Radius.full,
+    marginTop: 4,
+  },
+  unitPillTxt: { fontSize: 10, fontWeight: '700', color: Colors.primary, textTransform: 'uppercase' },
   addBtn: {
     position: 'absolute', bottom: Spacing.sm, right: Spacing.sm,
     width: 30, height: 30, borderRadius: 15,
