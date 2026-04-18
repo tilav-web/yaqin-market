@@ -2,20 +2,63 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Auth } from '../auth/auth.entity';
+import { RoleApplication } from '../application/role-application.entity';
 import { SellerLegal } from '../application/seller-legal.entity';
 import { Category } from '../category/category.entity';
+import { Conversation } from '../chat/entities/conversation.entity';
+import { Message } from '../chat/entities/message.entity';
 import { Location } from '../location/location.entity';
+import { BroadcastOffer } from '../order/entities/broadcast-offer.entity';
+import { BroadcastOfferItem } from '../order/entities/broadcast-offer-item.entity';
+import { BroadcastRequest } from '../order/entities/broadcast-request.entity';
+import { BroadcastRequestItem } from '../order/entities/broadcast-request-item.entity';
+import { Order } from '../order/entities/order.entity';
+import { OrderItem } from '../order/entities/order-item.entity';
+import { Payment } from '../payment/payment.entity';
 import { Product } from '../product/product.entity';
 import { ProductTax } from '../product/product-tax.entity';
+import { Review } from '../review/review.entity';
 import { StoreProduct } from '../store-product/store-product.entity';
 import { StoreDeliverySettings } from '../store/entities/store-delivery-settings.entity';
+import { StoreSubscription } from '../store/entities/store-subscription.entity';
 import { StoreWorkingHour } from '../store/entities/store-working-hour.entity';
 import { Store } from '../store/entities/store.entity';
 import { Telegram } from '../telegram/uset-telegram.entity';
 import { Unit } from '../unit/unit.entity';
 import { User } from '../user/user.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
+import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
 import { SeedService } from './seed.service';
+
+const ALL_ENTITIES = [
+  Auth,
+  RoleApplication,
+  SellerLegal,
+  User,
+  Wallet,
+  WalletTransaction,
+  Location,
+  Category,
+  Unit,
+  Product,
+  ProductTax,
+  Store,
+  StoreDeliverySettings,
+  StoreSubscription,
+  StoreWorkingHour,
+  StoreProduct,
+  Order,
+  OrderItem,
+  BroadcastRequest,
+  BroadcastRequestItem,
+  BroadcastOffer,
+  BroadcastOfferItem,
+  Conversation,
+  Message,
+  Review,
+  Payment,
+  Telegram,
+];
 
 @Module({
   imports: [
@@ -37,22 +80,7 @@ import { SeedService } from './seed.service';
           username: config.get<string>('POSTGRES_USER') ?? 'postgres',
           password: config.get<string>('POSTGRES_PASSWORD') ?? 'postgres',
           database: config.get<string>('POSTGRES_DB') ?? 'postgres',
-          entities: [
-            Auth,
-            SellerLegal,
-            User,
-            Wallet,
-            Location,
-            Category,
-            Unit,
-            Product,
-            ProductTax,
-            Store,
-            StoreDeliverySettings,
-            StoreWorkingHour,
-            StoreProduct,
-            Telegram,
-          ],
+          entities: ALL_ENTITIES,
           autoLoadEntities: true,
           synchronize: synchronize === 'true',
           logging: logging === 'true',
