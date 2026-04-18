@@ -832,7 +832,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
     slug: 'tovuq-filesi',
     name: { uz: 'Tovuq filesi', ru: 'Куриное филе' },
     description: { uz: 'Toza kesilgan tovuq filesi, muzlatilgan emas.', ru: 'Чисто нарезанное куриное филе, не замороженное.' },
-    categorySlug: 'gosht-va-muzlatilgan',
+    categorySlug: 'gosht-va-baliq',
     unitName: 'kg',
     image:
       'https://images.unsplash.com/photo-1604503468506-a8da13d82791?auto=format&fit=crop&w=800&q=80',
@@ -842,7 +842,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
     slug: 'mol-goshti',
     name: { uz: "Mol go'shti", ru: 'Говядина' },
     description: { uz: 'Taom va qovurma uchun yangi mol goʻshti.', ru: 'Свежая говядина для блюд и жарки.' },
-    categorySlug: 'gosht-va-muzlatilgan',
+    categorySlug: 'gosht-va-baliq',
     unitName: 'kg',
     image:
       'https://images.unsplash.com/photo-1603048297172-c92544798d5a?auto=format&fit=crop&w=800&q=80',
@@ -852,7 +852,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
     slug: 'kolbasa-doktor',
     name: { uz: 'Kolbasa doktor', ru: 'Колбаса докторская' },
     description: { uz: 'Sendvich va nonushta uchun yumshoq kolbasa.', ru: 'Мягкая колбаса для бутербродов и завтрака.' },
-    categorySlug: 'gosht-va-muzlatilgan',
+    categorySlug: 'gosht-va-baliq',
     unitName: 'qadoq',
     image:
       'https://images.unsplash.com/photo-1607623814075-e51df1bdc82f?auto=format&fit=crop&w=800&q=80',
