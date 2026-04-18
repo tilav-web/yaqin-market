@@ -1079,9 +1079,12 @@ export class SeedService {
       }
 
       const saved = await unitRepo.save(unit);
-      // Key both: short_name.uz ("kg") va name.uz ("Kilogramm") — product seeds ikkisidan foydalanishi mumkin
-      result.set(seed.short_name.uz, saved);
-      result.set(seed.name.uz, saved);
+      // Key variants — product seed qaysi birini ishlatishidan qat'iy nazar topa oladi
+      result.set(seed.short_name.uz, saved); // "kg"
+      result.set(seed.name.uz, saved);       // "Kilogramm"
+      // Qo'shimcha alias'lar (lowercase name, short without dots)
+      result.set(seed.name.uz.toLowerCase(), saved);
+      result.set(seed.short_name.uz.replace(/\./g, ''), saved);
     }
 
     this.logger.log(`Units ready: ${UNIT_SEEDS.length}`);
