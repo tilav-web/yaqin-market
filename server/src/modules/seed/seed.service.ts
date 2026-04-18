@@ -955,16 +955,47 @@ export class SeedService {
     const authRepo = this.dataSource.getRepository(Auth);
     const userRepo = this.dataSource.getRepository(User);
     const walletRepo = this.dataSource.getRepository(Wallet);
+    const locationRepo = this.dataSource.getRepository(Location);
     const unitRepo = this.dataSource.getRepository(Unit);
     const categoryRepo = this.dataSource.getRepository(Category);
+    const productRepo = this.dataSource.getRepository(Product);
+    const productTaxRepo = this.dataSource.getRepository(ProductTax);
+    const storeRepo = this.dataSource.getRepository(Store);
+    const deliverySettingsRepo = this.dataSource.getRepository(StoreDeliverySettings);
+    const workingHourRepo = this.dataSource.getRepository(StoreWorkingHour);
+    const storeProductRepo = this.dataSource.getRepository(StoreProduct);
+    const sellerLegalRepo = this.dataSource.getRepository(SellerLegal);
 
-    this.logger.log('Production seed started');
+    this.logger.log('🌱 Seed started — mock data yaratilmoqda...');
 
+    // 1. Super admin (agar yo'q bo'lsa)
     await this.ensureSuperAdmin(authRepo, userRepo, walletRepo, PROD_ADMIN_SEED);
-    await this.seedUnits(unitRepo);
-    await this.seedCategories(categoryRepo);
 
-    this.logger.log('Production seed completed successfully');
+    // 2. Units va kategoriyalar
+    const units = await this.seedUnits(unitRepo);
+    const categories = await this.seedCategories(categoryRepo);
+
+    // 3. Mahsulotlar (parent + children)
+    const products = await this.seedProducts(productRepo, productTaxRepo, categories, units);
+
+    // 4. Demo akkauntlar (sellerlar, customerlar, courierlar)
+    const accounts = await this.seedAccounts(authRepo, userRepo, walletRepo, locationRepo);
+
+    // 5. Do'konlar + yetkazib berish sozlamalari + ish soatlari
+    const stores = await this.seedStores(storeRepo, deliverySettingsRepo, workingHourRepo, accounts);
+
+    // 6. Seller huquqiy ma'lumotlari
+    await this.seedSellerLegals(sellerLegalRepo, accounts, stores);
+
+    // 7. Store products (do'kondagi mahsulot + narx + availability)
+    await this.seedStoreProducts(storeProductRepo, stores, products);
+
+    this.logger.log('✅ Seed muvaffaqiyatli tugadi');
+    this.logger.log(`  • ${units.size} ta unit`);
+    this.logger.log(`  • ${categories.size} ta kategoriya`);
+    this.logger.log(`  • ${products.size} ta mahsulot`);
+    this.logger.log(`  • ${accounts.size} ta demo user`);
+    this.logger.log(`  • ${stores.size} ta do'kon`);
   }
 
   private async ensureSuperAdmin(
@@ -1047,10 +1078,13 @@ export class SeedService {
         unit.short_name = seed.short_name;
       }
 
-      result.set(seed.name.uz, await unitRepo.save(unit));
+      const saved = await unitRepo.save(unit);
+      // Key both: short_name.uz ("kg") va name.uz ("Kilogramm") — product seeds ikkisidan foydalanishi mumkin
+      result.set(seed.short_name.uz, saved);
+      result.set(seed.name.uz, saved);
     }
 
-    this.logger.log(`Units ready: ${result.size}`);
+    this.logger.log(`Units ready: ${UNIT_SEEDS.length}`);
     return result;
   }
 
