@@ -9,7 +9,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
-import MapView, { Marker, Circle } from 'react-native-maps';
+import MapView, { Marker, Circle, PROVIDER_GOOGLE } from 'react-native-maps';
 import * as SecureStore from 'expo-secure-store';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useTranslation } from '../../src/i18n';
@@ -29,6 +29,15 @@ const hashStoreId = (id: string) => {
   return Math.abs(h);
 };
 const storeColor = (id: string) => CIRCLE_PALETTE[hashStoreId(id) % CIRCLE_PALETTE.length];
+
+// Hex (#RRGGBB) → rgba(r, g, b, a)
+function hexToRgba(hex: string, alpha: number): string {
+  const clean = hex.replace('#', '');
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 // Haversine — meters
 function calcDistance(lat1: number, lng1: number, lat2: number, lng2: number) {
@@ -333,6 +342,7 @@ export default function StoresMapScreen() {
     <View style={s.container}>
       <MapView
         ref={mapRef}
+        provider={PROVIDER_GOOGLE}
         style={StyleSheet.absoluteFillObject}
         initialRegion={initialRegion}
         showsUserLocation
@@ -369,8 +379,8 @@ export default function StoresMapScreen() {
               <Circle
                 center={{ latitude: sLat, longitude: sLng }}
                 radius={maxR}
-                fillColor={color + (isSelected ? '22' : '10')}
-                strokeColor={color + (isSelected ? 'AA' : '55')}
+                fillColor={hexToRgba(color, isSelected ? 0.13 : 0.06)}
+                strokeColor={hexToRgba(color, isSelected ? 0.7 : 0.35)}
                 strokeWidth={isSelected ? 2 : 1}
               />
               {/* Free delivery radius (inner) */}
@@ -527,7 +537,7 @@ export default function StoresMapScreen() {
               <Text style={s.infoName} numberOfLines={1}>
                 {typeof selectedStore.name === 'string'
                   ? selectedStore.name
-                  : t(selectedStore.name)}
+                  : t(selectedStore.name as any)}
               </Text>
               {selectedStore.is_prime && (
                 <View style={s.primeBadge}>
