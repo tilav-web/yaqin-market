@@ -130,8 +130,14 @@ export class ProductController {
 
     const newImages: { url: string; is_main: boolean }[] = [];
     for (const file of files) {
-      const url = await this.imageService.processAndSaveImage(file, UploadFolderEnum.PRODUCT);
-      newImages.push({ url, is_main: existingImages.length === 0 && newImages.length === 0 });
+      const url = await this.imageService.processAndSaveImage(
+        file,
+        UploadFolderEnum.PRODUCT,
+      );
+      newImages.push({
+        url,
+        is_main: existingImages.length === 0 && newImages.length === 0,
+      });
     }
 
     return this.productService.update(id, {

@@ -140,7 +140,9 @@ export class StoreProductService {
               .where("LOWER(product.name->>'uz') LIKE :search")
               .orWhere("LOWER(product.name->>'ru') LIKE :search")
               .orWhere('LOWER(product.slug) LIKE :search')
-              .orWhere("LOWER(COALESCE(category.name->>'uz', '')) LIKE :search");
+              .orWhere(
+                "LOWER(COALESCE(category.name->>'uz', '')) LIKE :search",
+              );
           }),
         )
         .setParameter('search', normalizedSearch);

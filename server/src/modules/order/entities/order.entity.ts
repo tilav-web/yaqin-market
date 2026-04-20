@@ -33,12 +33,12 @@ export enum OrderType {
 }
 
 export enum OrderChangeStatus {
-  NONE = 'NONE',                          // Kuryer qaytim kiritmagan
-  PENDING = 'PENDING',                    // User javob kutilmoqda
-  CONFIRMED = 'CONFIRMED',                // User tasdiqladi
-  WAIVED = 'WAIVED',                      // User "kerak emas" bosdi
-  AUTO_CONFIRMED = 'AUTO_CONFIRMED',      // 24 soat javob bermadi
-  DISPUTED = 'DISPUTED',                  // User "noto'g'ri" bosdi, admin ko'rib chiqmoqda
+  NONE = 'NONE', // Kuryer qaytim kiritmagan
+  PENDING = 'PENDING', // User javob kutilmoqda
+  CONFIRMED = 'CONFIRMED', // User tasdiqladi
+  WAIVED = 'WAIVED', // User "kerak emas" bosdi
+  AUTO_CONFIRMED = 'AUTO_CONFIRMED', // 24 soat javob bermadi
+  DISPUTED = 'DISPUTED', // User "noto'g'ri" bosdi, admin ko'rib chiqmoqda
   RESOLVED_USER_WON = 'RESOLVED_USER_WON',
   RESOLVED_SELLER_WON = 'RESOLVED_SELLER_WON',
   RESOLVED_ADJUSTED = 'RESOLVED_ADJUSTED',

@@ -59,7 +59,10 @@ export class BroadcastGateway
 
   /** Haversine — metrda masofa */
   private calcDistance(
-    lat1: number, lng1: number, lat2: number, lng2: number,
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number,
   ): number {
     const R = 6371000;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;

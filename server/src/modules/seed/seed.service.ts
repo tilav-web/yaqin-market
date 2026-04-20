@@ -135,42 +135,140 @@ const STORE_BANNERS = [
 ];
 
 const CATEGORY_SEEDS = [
-  { name: { uz: 'Meva va sabzavot', ru: 'Фрукты и овощи' }, slug: 'meva-va-sabzavot', order_number: 1 },
-  { name: { uz: 'Sut mahsulotlari', ru: 'Молочные продукты' }, slug: 'sut-mahsulotlari', order_number: 2 },
-  { name: { uz: 'Ichimliklar', ru: 'Напитки' }, slug: 'ichimliklar', order_number: 3 },
-  { name: { uz: 'Bakaleya', ru: 'Бакалея' }, slug: 'bakaleya', order_number: 4 },
-  { name: { uz: "Go'sht va baliq", ru: 'Мясо и рыба' }, slug: 'gosht-va-baliq', order_number: 5 },
-  { name: { uz: 'Non va pishiriqlar', ru: 'Хлеб и выпечка' }, slug: 'non-va-pishiriqlar', order_number: 6 },
-  { name: { uz: 'Shirinlik va snack', ru: 'Сладости и снеки' }, slug: 'shirinlik-va-snack', order_number: 7 },
-  { name: { uz: 'Muzlatilgan mahsulotlar', ru: 'Замороженные продукты' }, slug: 'muzlatilgan', order_number: 8 },
-  { name: { uz: 'Konserva va sous', ru: 'Консервы и соусы' }, slug: 'konserva-va-sous', order_number: 9 },
-  { name: { uz: 'Ziravorlar', ru: 'Специи и приправы' }, slug: 'ziravorlar', order_number: 10 },
-  { name: { uz: "Uy-ro'zg'or", ru: 'Товары для дома' }, slug: 'uy-rozgor', order_number: 11 },
-  { name: { uz: 'Shaxsiy gigiyena', ru: 'Личная гигиена' }, slug: 'shaxsiy-gigiyena', order_number: 12 },
-  { name: { uz: 'Bolalar uchun', ru: 'Детские товары' }, slug: 'bolalar-uchun', order_number: 13 },
-  { name: { uz: 'Uy hayvonlari', ru: 'Товары для животных' }, slug: 'uy-hayvonlari', order_number: 14 },
-  { name: { uz: 'Choy va qahva', ru: 'Чай и кофе' }, slug: 'choy-va-qahva', order_number: 15 },
-  { name: { uz: "Yog' va sariyog'", ru: 'Масло и маргарин' }, slug: 'yog-va-sariyog', order_number: 16 },
+  {
+    name: { uz: 'Meva va sabzavot', ru: 'Фрукты и овощи' },
+    slug: 'meva-va-sabzavot',
+    order_number: 1,
+  },
+  {
+    name: { uz: 'Sut mahsulotlari', ru: 'Молочные продукты' },
+    slug: 'sut-mahsulotlari',
+    order_number: 2,
+  },
+  {
+    name: { uz: 'Ichimliklar', ru: 'Напитки' },
+    slug: 'ichimliklar',
+    order_number: 3,
+  },
+  {
+    name: { uz: 'Bakaleya', ru: 'Бакалея' },
+    slug: 'bakaleya',
+    order_number: 4,
+  },
+  {
+    name: { uz: "Go'sht va baliq", ru: 'Мясо и рыба' },
+    slug: 'gosht-va-baliq',
+    order_number: 5,
+  },
+  {
+    name: { uz: 'Non va pishiriqlar', ru: 'Хлеб и выпечка' },
+    slug: 'non-va-pishiriqlar',
+    order_number: 6,
+  },
+  {
+    name: { uz: 'Shirinlik va snack', ru: 'Сладости и снеки' },
+    slug: 'shirinlik-va-snack',
+    order_number: 7,
+  },
+  {
+    name: { uz: 'Muzlatilgan mahsulotlar', ru: 'Замороженные продукты' },
+    slug: 'muzlatilgan',
+    order_number: 8,
+  },
+  {
+    name: { uz: 'Konserva va sous', ru: 'Консервы и соусы' },
+    slug: 'konserva-va-sous',
+    order_number: 9,
+  },
+  {
+    name: { uz: 'Ziravorlar', ru: 'Специи и приправы' },
+    slug: 'ziravorlar',
+    order_number: 10,
+  },
+  {
+    name: { uz: "Uy-ro'zg'or", ru: 'Товары для дома' },
+    slug: 'uy-rozgor',
+    order_number: 11,
+  },
+  {
+    name: { uz: 'Shaxsiy gigiyena', ru: 'Личная гигиена' },
+    slug: 'shaxsiy-gigiyena',
+    order_number: 12,
+  },
+  {
+    name: { uz: 'Bolalar uchun', ru: 'Детские товары' },
+    slug: 'bolalar-uchun',
+    order_number: 13,
+  },
+  {
+    name: { uz: 'Uy hayvonlari', ru: 'Товары для животных' },
+    slug: 'uy-hayvonlari',
+    order_number: 14,
+  },
+  {
+    name: { uz: 'Choy va qahva', ru: 'Чай и кофе' },
+    slug: 'choy-va-qahva',
+    order_number: 15,
+  },
+  {
+    name: { uz: "Yog' va sariyog'", ru: 'Масло и маргарин' },
+    slug: 'yog-va-sariyog',
+    order_number: 16,
+  },
   { name: { uz: 'Tuxum', ru: 'Яйца' }, slug: 'tuxum', order_number: 17 },
-  { name: { uz: 'Makaronlar', ru: 'Макаронные изделия' }, slug: 'makaronlar', order_number: 18 },
+  {
+    name: { uz: 'Makaronlar', ru: 'Макаронные изделия' },
+    slug: 'makaronlar',
+    order_number: 18,
+  },
 ];
 
 const UNIT_SEEDS = [
   { name: { uz: 'Dona', ru: 'Штука' }, short_name: { uz: 'dona', ru: 'шт' } },
-  { name: { uz: 'Kilogramm', ru: 'Килограмм' }, short_name: { uz: 'kg', ru: 'кг' } },
+  {
+    name: { uz: 'Kilogramm', ru: 'Килограмм' },
+    short_name: { uz: 'kg', ru: 'кг' },
+  },
   { name: { uz: 'Gramm', ru: 'Грамм' }, short_name: { uz: 'g', ru: 'г' } },
   { name: { uz: 'Litr', ru: 'Литр' }, short_name: { uz: 'l', ru: 'л' } },
-  { name: { uz: 'Millilitr', ru: 'Миллилитр' }, short_name: { uz: 'ml', ru: 'мл' } },
+  {
+    name: { uz: 'Millilitr', ru: 'Миллилитр' },
+    short_name: { uz: 'ml', ru: 'мл' },
+  },
   { name: { uz: 'Metr', ru: 'Метр' }, short_name: { uz: 'm', ru: 'м' } },
-  { name: { uz: 'Santimetr', ru: 'Сантиметр' }, short_name: { uz: 'sm', ru: 'см' } },
-  { name: { uz: 'Qadoq', ru: 'Упаковка' }, short_name: { uz: 'qad.', ru: 'уп.' } },
-  { name: { uz: 'Paket', ru: 'Пакет' }, short_name: { uz: 'pkt.', ru: 'пкт.' } },
-  { name: { uz: "Bog'lam", ru: 'Связка' }, short_name: { uz: "bog'.", ru: 'св.' } },
-  { name: { uz: 'Quti', ru: 'Коробка' }, short_name: { uz: 'quti', ru: 'кор.' } },
-  { name: { uz: 'Butilka', ru: 'Бутылка' }, short_name: { uz: 'but.', ru: 'бут.' } },
+  {
+    name: { uz: 'Santimetr', ru: 'Сантиметр' },
+    short_name: { uz: 'sm', ru: 'см' },
+  },
+  {
+    name: { uz: 'Qadoq', ru: 'Упаковка' },
+    short_name: { uz: 'qad.', ru: 'уп.' },
+  },
+  {
+    name: { uz: 'Paket', ru: 'Пакет' },
+    short_name: { uz: 'pkt.', ru: 'пкт.' },
+  },
+  {
+    name: { uz: "Bog'lam", ru: 'Связка' },
+    short_name: { uz: "bog'.", ru: 'св.' },
+  },
+  {
+    name: { uz: 'Quti', ru: 'Коробка' },
+    short_name: { uz: 'quti', ru: 'кор.' },
+  },
+  {
+    name: { uz: 'Butilka', ru: 'Бутылка' },
+    short_name: { uz: 'but.', ru: 'бут.' },
+  },
   { name: { uz: 'Tonna', ru: 'Тонна' }, short_name: { uz: 't', ru: 'т' } },
-  { name: { uz: "Juft (par)", ru: 'Пара' }, short_name: { uz: 'juft', ru: 'пар.' } },
-  { name: { uz: "O'ram", ru: 'Рулон' }, short_name: { uz: "o'r.", ru: 'рул.' } },
+  {
+    name: { uz: 'Juft (par)', ru: 'Пара' },
+    short_name: { uz: 'juft', ru: 'пар.' },
+  },
+  {
+    name: { uz: "O'ram", ru: 'Рулон' },
+    short_name: { uz: "o'r.", ru: 'рул.' },
+  },
 ];
 
 const SELLER_ACCOUNT_SEEDS: DemoAccountSeed[] = [
@@ -584,7 +682,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'olma-gala',
     name: { uz: 'Olma Gala', ru: 'Яблоко Гала' },
-    description: { uz: "Shirin va suvli Gala navi, kundalik iste'mol uchun.", ru: 'Сладкий и сочный сорт Гала, для ежедневного употребления.' },
+    description: {
+      uz: "Shirin va suvli Gala navi, kundalik iste'mol uchun.",
+      ru: 'Сладкий и сочный сорт Гала, для ежедневного употребления.',
+    },
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
     image:
@@ -594,7 +695,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'banan-ecuador',
     name: { uz: 'Banan Ecuador', ru: 'Банан Эквадор' },
-    description: { uz: 'Import sifatli banan, yumshoq va shirin taʼm.', ru: 'Импортный банан, мягкий и сладкий вкус.' },
+    description: {
+      uz: 'Import sifatli banan, yumshoq va shirin taʼm.',
+      ru: 'Импортный банан, мягкий и сладкий вкус.',
+    },
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
     image:
@@ -604,7 +708,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'pomidor-pushti',
     name: { uz: 'Pomidor pushti', ru: 'Помидор розовый' },
-    description: { uz: 'Salat va taomlar uchun yangi pushti pomidor.', ru: 'Свежий розовый помидор для салатов и блюд.' },
+    description: {
+      uz: 'Salat va taomlar uchun yangi pushti pomidor.',
+      ru: 'Свежий розовый помидор для салатов и блюд.',
+    },
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
     image:
@@ -614,7 +721,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'bodring-sersuv',
     name: { uz: 'Bodring sersuv', ru: 'Огурец свежий' },
-    description: { uz: 'Yangi uzilgan bodring, ertalabki salat uchun ayni muddao.', ru: 'Свежесорванный огурец, идеален для утреннего салата.' },
+    description: {
+      uz: 'Yangi uzilgan bodring, ertalabki salat uchun ayni muddao.',
+      ru: 'Свежесорванный огурец, идеален для утреннего салата.',
+    },
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
     image:
@@ -624,7 +734,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'kartoshka-yangi',
     name: { uz: 'Kartoshka yangi', ru: 'Картофель свежий' },
-    description: { uz: "Qovurish va sho'rva uchun universal kartoshka.", ru: 'Универсальный картофель для жарки и супа.' },
+    description: {
+      uz: "Qovurish va sho'rva uchun universal kartoshka.",
+      ru: 'Универсальный картофель для жарки и супа.',
+    },
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
     image:
@@ -634,7 +747,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'piyoz-sariq',
     name: { uz: 'Piyoz sariq', ru: 'Лук жёлтый' },
-    description: { uz: 'Taomga mazali taʼm beruvchi sariq piyoz.', ru: 'Жёлтый лук, придающий блюдам вкусный аромат.' },
+    description: {
+      uz: 'Taomga mazali taʼm beruvchi sariq piyoz.',
+      ru: 'Жёлтый лук, придающий блюдам вкусный аромат.',
+    },
     categorySlug: 'meva-va-sabzavot',
     unitName: 'kg',
     image:
@@ -644,7 +760,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'sut-1l',
     name: { uz: 'Sut 1L', ru: 'Молоко 1л' },
-    description: { uz: 'Tabiiy sigir suti, 1 litr tetrapak.', ru: 'Натуральное коровье молоко, 1 литр тетрапак.' },
+    description: {
+      uz: 'Tabiiy sigir suti, 1 litr tetrapak.',
+      ru: 'Натуральное коровье молоко, 1 литр тетрапак.',
+    },
     categorySlug: 'sut-mahsulotlari',
     unitName: 'litr',
     image:
@@ -654,7 +773,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'sut-05l',
     name: { uz: 'Sut 0.5L', ru: 'Молоко 0.5л' },
-    description: { uz: 'Yarim litr tetrapak tabiiy sut.', ru: 'Поллитра натурального молока в тетрапаке.' },
+    description: {
+      uz: 'Yarim litr tetrapak tabiiy sut.',
+      ru: 'Поллитра натурального молока в тетрапаке.',
+    },
     categorySlug: 'sut-mahsulotlari',
     unitName: 'litr',
     image:
@@ -666,7 +788,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'qatiq-1l',
     name: { uz: 'Qatiq 1L', ru: 'Кефир 1л' },
-    description: { uz: 'Yengil va foydali tabiiy qatiq.', ru: 'Лёгкий и полезный натуральный кефир.' },
+    description: {
+      uz: 'Yengil va foydali tabiiy qatiq.',
+      ru: 'Лёгкий и полезный натуральный кефир.',
+    },
     categorySlug: 'sut-mahsulotlari',
     unitName: 'litr',
     image:
@@ -676,7 +801,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'qatiq-05l',
     name: { uz: 'Qatiq 0.5L', ru: 'Кефир 0.5л' },
-    description: { uz: 'Yengil va foydali qatiq, kichik hajm.', ru: 'Лёгкий и полезный кефир, малый объём.' },
+    description: {
+      uz: 'Yengil va foydali qatiq, kichik hajm.',
+      ru: 'Лёгкий и полезный кефир, малый объём.',
+    },
     categorySlug: 'sut-mahsulotlari',
     unitName: 'litr',
     image:
@@ -688,7 +816,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'qaymoq-15',
     name: { uz: 'Qaymoq 15%', ru: 'Сметана 15%' },
-    description: { uz: 'Nonushta va desertlar uchun qaymoq.', ru: 'Сметана для завтрака и десертов.' },
+    description: {
+      uz: 'Nonushta va desertlar uchun qaymoq.',
+      ru: 'Сметана для завтрака и десертов.',
+    },
     categorySlug: 'sut-mahsulotlari',
     unitName: 'qadoq',
     image:
@@ -698,7 +829,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'tuxum-10',
     name: { uz: 'Tuxum 10 talik', ru: 'Яйца 10 шт' },
-    description: { uz: 'Yangi tuxum, 10 dona lik qadoq.', ru: 'Свежие яйца, упаковка 10 штук.' },
+    description: {
+      uz: 'Yangi tuxum, 10 dona lik qadoq.',
+      ru: 'Свежие яйца, упаковка 10 штук.',
+    },
     categorySlug: 'sut-mahsulotlari',
     unitName: 'qadoq',
     image:
@@ -708,7 +842,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'tandir-non',
     name: { uz: 'Tandir non', ru: 'Тандырная лепёшка' },
-    description: { uz: 'Har kuni pishiriladigan tandir non.', ru: 'Тандырная лепёшка, выпекается каждый день.' },
+    description: {
+      uz: 'Har kuni pishiriladigan tandir non.',
+      ru: 'Тандырная лепёшка, выпекается каждый день.',
+    },
     categorySlug: 'bakaleya',
     unitName: 'dona',
     image:
@@ -718,7 +855,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'guruch-lazer',
     name: { uz: 'Guruch Lazer', ru: 'Рис Лазер' },
-    description: { uz: 'Palov uchun sifatli lazer guruch.', ru: 'Качественный рис Лазер для плова.' },
+    description: {
+      uz: 'Palov uchun sifatli lazer guruch.',
+      ru: 'Качественный рис Лазер для плова.',
+    },
     categorySlug: 'bakaleya',
     unitName: 'kg',
     image:
@@ -728,7 +868,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'un-birinchi-nav',
     name: { uz: 'Un birinchi nav', ru: 'Мука первый сорт' },
-    description: { uz: 'Pishiriq va non uchun birinchi nav un.', ru: 'Мука первого сорта для выпечки и хлеба.' },
+    description: {
+      uz: 'Pishiriq va non uchun birinchi nav un.',
+      ru: 'Мука первого сорта для выпечки и хлеба.',
+    },
     categorySlug: 'bakaleya',
     unitName: 'kg',
     image:
@@ -738,7 +881,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'shakar-oq',
     name: { uz: 'Shakar oq', ru: 'Сахар белый' },
-    description: { uz: 'Tozalangan oq shakar, 1 kg.', ru: 'Очищенный белый сахар, 1 кг.' },
+    description: {
+      uz: 'Tozalangan oq shakar, 1 kg.',
+      ru: 'Очищенный белый сахар, 1 кг.',
+    },
     categorySlug: 'bakaleya',
     unitName: 'kg',
     image:
@@ -748,7 +894,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'choy-qora',
     name: { uz: 'Qora choy', ru: 'Чёрный чай' },
-    description: { uz: 'Kunlik choynak uchun xushboʻy qora choy.', ru: 'Ароматный чёрный чай для ежедневного чайника.' },
+    description: {
+      uz: 'Kunlik choynak uchun xushboʻy qora choy.',
+      ru: 'Ароматный чёрный чай для ежедневного чайника.',
+    },
     categorySlug: 'bakaleya',
     unitName: 'qadoq',
     image:
@@ -758,7 +907,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'cola-15l',
     name: { uz: 'Cola 1.5L', ru: 'Кола 1.5л' },
-    description: { uz: 'Sovutilgan holda ichish uchun gazlangan ichimlik.', ru: 'Газированный напиток, подавать охлаждённым.' },
+    description: {
+      uz: 'Sovutilgan holda ichish uchun gazlangan ichimlik.',
+      ru: 'Газированный напиток, подавать охлаждённым.',
+    },
     categorySlug: 'ichimliklar',
     unitName: 'litr',
     image:
@@ -768,7 +920,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'cola-05l',
     name: { uz: 'Cola 0.5L', ru: 'Кола 0.5л' },
-    description: { uz: 'Kichik hajmdagi gazlangan ichimlik.', ru: 'Газированный напиток малого объёма.' },
+    description: {
+      uz: 'Kichik hajmdagi gazlangan ichimlik.',
+      ru: 'Газированный напиток малого объёма.',
+    },
     categorySlug: 'ichimliklar',
     unitName: 'litr',
     image:
@@ -780,7 +935,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'cola-2l',
     name: { uz: 'Cola 2L', ru: 'Кола 2л' },
-    description: { uz: 'Katta hajmdagi gazlangan ichimlik.', ru: 'Газированный напиток большого объёма.' },
+    description: {
+      uz: 'Katta hajmdagi gazlangan ichimlik.',
+      ru: 'Газированный напиток большого объёма.',
+    },
     categorySlug: 'ichimliklar',
     unitName: 'litr',
     image:
@@ -792,7 +950,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'fanta-15l',
     name: { uz: 'Fanta 1.5L', ru: 'Фанта 1.5л' },
-    description: { uz: 'Apelsin taʼmli gazlangan ichimlik.', ru: 'Газированный напиток со вкусом апельсина.' },
+    description: {
+      uz: 'Apelsin taʼmli gazlangan ichimlik.',
+      ru: 'Газированный напиток со вкусом апельсина.',
+    },
     categorySlug: 'ichimliklar',
     unitName: 'litr',
     image:
@@ -802,7 +963,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'fanta-05l',
     name: { uz: 'Fanta 0.5L', ru: 'Фанта 0.5л' },
-    description: { uz: 'Kichik hajmdagi apelsin taʼmli ichimlik.', ru: 'Апельсиновый газированный напиток малого объёма.' },
+    description: {
+      uz: 'Kichik hajmdagi apelsin taʼmli ichimlik.',
+      ru: 'Апельсиновый газированный напиток малого объёма.',
+    },
     categorySlug: 'ichimliklar',
     unitName: 'litr',
     image:
@@ -814,7 +978,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'suv-gazsiz-15l',
     name: { uz: 'Suv gazsiz 1.5L', ru: 'Вода негазированная 1.5л' },
-    description: { uz: 'Kunlik isteʼmol uchun toza ichimlik suvi.', ru: 'Чистая питьевая вода для ежедневного употребления.' },
+    description: {
+      uz: 'Kunlik isteʼmol uchun toza ichimlik suvi.',
+      ru: 'Чистая питьевая вода для ежедневного употребления.',
+    },
     categorySlug: 'ichimliklar',
     unitName: 'litr',
     image:
@@ -824,7 +991,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'sharbat-olma-1l',
     name: { uz: 'Olma sharbati 1L', ru: 'Яблочный сок 1л' },
-    description: { uz: 'Mevali, bolalar va kattalar uchun qulay sharbat.', ru: 'Фруктовый сок, удобный для детей и взрослых.' },
+    description: {
+      uz: 'Mevali, bolalar va kattalar uchun qulay sharbat.',
+      ru: 'Фруктовый сок, удобный для детей и взрослых.',
+    },
     categorySlug: 'ichimliklar',
     unitName: 'litr',
     image:
@@ -834,7 +1004,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'tovuq-filesi',
     name: { uz: 'Tovuq filesi', ru: 'Куриное филе' },
-    description: { uz: 'Toza kesilgan tovuq filesi, muzlatilgan emas.', ru: 'Чисто нарезанное куриное филе, не замороженное.' },
+    description: {
+      uz: 'Toza kesilgan tovuq filesi, muzlatilgan emas.',
+      ru: 'Чисто нарезанное куриное филе, не замороженное.',
+    },
     categorySlug: 'gosht-va-baliq',
     unitName: 'kg',
     image:
@@ -844,7 +1017,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'mol-goshti',
     name: { uz: "Mol go'shti", ru: 'Говядина' },
-    description: { uz: 'Taom va qovurma uchun yangi mol goʻshti.', ru: 'Свежая говядина для блюд и жарки.' },
+    description: {
+      uz: 'Taom va qovurma uchun yangi mol goʻshti.',
+      ru: 'Свежая говядина для блюд и жарки.',
+    },
     categorySlug: 'gosht-va-baliq',
     unitName: 'kg',
     image:
@@ -854,7 +1030,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'kolbasa-doktor',
     name: { uz: 'Kolbasa doktor', ru: 'Колбаса докторская' },
-    description: { uz: 'Sendvich va nonushta uchun yumshoq kolbasa.', ru: 'Мягкая колбаса для бутербродов и завтрака.' },
+    description: {
+      uz: 'Sendvich va nonushta uchun yumshoq kolbasa.',
+      ru: 'Мягкая колбаса для бутербродов и завтрака.',
+    },
     categorySlug: 'gosht-va-baliq',
     unitName: 'qadoq',
     image:
@@ -864,7 +1043,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'pishloq-gauda',
     name: { uz: 'Pishloq gauda', ru: 'Сыр гауда' },
-    description: { uz: 'Kesilgan qadoqda yumshoq pishloq.', ru: 'Мягкий сыр в нарезанной упаковке.' },
+    description: {
+      uz: 'Kesilgan qadoqda yumshoq pishloq.',
+      ru: 'Мягкий сыр в нарезанной упаковке.',
+    },
     categorySlug: 'sut-mahsulotlari',
     unitName: 'qadoq',
     image:
@@ -874,7 +1056,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'saryog-200g',
     name: { uz: "Saryog' 200g", ru: 'Масло сливочное 200г' },
-    description: { uz: 'Tabiiy saryogʻ, nonushta va pishiriq uchun.', ru: 'Натуральное сливочное масло для завтрака и выпечки.' },
+    description: {
+      uz: 'Tabiiy saryogʻ, nonushta va pishiriq uchun.',
+      ru: 'Натуральное сливочное масло для завтрака и выпечки.',
+    },
     categorySlug: 'sut-mahsulotlari',
     unitName: 'qadoq',
     image:
@@ -884,7 +1069,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'chips-paprika',
     name: { uz: 'Chips paprika', ru: 'Чипсы паприка' },
-    description: { uz: 'Paprika taʼmli qarsildoq snack.', ru: 'Хрустящий снек со вкусом паприки.' },
+    description: {
+      uz: 'Paprika taʼmli qarsildoq snack.',
+      ru: 'Хрустящий снек со вкусом паприки.',
+    },
     categorySlug: 'shirinlik-va-snack',
     unitName: 'qadoq',
     image:
@@ -894,7 +1082,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'shokolad-sutli',
     name: { uz: 'Sutli shokolad', ru: 'Молочный шоколад' },
-    description: { uz: 'Yumshoq sutli shokolad batonchasi.', ru: 'Мягкая молочная шоколадная плитка.' },
+    description: {
+      uz: 'Yumshoq sutli shokolad batonchasi.',
+      ru: 'Мягкая молочная шоколадная плитка.',
+    },
     categorySlug: 'shirinlik-va-snack',
     unitName: 'dona',
     image:
@@ -904,7 +1095,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'pechenye-choyga',
     name: { uz: 'Pechenye choyga', ru: 'Печенье к чаю' },
-    description: { uz: 'Choy bilan isteʼmol qilish uchun pechenye.', ru: 'Печенье для употребления с чаем.' },
+    description: {
+      uz: 'Choy bilan isteʼmol qilish uchun pechenye.',
+      ru: 'Печенье для употребления с чаем.',
+    },
     categorySlug: 'shirinlik-va-snack',
     unitName: 'qadoq',
     image:
@@ -914,7 +1108,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'kir-yuvish-kukuni',
     name: { uz: 'Kir yuvish kukuni', ru: 'Стиральный порошок' },
-    description: { uz: 'Rangli va oq kiyimlar uchun universal kukun.', ru: 'Универсальный порошок для цветных и белых вещей.' },
+    description: {
+      uz: 'Rangli va oq kiyimlar uchun universal kukun.',
+      ru: 'Универсальный порошок для цветных и белых вещей.',
+    },
     categorySlug: 'uy-rozgor',
     unitName: 'paket',
     image:
@@ -924,7 +1121,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'sovun-antibakterial',
     name: { uz: 'Sovun antibakterial', ru: 'Мыло антибактериальное' },
-    description: { uz: 'Qoʻl va tana uchun yumshoq sovun.', ru: 'Мягкое мыло для рук и тела.' },
+    description: {
+      uz: 'Qoʻl va tana uchun yumshoq sovun.',
+      ru: 'Мягкое мыло для рук и тела.',
+    },
     categorySlug: 'uy-rozgor',
     unitName: 'dona',
     image:
@@ -934,7 +1134,10 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   {
     slug: 'kungaboqar-yogi-1l',
     name: { uz: "Kungaboqar yog'i 1L", ru: 'Подсолнечное масло 1л' },
-    description: { uz: 'Qovurish va salat uchun tozalangan yogʻ.', ru: 'Очищенное масло для жарки и салатов.' },
+    description: {
+      uz: 'Qovurish va salat uchun tozalangan yogʻ.',
+      ru: 'Очищенное масло для жарки и салатов.',
+    },
     categorySlug: 'bakaleya',
     unitName: 'litr',
     image:
@@ -964,7 +1167,9 @@ export class SeedService {
     const productRepo = this.dataSource.getRepository(Product);
     const productTaxRepo = this.dataSource.getRepository(ProductTax);
     const storeRepo = this.dataSource.getRepository(Store);
-    const deliverySettingsRepo = this.dataSource.getRepository(StoreDeliverySettings);
+    const deliverySettingsRepo = this.dataSource.getRepository(
+      StoreDeliverySettings,
+    );
     const workingHourRepo = this.dataSource.getRepository(StoreWorkingHour);
     const storeProductRepo = this.dataSource.getRepository(StoreProduct);
     const sellerLegalRepo = this.dataSource.getRepository(SellerLegal);
@@ -972,14 +1177,24 @@ export class SeedService {
     this.logger.log('🌱 Seed started — mock data yaratilmoqda...');
 
     // 1. Super admin (agar yo'q bo'lsa)
-    await this.ensureSuperAdmin(authRepo, userRepo, walletRepo, PROD_ADMIN_SEED);
+    await this.ensureSuperAdmin(
+      authRepo,
+      userRepo,
+      walletRepo,
+      PROD_ADMIN_SEED,
+    );
 
     // 2. Units va kategoriyalar
     const units = await this.seedUnits(unitRepo);
     const categories = await this.seedCategories(categoryRepo);
 
     // 3. Mahsulotlar (parent + children)
-    const products = await this.seedProducts(productRepo, productTaxRepo, categories, units);
+    const products = await this.seedProducts(
+      productRepo,
+      productTaxRepo,
+      categories,
+      units,
+    );
 
     // 4. Demo akkauntlar (sellerlar, customerlar, courierlar)
     const walletTxRepo = this.dataSource.getRepository(WalletTransaction);
@@ -992,7 +1207,12 @@ export class SeedService {
     );
 
     // 5. Do'konlar + yetkazib berish sozlamalari + ish soatlari
-    const stores = await this.seedStores(storeRepo, deliverySettingsRepo, workingHourRepo, accounts);
+    const stores = await this.seedStores(
+      storeRepo,
+      deliverySettingsRepo,
+      workingHourRepo,
+      accounts,
+    );
 
     // 6. Seller huquqiy ma'lumotlari
     await this.seedSellerLegals(sellerLegalRepo, accounts, stores);
@@ -1076,7 +1296,8 @@ export class SeedService {
     const result = new Map<string, Unit>();
 
     for (const seed of UNIT_SEEDS) {
-      let unit = await unitRepo.createQueryBuilder('unit')
+      let unit = await unitRepo
+        .createQueryBuilder('unit')
         .where("unit.short_name->>'uz' = :short", { short: seed.short_name.uz })
         .orWhere("unit.name->>'uz' = :uz", { uz: seed.name.uz })
         .getOne();
@@ -1091,7 +1312,7 @@ export class SeedService {
       const saved = await unitRepo.save(unit);
       // Key variants — product seed qaysi birini ishlatishidan qat'iy nazar topa oladi
       result.set(seed.short_name.uz, saved); // "kg"
-      result.set(seed.name.uz, saved);       // "Kilogramm"
+      result.set(seed.name.uz, saved); // "Kilogramm"
       // Qo'shimcha alias'lar (lowercase name, short without dots)
       result.set(seed.name.uz.toLowerCase(), saved);
       result.set(seed.short_name.uz.replace(/\./g, ''), saved);
@@ -1274,7 +1495,7 @@ export class SeedService {
             walletTxRepo.create({
               amount: SELLER_INITIAL_CREDIT,
               type: String(WalletTransactionTypeEnum.CREDIT_BONUS),
-              description: 'Boshlang\'ich promo-kredit (seed)',
+              description: "Boshlang'ich promo-kredit (seed)",
               wallet: savedWallet,
             }),
           );

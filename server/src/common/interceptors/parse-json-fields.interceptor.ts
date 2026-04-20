@@ -1,4 +1,9 @@
-import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import {
+  CallHandler,
+  ExecutionContext,
+  Injectable,
+  NestInterceptor,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 
 /**
@@ -16,7 +21,10 @@ export class ParseJsonFieldsInterceptor implements NestInterceptor {
     if (body && typeof body === 'object') {
       for (const key of Object.keys(body)) {
         const val = body[key];
-        if (typeof val === 'string' && (val.startsWith('{') || val.startsWith('['))) {
+        if (
+          typeof val === 'string' &&
+          (val.startsWith('{') || val.startsWith('['))
+        ) {
           try {
             const parsed = JSON.parse(val);
             if (typeof parsed === 'object' && parsed !== null) {

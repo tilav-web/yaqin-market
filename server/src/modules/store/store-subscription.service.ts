@@ -1,4 +1,8 @@
-import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { StoreSubscription } from './entities/store-subscription.entity';
@@ -22,7 +26,10 @@ export class StoreSubscriptionService {
       throw new ConflictException('Already subscribed to this store');
     }
 
-    const subscription = this.repo.create({ user_id: userId, store_id: storeId });
+    const subscription = this.repo.create({
+      user_id: userId,
+      store_id: storeId,
+    });
     return this.repo.save(subscription);
   }
 
@@ -55,7 +62,11 @@ export class StoreSubscriptionService {
   }
 
   /** Do'konga yangi mahsulot qo'shilganda barcha obunachilarga bildirishnoma yuboradi */
-  async notifySubscribers(storeId: string, storeName: string, productName: string) {
+  async notifySubscribers(
+    storeId: string,
+    storeName: string,
+    productName: string,
+  ) {
     const subscriptions = await this.repo.find({
       where: { store_id: storeId },
       relations: ['user'],

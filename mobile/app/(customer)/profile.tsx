@@ -10,8 +10,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth.store';
 import { authApi } from '../../src/api/auth';
-import { usersApi } from '../../src/api/users';
+import { usersApi, locationsApi } from '../../src/api/users';
 import { notificationsApi } from '../../src/api/notifications';
+import { ordersApi } from '../../src/api/orders';
+import { apiClient } from '../../src/api/client';
 import { useTranslation } from '../../src/i18n';
 import type { Lang } from '../../src/i18n';
 
@@ -125,6 +127,43 @@ export default function ProfileScreen() {
     refetchInterval: 60000,
   });
   const unreadCount = unreadNotif?.unread ?? 0;
+
+  // Statistikalar — buyurtma, balans, manzil
+  const { data: myOrdersData } = useQuery({
+    queryKey: ['my-orders-all'],
+    queryFn: () => ordersApi.getMyOrders(),
+    enabled: isAuthenticated,
+  });
+  const { data: myLocations } = useQuery({
+    queryKey: ['my-locations'],
+    queryFn: () => locationsApi.getAll(),
+    enabled: isAuthenticated,
+  });
+  const { data: walletData } = useQuery({
+    queryKey: ['wallet-my'],
+    queryFn: () => apiClient.get('/wallet/my').then((r) => r.data),
+    enabled: isAuthenticated,
+    refetchInterval: 30000,
+  });
+
+  const orderList = Array.isArray(myOrdersData) ? myOrdersData : [];
+  const ordersCount = orderList.length;
+  const walletBalance = Number(
+    walletData?.available_balance ?? walletData?.balance ?? 0,
+  );
+  const locationsCount = Array.isArray(myLocations) ? myLocations.length : 0;
+
+  const formatCompactPrice = (p: number): string => {
+    if (p >= 1_000_000) {
+      const m = p / 1_000_000;
+      return Number.isInteger(m) ? `${m}M` : `${m.toFixed(1)}M`;
+    }
+    if (p >= 1_000) {
+      const k = p / 1_000;
+      return Number.isInteger(k) ? `${k}k` : `${k.toFixed(0)}k`;
+    }
+    return String(p);
+  };
 
   if (!isAuthenticated) {
     const guestMenu: MenuItem[] = [
@@ -353,47 +392,113 @@ export default function ProfileScreen() {
     },
   ];
 
+  const stats = [
+    {
+      label: lang === 'ru' ? 'Заказы' : 'Buyurtma',
+      value: String(ordersCount),
+      icon: 'cube-outline' as IoniconsName,
+    },
+    {
+      label: lang === 'ru' ? 'Баланс' : "Balans",
+      value: walletBalance > 0 ? formatCompactPrice(walletBalance) : '0',
+      icon: 'wallet-outline' as IoniconsName,
+    },
+    {
+      label: lang === 'ru' ? 'Адреса' : 'Manzillar',
+      value: String(locationsCount),
+      icon: 'location-outline' as IoniconsName,
+    },
+  ];
+
+  // Scroll animation — hero collapses, stats sticks
+  const HERO_HEIGHT = 260;
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const heroOpacity = scrollY.interpolate({
+    inputRange: [0, HERO_HEIGHT * 0.6, HERO_HEIGHT * 0.9],
+    outputRange: [1, 0.4, 0],
+    extrapolate: 'clamp',
+  });
+  const heroTranslate = scrollY.interpolate({
+    inputRange: [0, HERO_HEIGHT],
+    outputRange: [0, -HERO_HEIGHT * 0.5],
+    extrapolate: 'clamp',
+  });
+  const stickyElevation = scrollY.interpolate({
+    inputRange: [HERO_HEIGHT * 0.3, HERO_HEIGHT],
+    outputRange: [0, 1],
+    extrapolate: 'clamp',
+  });
+
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
-      {/* Hero */}
-      <View style={s.header}>
-        <View style={s.decorCircle1} />
-        <View style={s.decorCircle2} />
-        <View style={s.avatarWrap}>
-          <View style={s.avatar}>
-            <Text style={s.avatarTxt}>{initials}</Text>
+      <Animated.ScrollView
+        style={s.scroll}
+        showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[1]}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true },
+        )}
+        scrollEventThrottle={16}
+      >
+        {/* [0] Hero — collapses on scroll */}
+        <Animated.View
+          style={[
+            s.header,
+            {
+              opacity: heroOpacity,
+              transform: [{ translateY: heroTranslate }],
+            },
+          ]}
+        >
+          <View style={s.decorCircle1} />
+          <View style={s.decorCircle2} />
+          <View style={s.avatarWrap}>
+            <View style={s.avatar}>
+              <Text style={s.avatarTxt}>{initials}</Text>
+            </View>
+            <TouchableOpacity style={s.editBtn} onPress={() => router.push('/(customer)/edit-profile')}>
+              <Ionicons name="pencil" size={12} color={Colors.white} />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={s.editBtn} onPress={() => router.push('/(customer)/edit-profile')}>
-            <Ionicons name="pencil" size={12} color={Colors.white} />
-          </TouchableOpacity>
-        </View>
-        <Text style={s.name}>{fullName}</Text>
-        <Text style={s.phone}>+998 {auth?.phone ?? '— — —'}</Text>
-        <View style={s.rolePill}>
-          <Ionicons
-            name={role === 'SELLER' ? 'storefront-outline' : role === 'COURIER' ? 'bicycle-outline' : 'person-outline'}
-            size={12} color={Colors.primary}
-          />
-          <Text style={s.roleText}>{roleLabel}</Text>
-        </View>
-      </View>
-
-      {/* Stats */}
-      <View style={s.statsRow}>
-        {[
-          { label: lang === 'ru' ? 'Заказы' : 'Buyurtma', value: '0', icon: 'cube-outline' as IoniconsName },
-          { label: lang === 'ru' ? 'Потрачено' : "So'm sarflandi", value: '0', icon: 'wallet-outline' as IoniconsName },
-          { label: lang === 'ru' ? 'Адрес' : 'Manzil', value: '0', icon: 'location-outline' as IoniconsName },
-        ].map((stat, i) => (
-          <View key={i} style={[s.statCard, i < 2 && s.statBorder]}>
-            <Ionicons name={stat.icon} size={18} color={Colors.primary} />
-            <Text style={s.statVal}>{stat.value}</Text>
-            <Text style={s.statLabel}>{stat.label}</Text>
+          <Text style={s.name}>{fullName}</Text>
+          <Text style={s.phone}>+998 {auth?.phone ?? '— — —'}</Text>
+          <View style={s.rolePill}>
+            <Ionicons
+              name={role === 'SELLER' ? 'storefront-outline' : role === 'COURIER' ? 'bicycle-outline' : 'person-outline'}
+              size={12} color={Colors.primary}
+            />
+            <Text style={s.roleText}>{roleLabel}</Text>
           </View>
-        ))}
-      </View>
+        </Animated.View>
 
-      <ScrollView style={s.scroll} showsVerticalScrollIndicator={false}>
+        {/* [1] Stats — sticky at top when scrolled */}
+        <Animated.View
+          style={[
+            s.statsSticky,
+            {
+              shadowOpacity: stickyElevation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 0.15],
+              }),
+              elevation: stickyElevation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, 6],
+              }),
+            },
+          ]}
+        >
+          <View style={s.statsRow}>
+            {stats.map((stat, i) => (
+              <View key={i} style={[s.statCard, i < 2 && s.statBorder]}>
+                <Ionicons name={stat.icon} size={18} color={Colors.primary} />
+                <Text style={s.statVal}>{stat.value}</Text>
+                <Text style={s.statLabel}>{stat.label}</Text>
+              </View>
+            ))}
+          </View>
+        </Animated.View>
+
         {(role === 'SELLER' || role === 'COURIER') && (
           <View style={s.section}>
             <Text style={s.sectionTitle}>{lang === 'ru' ? 'Моя панель' : 'Mening panelim'}</Text>
@@ -450,7 +555,7 @@ export default function ProfileScreen() {
 
         <Text style={s.version}>Yaqin Market v1.0.0</Text>
         <View style={{ height: 32 }} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Lang Picker Drawer */}
       <LangPickerDrawer
@@ -554,12 +659,19 @@ const s = StyleSheet.create({
     borderRadius: Radius.full,
   },
   roleText: { fontSize: 12, fontWeight: '600', color: Colors.primary },
+  statsSticky: {
+    backgroundColor: Colors.background,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.sm,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowRadius: 8,
+  },
   statsRow: {
     flexDirection: 'row',
     backgroundColor: Colors.white,
     marginHorizontal: Spacing.md,
     marginTop: -20,
-    marginBottom: Spacing.md,
     borderRadius: Radius.lg,
     ...Shadow.md,
     overflow: 'hidden',

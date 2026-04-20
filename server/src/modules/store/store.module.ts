@@ -12,7 +12,12 @@ import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Store, StoreDeliverySettings, StoreWorkingHour, StoreSubscription]),
+    TypeOrmModule.forFeature([
+      Store,
+      StoreDeliverySettings,
+      StoreWorkingHour,
+      StoreSubscription,
+    ]),
     NotificationModule,
   ],
   controllers: [StoreServiceController, StoreSubscriptionController],

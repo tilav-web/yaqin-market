@@ -46,7 +46,12 @@ import { OrderChangeCronService } from './order-change-cron.service';
     WalletModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService, RolesGuard, BroadcastGateway, OrderChangeCronService],
+  providers: [
+    OrderService,
+    RolesGuard,
+    BroadcastGateway,
+    OrderChangeCronService,
+  ],
   exports: [OrderService],
 })
 export class OrderModule {}

@@ -64,6 +64,12 @@ export class Product {
   @OneToOne(() => ProductTax, (tax) => tax.product)
   tax: ProductTax | null;
 
+  @Column({ type: 'float', default: 0 })
+  rating: number;
+
+  @Column({ type: 'int', default: 0 })
+  reviews_count: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

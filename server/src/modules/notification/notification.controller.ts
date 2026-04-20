@@ -9,10 +9,14 @@ import {
   Body,
 } from '@nestjs/common';
 import { AuthGuard } from '../auth/guard/auth.guard';
+import { RolesGuard } from '../auth/guard/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { UserDecorator } from '../auth/decorators/user.decorator';
 import { User } from '../user/user.entity';
 import { NotificationService } from './notification.service';
 import { NotificationType } from './notification.entity';
+import { BroadcastNotificationDto } from './dto/broadcast-notification.dto';
+import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 
 @Controller('notifications')
 @UseGuards(AuthGuard)
@@ -67,5 +71,21 @@ export class NotificationController {
     @Body('token') token: string,
   ) {
     return this.notificationService.saveFcmToken(user.id, token);
+  }
+
+  // ─── Admin broadcast ────────────────────────────────────────────────────
+
+  @Post('admin/broadcast')
+  @UseGuards(RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
+  async broadcast(@Body() dto: BroadcastNotificationDto) {
+    return this.notificationService.broadcast(dto);
+  }
+
+  @Post('admin/broadcast/preview')
+  @UseGuards(RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
+  async broadcastPreview(@Body() dto: BroadcastNotificationDto) {
+    return this.notificationService.previewBroadcastTargets(dto);
   }
 }

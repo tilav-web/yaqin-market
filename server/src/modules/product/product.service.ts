@@ -101,9 +101,7 @@ export class ProductService {
             qb.where("LOWER(product.name->>'uz') LIKE :search")
               .orWhere("LOWER(product.name->>'ru') LIKE :search")
               .orWhere('LOWER(product.slug) LIKE :search')
-              .orWhere(
-                "LOWER(COALESCE(category.name->>'uz', '')) LIKE :search",
-              )
+              .orWhere("LOWER(COALESCE(category.name->>'uz', '')) LIKE :search")
               .orWhere(
                 `EXISTS (
                   SELECT 1 FROM products c
@@ -124,8 +122,8 @@ export class ProductService {
     // Har bir product (yoki uning variant-childrenlari) uchun store_products
     // dan kamida bitta AVAILABLE mos yozuvlari bor yoki yo'qligini tekshiradi.
     const hasUserLocation = query.lat != null && query.lng != null;
-    const hasDeliveryFilter = hasUserLocation &&
-      (query.deliverableOnly || query.freeDeliveryOnly);
+    const hasDeliveryFilter =
+      hasUserLocation && (query.deliverableOnly || query.freeDeliveryOnly);
     const needsSpFilter =
       query.priceMin != null ||
       query.priceMax != null ||
@@ -138,11 +136,7 @@ export class ProductService {
         .select('1')
         .from('store_products', 'sp')
         .leftJoin('stores', 'st', 'st.id = sp.store_id')
-        .leftJoin(
-          'store_delivery_settings',
-          'dset',
-          'dset.store_id = st.id',
-        )
+        .leftJoin('store_delivery_settings', 'dset', 'dset.store_id = st.id')
         .where(
           '(sp.product_id = product.id OR sp.product_id IN ' +
             '(SELECT c.id FROM products c WHERE c.parent_id = product.id))',
@@ -207,7 +201,11 @@ export class ProductService {
             ))`,
           'min_price',
         )
-        .orderBy('min_price', sort === 'price_asc' ? 'ASC' : 'DESC', 'NULLS LAST');
+        .orderBy(
+          'min_price',
+          sort === 'price_asc' ? 'ASC' : 'DESC',
+          'NULLS LAST',
+        );
     } else if (sort === 'popular') {
       sortedQuery
         .addSelect(
@@ -436,7 +434,10 @@ export class ProductService {
     userLng?: number,
     limit = 10,
   ) {
-    const safeLimit = Math.min(20, Math.max(1, Math.floor(Number(limit) || 10)));
+    const safeLimit = Math.min(
+      20,
+      Math.max(1, Math.floor(Number(limit) || 10)),
+    );
     const hasLocation =
       userLat != null &&
       userLng != null &&
@@ -490,9 +491,35 @@ export class ProductService {
       LIMIT ${safeLimit}
     `;
 
-    const rows = await this.productRepo.manager.query(sql, params);
+    type CheapestRow = {
+      store_product_id: string;
+      price: string | number;
+      variant_id: string | number;
+      variant_name: Record<string, string>;
+      variant_slug: string;
+      variant_images: { url: string; is_main?: boolean }[] | null;
+      parent_id: string | number | null;
+      unit_short_name: Record<string, string> | null;
+      unit_name: Record<string, string> | null;
+      store_id: string;
+      store_name: string;
+      store_address: string | null;
+      store_lat: string | number | null;
+      store_lng: string | number | null;
+      store_logo: string | null;
+      store_is_prime: boolean;
+      max_radius: string | number | null;
+      free_radius: string | number | null;
+      delivery_enabled: boolean | null;
+      distance_meters: string | number | null;
+    };
 
-    return rows.map((r: any) => {
+    const rows: CheapestRow[] = await this.productRepo.manager.query(
+      sql,
+      params,
+    );
+
+    return rows.map((r) => {
       const price = Number(r.price);
       const distance =
         r.distance_meters != null ? Number(r.distance_meters) : null;

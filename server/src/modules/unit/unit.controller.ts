@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, UseGuards, ParseIntPipe } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  UseGuards,
+  ParseIntPipe,
+} from '@nestjs/common';
 import { UnitService } from './unit.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { RolesGuard } from '../auth/guard/roles.guard';
@@ -22,7 +32,13 @@ export class UnitController {
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SUPER_ADMIN)
-  async create(@Body() data: { name: { uz: string; ru: string }; short_name?: { uz: string; ru: string } }) {
+  async create(
+    @Body()
+    data: {
+      name: { uz: string; ru: string };
+      short_name?: { uz: string; ru: string };
+    },
+  ) {
     return this.unitService.create(data);
   }
 
@@ -31,7 +47,11 @@ export class UnitController {
   @Roles(AuthRoleEnum.SUPER_ADMIN)
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() data: { name?: { uz: string; ru: string }; short_name?: { uz: string; ru: string } },
+    @Body()
+    data: {
+      name?: { uz: string; ru: string };
+      short_name?: { uz: string; ru: string };
+    },
   ) {
     return this.unitService.update(id, data);
   }

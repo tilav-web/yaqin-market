@@ -12,6 +12,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../../src/theme';
 import { StatusBadge } from '../../../src/components/ui/Badge';
 import { ordersApi } from '../../../src/api/orders';
+import { reviewsApi } from '../../../src/api/reviews';
 import { useSocket } from '../../../src/hooks/useSocket';
 import { haptics } from '../../../src/utils/haptics';
 
@@ -38,6 +39,12 @@ export default function OrderDetailScreen() {
     queryFn: () => ordersApi.getById(id),
     refetchInterval: (query) =>
       query.state.data?.status === 'DELIVERING' ? 15000 : false,
+  });
+
+  const { data: myReviews = [] } = useQuery<any[]>({
+    queryKey: ['order-reviews', id],
+    queryFn: () => reviewsApi.getByOrder(id),
+    enabled: order?.status === 'DELIVERED',
   });
 
   const { subscribeToOrder } = useSocket('customer', (event, data) => {
@@ -320,6 +327,46 @@ export default function OrderDetailScreen() {
           </View>
         </View>
 
+        {/* Rate CTA — DELIVERED, baholanishi mumkin bo'lgan mahsulot yoki kuryer bo'lsa */}
+        {order.status === 'DELIVERED' && (() => {
+          const reviewedProductIds = new Set(
+            myReviews.filter((r: any) => r.target === 'PRODUCT').map((r: any) => Number(r.product_id)),
+          );
+          const unreviewedItems = (order.items ?? []).filter(
+            (it: any) => !reviewedProductIds.has(Number(it.product_id)),
+          );
+          const courierReviewed = myReviews.some((r: any) => r.target === 'COURIER');
+          const canRate =
+            unreviewedItems.length > 0 || (order.courier_id && !courierReviewed);
+
+          if (canRate) {
+            return (
+              <TouchableOpacity
+                style={s.rateCta}
+                onPress={() => {
+                  haptics.medium();
+                  router.push(`/(customer)/order/rate/${id}`);
+                }}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="star" size={20} color={Colors.white} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.rateCtaTitle}>Buyurtmani baholang</Text>
+                  <Text style={s.rateCtaSub}>Mahsulotlar va kuryer haqida fikringiz muhim</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={Colors.white} />
+              </TouchableOpacity>
+            );
+          }
+
+          return (
+            <View style={s.rateDone}>
+              <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
+              <Text style={s.rateDoneTxt}>Buyurtma baholangan. Rahmat!</Text>
+            </View>
+          );
+        })()}
+
       </ScrollView>
 
       {/* Dispute modal */}
@@ -503,4 +550,34 @@ const s = StyleSheet.create({
   modalBtnCancelTxt: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
   modalBtnDispute: { backgroundColor: Colors.error },
   modalBtnDisputeTxt: { fontSize: 14, fontWeight: '700', color: Colors.white },
+
+  // ── Rate CTA ──
+  rateCta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    padding: Spacing.md,
+    borderRadius: Radius.lg,
+    backgroundColor: '#F59E0B',
+    ...Shadow.sm,
+  },
+  rateCtaTitle: { fontSize: 14, fontWeight: '800', color: Colors.white },
+  rateCtaSub: { fontSize: 11, color: 'rgba(255,255,255,0.9)', marginTop: 2 },
+
+  rateDone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    justifyContent: 'center',
+    padding: Spacing.sm,
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    backgroundColor: '#F0FDF4',
+    borderRadius: Radius.lg,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  rateDoneTxt: { fontSize: 12, fontWeight: '600', color: Colors.success },
 });

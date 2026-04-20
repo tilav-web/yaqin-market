@@ -31,6 +31,8 @@ function AuthGuard() {
   useEffect(() => {
     if (!navState?.key) return; // navigation not mounted yet
     if (isLoading) return;
+    // segments bo'sh — dastlabki yuklanish, index.tsx Redirect o'z ishini qiladi
+    if (!segments || segments.length < 1) return;
 
     const group = segments[0] as string | undefined;
 
@@ -58,9 +60,6 @@ function AuthGuard() {
       }
       return;
     }
-
-    // No route matched (initial load) → customer home
-    router.replace('/(customer)/home');
   }, [isAuthenticated, isLoading, segments, navState?.key]);
 
   return null;

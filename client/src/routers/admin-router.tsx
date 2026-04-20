@@ -9,6 +9,8 @@ import AdminProfilePage from "../pages/admin/profile/profile";
 import AdminApplicationsPage from "../pages/admin/applications/applications";
 import AdminUnitsPage from "../pages/admin/units/units";
 import AdminDisputesPage from "../pages/admin/disputes/disputes";
+import AdminReviewsPage from "../pages/admin/reviews/reviews";
+import AdminBroadcastPage from "../pages/admin/broadcast/broadcast";
 
 export const adminRouter: RouteObject[] = [
   {
@@ -50,6 +52,14 @@ export const adminRouter: RouteObject[] = [
       {
         path: "disputes",
         element: <AdminDisputesPage />,
+      },
+      {
+        path: "reviews",
+        element: <AdminReviewsPage />,
+      },
+      {
+        path: "broadcast",
+        element: <AdminBroadcastPage />,
       },
       {
         path: "profile",

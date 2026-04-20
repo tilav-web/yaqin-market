@@ -2,6 +2,8 @@ import {
   BoxesIcon,
   FileCheckIcon,
   LayoutGridIcon,
+  MegaphoneIcon,
+  MessageSquareTextIcon,
   RulerIcon,
   ScaleIcon,
   SendIcon,
@@ -25,6 +27,8 @@ export const adminSections: SidebarSection[] = [
       { label: "Birliklar", to: "/admin/units", icon: RulerIcon },
       { label: "Arizalar", to: "/admin/applications", icon: FileCheckIcon },
       { label: "Qaytim nizolari", to: "/admin/disputes", icon: ScaleIcon },
+      { label: "Sharhlar", to: "/admin/reviews", icon: MessageSquareTextIcon },
+      { label: "Bildirishnoma", to: "/admin/broadcast", icon: MegaphoneIcon },
     ],
   },
   {

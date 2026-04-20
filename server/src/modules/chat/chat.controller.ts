@@ -8,7 +8,10 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { ChatService } from './chat.service';
-import { StartConversationDto, SendMessageDto } from './dto/start-conversation.dto';
+import {
+  StartConversationDto,
+  SendMessageDto,
+} from './dto/start-conversation.dto';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { UserDecorator } from '../auth/decorators/user.decorator';
 import { User } from '../user/user.entity';

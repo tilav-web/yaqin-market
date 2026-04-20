@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { AlertCircleIcon, CheckCircle2Icon, CircleDollarSignIcon, ScaleIcon, UserIcon } from "lucide-react";
+import { AlertCircleIcon, CheckCircle2Icon, CircleDollarSignIcon, UserIcon } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/api/api";
 import {
@@ -13,9 +13,28 @@ import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { extractErrorMessage } from "@/lib/market";
+
+function Label({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="text-sm font-semibold text-slate-700">{children}</span>
+  );
+}
+
+function Textarea(
+  props: React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+) {
+  const { className, ...rest } = props;
+  return (
+    <textarea
+      {...rest}
+      className={
+        "w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 " +
+        (className ?? "")
+      }
+    />
+  );
+}
 
 type DisputedOrder = {
   id: string;
@@ -99,8 +118,7 @@ export default function AdminDisputesPage() {
     <>
       <AdminPageHeader
         title="Qaytim nizolari"
-        subtitle="Kuryer va mijoz o'rtasidagi naqd pul farqi bo'yicha nizolarni hal qiling"
-        icon={<ScaleIcon className="size-5" />}
+        description="Kuryer va mijoz o'rtasidagi naqd pul farqi bo'yicha nizolarni hal qiling"
       />
 
       <AdminSurface>

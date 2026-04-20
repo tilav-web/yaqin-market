@@ -206,15 +206,23 @@ export class OrderService {
 
       // Notify seller about new direct order
       if (store.owner_id) {
-        this.broadcastGateway.emitToSellerUser(store.owner_id, 'order:new-direct', {
-          order_id: savedOrder.id,
-          order_number: savedOrder.order_number,
-          notification_type: 'DIRECT',
-        });
+        this.broadcastGateway.emitToSellerUser(
+          store.owner_id,
+          'order:new-direct',
+          {
+            order_id: savedOrder.id,
+            order_number: savedOrder.order_number,
+            notification_type: 'DIRECT',
+          },
+        );
         void this.notificationService.sendToUser(store.owner_id, {
-          title: "Yangi buyurtma 🛒",
+          title: 'Yangi buyurtma 🛒',
           body: `${savedOrder.order_number} - to'g'ridan-to'g'ri buyurtma keldi`,
-          data: { order_id: savedOrder.id, type: 'NEW_DIRECT_ORDER', notification_type: 'DIRECT' },
+          data: {
+            order_id: savedOrder.id,
+            type: 'NEW_DIRECT_ORDER',
+            notification_type: 'DIRECT',
+          },
         });
       }
 
@@ -493,16 +501,20 @@ export class OrderService {
 
     const saved = await this.orderRepo.save(order);
 
-    this.broadcastGateway.emitToCustomerUser(order.customer_id, 'order:status-changed', {
-      order_id: orderId,
-      status: OrderStatus.ACCEPTED,
-      store_name: order.store?.name,
-      notification_type: order.order_type,
-    });
+    this.broadcastGateway.emitToCustomerUser(
+      order.customer_id,
+      'order:status-changed',
+      {
+        order_id: orderId,
+        status: OrderStatus.ACCEPTED,
+        store_name: order.store?.name,
+        notification_type: order.order_type,
+      },
+    );
 
     void this.notificationService.sendToUser(order.customer_id, {
-      title: "Buyurtma qabul qilindi ✅",
-      body: `${order.store?.name ?? 'Do\'kon'} buyurtmangizni qabul qildi`,
+      title: 'Buyurtma qabul qilindi ✅',
+      body: `${order.store?.name ?? "Do'kon"} buyurtmangizni qabul qildi`,
       data: { order_id: orderId, type: 'ORDER_ACCEPTED' },
     });
 
@@ -524,12 +536,18 @@ export class OrderService {
       throw new BadRequestException('Order cannot be accepted');
 
     if (order.payment_method !== PaymentMethod.CASH && !order.is_paid) {
-      throw new BadRequestException('Online to`lov qilinmagan buyurtmani qabul qilib bo`lmaydi');
+      throw new BadRequestException(
+        'Online to`lov qilinmagan buyurtmani qabul qilib bo`lmaydi',
+      );
     }
 
     const acceptedSet = new Set(acceptedItemIds);
-    const rejectedItems = order.items.filter(item => !acceptedSet.has(item.id));
-    const acceptedItems = order.items.filter(item => acceptedSet.has(item.id));
+    const rejectedItems = order.items.filter(
+      (item) => !acceptedSet.has(item.id),
+    );
+    const acceptedItems = order.items.filter((item) =>
+      acceptedSet.has(item.id),
+    );
 
     if (acceptedItems.length === 0) {
       throw new BadRequestException('Kamida bitta mahsulot tanlanishi kerak');
@@ -566,23 +584,29 @@ export class OrderService {
     order.accepted_at = new Date();
     await this.orderRepo.save(order);
 
-    this.broadcastGateway.emitToCustomerUser(order.customer_id, 'order:status-changed', {
-      order_id: orderId,
-      status: OrderStatus.ACCEPTED,
-      store_name: order.store?.name,
-      accepted_items: acceptedItemIds,
-      rejected_items: rejectedItems.map(i => i.id),
-      notification_type: order.order_type,
-      has_rejected_items: rejectedItems.length > 0,
-    });
+    this.broadcastGateway.emitToCustomerUser(
+      order.customer_id,
+      'order:status-changed',
+      {
+        order_id: orderId,
+        status: OrderStatus.ACCEPTED,
+        store_name: order.store?.name,
+        accepted_items: acceptedItemIds,
+        rejected_items: rejectedItems.map((i) => i.id),
+        notification_type: order.order_type,
+        has_rejected_items: rejectedItems.length > 0,
+      },
+    );
 
     void this.notificationService.sendToUser(order.customer_id, {
-      title: rejectedItems.length > 0
-        ? `Qisman qabul qilindi ⚠️`
-        : `Buyurtma qabul qilindi ✅`,
-      body: rejectedItems.length > 0
-        ? `${order.store?.name} ${acceptedItems.length} ta mahsulotni yetkazib bera oladi. ${rejectedItems.length} ta qoldi.`
-        : `${order.store?.name} barcha mahsulotlarni yetkazib beradi`,
+      title:
+        rejectedItems.length > 0
+          ? `Qisman qabul qilindi ⚠️`
+          : `Buyurtma qabul qilindi ✅`,
+      body:
+        rejectedItems.length > 0
+          ? `${order.store?.name} ${acceptedItems.length} ta mahsulotni yetkazib bera oladi. ${rejectedItems.length} ta qoldi.`
+          : `${order.store?.name} barcha mahsulotlarni yetkazib beradi`,
       data: {
         order_id: orderId,
         type: 'ORDER_PARTIAL_ACCEPTED',
@@ -617,16 +641,20 @@ export class OrderService {
 
     const saved = await this.orderRepo.save(order);
 
-    this.broadcastGateway.emitToCustomerUser(order.customer_id, 'order:status-changed', {
-      order_id: orderId,
-      status: OrderStatus.READY,
-      store_name: order.store?.name,
-      notification_type: order.order_type,
-    });
+    this.broadcastGateway.emitToCustomerUser(
+      order.customer_id,
+      'order:status-changed',
+      {
+        order_id: orderId,
+        status: OrderStatus.READY,
+        store_name: order.store?.name,
+        notification_type: order.order_type,
+      },
+    );
 
     void this.notificationService.sendToUser(order.customer_id, {
-      title: "Buyurtma tayyor 🎉",
-      body: `${order.store?.name ?? 'Do\'kon'} buyurtmangizni tayyor qildi`,
+      title: 'Buyurtma tayyor 🎉',
+      body: `${order.store?.name ?? "Do'kon"} buyurtmangizni tayyor qildi`,
       data: { order_id: orderId, type: 'ORDER_READY' },
     });
 
@@ -656,17 +684,25 @@ export class OrderService {
 
     const saved = await this.orderRepo.save(order);
 
-    this.broadcastGateway.emitToCustomerUser(order.customer_id, 'order:status-changed', {
-      order_id: orderId,
-      status: OrderStatus.DELIVERING,
-      courier_id: courierId,
-      notification_type: order.order_type,
-    });
+    this.broadcastGateway.emitToCustomerUser(
+      order.customer_id,
+      'order:status-changed',
+      {
+        order_id: orderId,
+        status: OrderStatus.DELIVERING,
+        courier_id: courierId,
+        notification_type: order.order_type,
+      },
+    );
 
     void this.notificationService.sendToUser(order.customer_id, {
       title: "Buyurtma yo'lda 🚗",
-      body: "Kuryer buyurtmangizni olib ketdi, tez orada yetib keladi",
-      data: { order_id: orderId, type: 'ORDER_DELIVERING', courier_id: courierId },
+      body: 'Kuryer buyurtmangizni olib ketdi, tez orada yetib keladi',
+      data: {
+        order_id: orderId,
+        type: 'ORDER_DELIVERING',
+        courier_id: courierId,
+      },
     });
 
     return saved;
@@ -701,15 +737,19 @@ export class OrderService {
 
     const saved = await this.orderRepo.save(order);
 
-    this.broadcastGateway.emitToCustomerUser(order.customer_id, 'order:status-changed', {
-      order_id: orderId,
-      status: OrderStatus.DELIVERED,
-      notification_type: order.order_type,
-    });
+    this.broadcastGateway.emitToCustomerUser(
+      order.customer_id,
+      'order:status-changed',
+      {
+        order_id: orderId,
+        status: OrderStatus.DELIVERED,
+        notification_type: order.order_type,
+      },
+    );
 
     void this.notificationService.sendToUser(order.customer_id, {
-      title: "Buyurtma yetkazildi 🎉",
-      body: "Buyurtmangiz muvaffaqiyatli yetkazildi!",
+      title: 'Buyurtma yetkazildi 🎉',
+      body: 'Buyurtmangiz muvaffaqiyatli yetkazildi!',
       data: { order_id: orderId, type: 'ORDER_DELIVERED' },
     });
 
@@ -718,7 +758,7 @@ export class OrderService {
       () => {
         void this.notificationService.sendToUser(order.customer_id, {
           title: '⭐ Sharh qoldiring',
-          body: `${order.store?.name ?? 'Do\'kon'}ga baho bering — boshqa mijozlarga yordam bering`,
+          body: `${order.store?.name ?? "Do'kon"}ga baho bering — boshqa mijozlarga yordam bering`,
           data: { order_id: orderId, type: 'REVIEW_REQUEST' },
         });
       },
@@ -752,7 +792,7 @@ export class OrderService {
       );
     }
     if (order.change_status !== OrderChangeStatus.NONE) {
-      throw new BadRequestException('Qaytim allaqachon ro\'yxatga olingan');
+      throw new BadRequestException("Qaytim allaqachon ro'yxatga olingan");
     }
 
     // Bo'sh — o'zgarish yo'q (default order narxi)
@@ -785,7 +825,11 @@ export class OrderService {
     if (!sellerUserId) {
       throw new BadRequestException("Do'kon egasi topilmadi");
     }
-    await this.walletService.freezeChangeForOrder(sellerUserId, change, orderId);
+    await this.walletService.freezeChangeForOrder(
+      sellerUserId,
+      change,
+      orderId,
+    );
 
     order.change_status = OrderChangeStatus.PENDING;
     const saved = await this.orderRepo.save(order);
@@ -801,11 +845,15 @@ export class OrderService {
       },
     });
 
-    this.broadcastGateway.emitToCustomerUser(order.customer_id, 'order:change-pending', {
-      order_id: orderId,
-      change_amount: change,
-      paid_amount: paid,
-    });
+    this.broadcastGateway.emitToCustomerUser(
+      order.customer_id,
+      'order:change-pending',
+      {
+        order_id: orderId,
+        change_amount: change,
+        paid_amount: paid,
+      },
+    );
 
     return saved;
   }
@@ -824,7 +872,7 @@ export class OrderService {
     if (!order) throw new NotFoundException('Buyurtma topilmadi');
     if (order.change_status !== OrderChangeStatus.PENDING) {
       throw new BadRequestException(
-        'Bu buyurtma uchun qaytim tasdig\'i kutilmayapti',
+        "Bu buyurtma uchun qaytim tasdig'i kutilmayapti",
       );
     }
 
@@ -867,7 +915,7 @@ export class OrderService {
       const claimed = Number(claimedAmount);
       if (claimed < Number(order.total_price)) {
         throw new BadRequestException(
-          'Haqiqiy summa buyurtma narxidan kam bo\'lishi mumkin emas',
+          "Haqiqiy summa buyurtma narxidan kam bo'lishi mumkin emas",
         );
       }
       order.user_claimed_amount = claimed;
@@ -1018,7 +1066,8 @@ export class OrderService {
       relations: ['courier'],
     });
 
-    if (!order) throw new NotFoundException('Order not found or not in delivery');
+    if (!order)
+      throw new NotFoundException('Order not found or not in delivery');
     if (!order.courier) throw new NotFoundException('Courier not assigned');
 
     return {
@@ -1762,7 +1811,7 @@ export class OrderService {
 
             // Push notification — seller'ga yangi broadcast request
             void this.notificationService.sendToUser(store.owner_id, {
-              title: '📢 Yangi umumiy so\'rov',
+              title: "📢 Yangi umumiy so'rov",
               body: `${latestRequest.items?.length ?? 0} ta mahsulot — atrofingizda mijoz taklif kutmoqda`,
               data: {
                 request_id: requestId,

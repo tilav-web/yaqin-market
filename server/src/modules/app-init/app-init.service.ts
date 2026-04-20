@@ -31,7 +31,9 @@ export class AppInitService implements OnApplicationBootstrap {
     const lastName = this.config.get<string>('ADMIN_LAST_NAME') ?? 'User';
 
     if (!phone) {
-      this.logger.warn('ADMIN_PHONE not set in .env — skipping super admin init');
+      this.logger.warn(
+        'ADMIN_PHONE not set in .env — skipping super admin init',
+      );
       return;
     }
 
@@ -42,7 +44,11 @@ export class AppInitService implements OnApplicationBootstrap {
     let auth = await authRepo.findOne({ where: { phone } });
 
     if (!auth) {
-      auth = authRepo.create({ phone, role: AuthRoleEnum.SUPER_ADMIN, is_verified: true });
+      auth = authRepo.create({
+        phone,
+        role: AuthRoleEnum.SUPER_ADMIN,
+        is_verified: true,
+      });
       auth = await authRepo.save(auth);
     } else if (auth.role !== AuthRoleEnum.SUPER_ADMIN || !auth.is_verified) {
       auth.role = AuthRoleEnum.SUPER_ADMIN;
@@ -52,14 +58,24 @@ export class AppInitService implements OnApplicationBootstrap {
 
     let user = await userRepo.findOne({ where: { auth: { id: auth.id } } });
     if (!user) {
-      user = userRepo.create({ first_name: firstName, last_name: lastName, auth });
+      user = userRepo.create({
+        first_name: firstName,
+        last_name: lastName,
+        auth,
+      });
       await userRepo.save(user);
-      this.logger.log(`Super admin yaratildi: ${lastName} ${firstName} (${phone})`);
+      this.logger.log(
+        `Super admin yaratildi: ${lastName} ${firstName} (${phone})`,
+      );
     }
 
-    const wallet = await walletRepo.findOne({ where: { user: { id: user.id } } });
+    const wallet = await walletRepo.findOne({
+      where: { user: { id: user.id } },
+    });
     if (!wallet) {
-      await walletRepo.save(walletRepo.create({ balance: 0, frozen_balance: 0, user }));
+      await walletRepo.save(
+        walletRepo.create({ balance: 0, frozen_balance: 0, user }),
+      );
     }
   }
 }

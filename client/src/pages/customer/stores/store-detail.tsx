@@ -634,7 +634,8 @@ export default function StoreDetail() {
                       navigate(`/login?returnTo=/mobile/stores/${id}`);
                       return;
                     }
-                    isSubscribed ? unsubscribeMutation.mutate() : subscribeMutation.mutate();
+                    if (isSubscribed) unsubscribeMutation.mutate();
+                    else subscribeMutation.mutate();
                   }}
                   disabled={subscribeMutation.isPending || unsubscribeMutation.isPending}
                   className="flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white backdrop-blur transition hover:bg-white/25 disabled:opacity-60"

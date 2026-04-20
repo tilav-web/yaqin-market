@@ -156,7 +156,7 @@ export class WalletService {
     } else if (newBalance <= 0) {
       void this.notificationService.sendToUser(userId, {
         title: '❗ Balans tugadi',
-        body: 'Komissiya balansingiz tugadi. Yangi buyurtmalarni qabul qila olmaysiz. Iltimos balansni to\'ldiring.',
+        body: "Komissiya balansingiz tugadi. Yangi buyurtmalarni qabul qila olmaysiz. Iltimos balansni to'ldiring.",
         data: { type: 'BALANCE_DEPLETED' },
       });
     }
@@ -168,7 +168,10 @@ export class WalletService {
    * Yangi seller'ga boshlang'ich kredit (bepul bonus) beradi.
    * Agar avval berilgan bo'lsa — qayta berilmaydi (idempotent).
    */
-  async grantInitialCredit(userId: string, amount: number = SELLER_INITIAL_CREDIT) {
+  async grantInitialCredit(
+    userId: string,
+    amount: number = SELLER_INITIAL_CREDIT,
+  ) {
     let wallet = await this.walletRepo.findOne({
       where: { user: { id: userId } },
     });
@@ -196,7 +199,7 @@ export class WalletService {
     const tx = this.transactionRepo.create({
       amount,
       type: String(WalletTransactionTypeEnum.CREDIT_BONUS),
-      description: 'Boshlang\'ich promo-kredit (hisob ochilganda)',
+      description: "Boshlang'ich promo-kredit (hisob ochilganda)",
       wallet,
     });
     await this.transactionRepo.save(tx);
@@ -213,7 +216,7 @@ export class WalletService {
     orderId: string,
   ) {
     if (amount <= 0) return;
-    let wallet = await this.ensureWallet(sellerUserId);
+    const wallet = await this.ensureWallet(sellerUserId);
     const available = Number(wallet.balance) - Number(wallet.frozen_balance);
     if (available < amount) {
       throw new BadRequestException(
@@ -277,10 +280,7 @@ export class WalletService {
   async waiveChange(sellerUserId: string, amount: number, orderId: string) {
     if (amount <= 0) return;
     const wallet = await this.ensureWallet(sellerUserId);
-    wallet.frozen_balance = Math.max(
-      0,
-      Number(wallet.frozen_balance) - amount,
-    );
+    wallet.frozen_balance = Math.max(0, Number(wallet.frozen_balance) - amount);
     await this.walletRepo.save(wallet);
 
     await this.transactionRepo.save(
@@ -301,7 +301,12 @@ export class WalletService {
     orderId: string,
   ) {
     // Default amount user ga beriladi (kuryer kafolat)
-    await this.releaseChangeToUser(sellerUserId, customerUserId, amount, orderId);
+    await this.releaseChangeToUser(
+      sellerUserId,
+      customerUserId,
+      amount,
+      orderId,
+    );
   }
 
   /** Dispute — user yutdi → frozen + qo'shimcha seller'dan yechilib user'ga */

@@ -26,7 +26,9 @@ export class Message {
   @Column({ type: 'timestamp', nullable: true })
   read_at: Date | null;
 
-  @ManyToOne(() => Conversation, (conv) => conv.messages, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Conversation, (conv) => conv.messages, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'conversation_id' })
   conversation: Conversation;
 

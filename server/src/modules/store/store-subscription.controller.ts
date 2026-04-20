@@ -1,4 +1,11 @@
-import { Controller, Post, Delete, Get, Param, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Delete,
+  Get,
+  Param,
+  UseGuards,
+} from '@nestjs/common';
 import { StoreSubscriptionService } from './store-subscription.service';
 import { AuthGuard } from '../auth/guard/auth.guard';
 import { UserDecorator } from '../auth/decorators/user.decorator';
@@ -25,7 +32,10 @@ export class StoreSubscriptionController {
   }
 
   @Get(':id/subscribed')
-  async checkSubscription(@Param('id') storeId: string, @UserDecorator() user: User) {
+  async checkSubscription(
+    @Param('id') storeId: string,
+    @UserDecorator() user: User,
+  ) {
     const subscribed = await this.service.isSubscribed(user.id, storeId);
     return { subscribed };
   }

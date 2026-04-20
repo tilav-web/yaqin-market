@@ -20,12 +20,21 @@ export class UnitService {
     return unit;
   }
 
-  async create(data: { name: { uz: string; ru: string }; short_name?: { uz: string; ru: string } }) {
+  async create(data: {
+    name: { uz: string; ru: string };
+    short_name?: { uz: string; ru: string };
+  }) {
     const unit = this.unitRepo.create(data);
     return this.unitRepo.save(unit);
   }
 
-  async update(id: number, data: { name?: { uz: string; ru: string }; short_name?: { uz: string; ru: string } }) {
+  async update(
+    id: number,
+    data: {
+      name?: { uz: string; ru: string };
+      short_name?: { uz: string; ru: string };
+    },
+  ) {
     const unit = await this.findById(id);
     Object.assign(unit, data);
     return this.unitRepo.save(unit);

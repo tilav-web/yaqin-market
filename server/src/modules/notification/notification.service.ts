@@ -1,8 +1,20 @@
-import { Injectable, Logger, OnModuleInit, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  OnModuleInit,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { User } from '../user/user.entity';
 import { Notification, NotificationType } from './notification.entity';
+import { Order, OrderStatus } from '../order/entities/order.entity';
+import {
+  BroadcastNotificationDto,
+  BroadcastTarget,
+} from './dto/broadcast-notification.dto';
+import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import * as admin from 'firebase-admin';
 
 export interface PushNotificationPayload {
@@ -49,6 +61,8 @@ export class NotificationService implements OnModuleInit {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Notification)
     private readonly notificationRepo: Repository<Notification>,
+    @InjectRepository(Order)
+    private readonly orderRepo: Repository<Order>,
   ) {}
 
   onModuleInit() {
@@ -130,9 +144,7 @@ export class NotificationService implements OnModuleInit {
       .andWhere('u.fcm_token IS NOT NULL')
       .getMany();
 
-    const tokens = users
-      .map((u) => u.fcm_token)
-      .filter(Boolean) as string[];
+    const tokens = users.map((u) => u.fcm_token).filter(Boolean) as string[];
 
     if (tokens.length === 0) return;
 
@@ -210,7 +222,10 @@ export class NotificationService implements OnModuleInit {
     } = {},
   ) {
     const page = Math.max(1, Math.floor(Number(params.page) || 1));
-    const limit = Math.min(50, Math.max(1, Math.floor(Number(params.limit) || 20)));
+    const limit = Math.min(
+      50,
+      Math.max(1, Math.floor(Number(params.limit) || 20)),
+    );
 
     const qb = this.notificationRepo
       .createQueryBuilder('n')
@@ -288,5 +303,127 @@ export class NotificationService implements OnModuleInit {
       .where('user_id = :uid', { uid: userId })
       .execute();
     return { deleted: result.affected ?? 0 };
+  }
+
+  // ─── Admin broadcast ────────────────────────────────────────────────────
+
+  /**
+   * Admin broadcast: tanlangan target guruhiga (va filter'larga mos) push + DB.
+   * Katta batch'larda xavfsiz ishlashi uchun FCM yuborishni chunk'larga bo'ladi.
+   */
+  async broadcast(dto: BroadcastNotificationDto) {
+    const targetUserIds = await this.resolveBroadcastTargets(dto);
+
+    if (targetUserIds.length === 0) {
+      return { matched: 0, sent: 0, dry_run: !!dto.dry_run };
+    }
+
+    if (dto.dry_run) {
+      return { matched: targetUserIds.length, sent: 0, dry_run: true };
+    }
+
+    const payload = {
+      title: dto.title,
+      body: dto.body,
+      data: {
+        ...(dto.data ?? {}),
+        type: dto.data?.type ?? 'BROADCAST_ADMIN',
+      },
+    };
+
+    const BATCH = 500;
+    let sent = 0;
+    for (let i = 0; i < targetUserIds.length; i += BATCH) {
+      const chunk = targetUserIds.slice(i, i + BATCH);
+      await this.sendToUsers(chunk, payload);
+      sent += chunk.length;
+    }
+
+    return { matched: targetUserIds.length, sent, dry_run: false };
+  }
+
+  /**
+   * Broadcast uchun user ro'yxatini filter bo'yicha topadi.
+   * Alohida metod — admin panelda "preview" uchun ham ishlatilishi mumkin.
+   */
+  async previewBroadcastTargets(dto: BroadcastNotificationDto) {
+    const ids = await this.resolveBroadcastTargets(dto);
+    return { count: ids.length };
+  }
+
+  private async resolveBroadcastTargets(
+    dto: BroadcastNotificationDto,
+  ): Promise<string[]> {
+    // SPECIFIC → to'g'ridan-to'g'ri ro'yxat
+    if (dto.target === BroadcastTarget.SPECIFIC) {
+      if (!dto.user_ids || dto.user_ids.length === 0) return [];
+      // valid user_id'larni tekshiramiz
+      const found = await this.userRepo
+        .createQueryBuilder('u')
+        .select('u.id', 'id')
+        .whereInIds(dto.user_ids)
+        .getRawMany<{ id: string }>();
+      return found.map((f) => f.id);
+    }
+
+    // Role → targetga ko'ra aniqlanadi yoki DTO'dan keladi
+    const roles = dto.roles ?? this.targetRoles(dto.target);
+
+    const qb = this.userRepo
+      .createQueryBuilder('u')
+      .leftJoin('u.auth', 'a')
+      .select('u.id', 'id');
+
+    if (roles.length > 0) {
+      qb.andWhere('a.role IN (:...roles)', { roles });
+    }
+
+    if (dto.only_with_token) {
+      qb.andWhere('u.fcm_token IS NOT NULL');
+    }
+
+    if (dto.active_last_days && dto.active_last_days > 0) {
+      const since = new Date();
+      since.setDate(since.getDate() - dto.active_last_days);
+      qb.andWhere('u.updatedAt >= :since', { since });
+    }
+
+    let userIds = (await qb.getRawMany<{ id: string }>()).map((r) => r.id);
+
+    // min_delivered_orders — alohida query (customer'lar uchun mantiqli)
+    if (dto.min_delivered_orders && dto.min_delivered_orders > 0) {
+      const rows = await this.orderRepo
+        .createQueryBuilder('o')
+        .select('o.customer_id', 'customer_id')
+        .addSelect('COUNT(o.id)', 'cnt')
+        .where('o.status = :st', { st: OrderStatus.DELIVERED })
+        .andWhere('o.customer_id IN (:...uids)', { uids: userIds.length ? userIds : [''] })
+        .groupBy('o.customer_id')
+        .having('COUNT(o.id) >= :mn', { mn: dto.min_delivered_orders })
+        .getRawMany<{ customer_id: string; cnt: string }>();
+
+      const qualifying = new Set(rows.map((r) => r.customer_id));
+      userIds = userIds.filter((id) => qualifying.has(id));
+    }
+
+    return userIds;
+  }
+
+  private targetRoles(target: BroadcastTarget): AuthRoleEnum[] {
+    switch (target) {
+      case BroadcastTarget.CUSTOMERS:
+        return [AuthRoleEnum.CUSTOMER];
+      case BroadcastTarget.SELLERS:
+        return [AuthRoleEnum.SELLER];
+      case BroadcastTarget.COURIERS:
+        return [AuthRoleEnum.COURIER];
+      case BroadcastTarget.ALL:
+      default:
+        return [
+          AuthRoleEnum.CUSTOMER,
+          AuthRoleEnum.SELLER,
+          AuthRoleEnum.COURIER,
+        ];
+    }
   }
 }

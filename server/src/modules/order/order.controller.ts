@@ -279,7 +279,8 @@ export class OrderController {
   @Roles(AuthRoleEnum.COURIER, AuthRoleEnum.SUPER_ADMIN)
   async submitDeliveryCash(
     @Param('id') id: string,
-    @Body() body: { paid_amount?: number | null; customer_requested_change?: boolean },
+    @Body()
+    body: { paid_amount?: number | null; customer_requested_change?: boolean },
     @UserDecorator() user: User,
   ) {
     return this.orderService.submitDeliveryCash(
@@ -293,10 +294,16 @@ export class OrderController {
   /** User qaytim tasdig'i: CONFIRM / WAIVE / DISPUTE */
   @Post(':id/confirm-change')
   @UseGuards(AuthGuard, RolesGuard)
-  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SELLER, AuthRoleEnum.COURIER, AuthRoleEnum.SUPER_ADMIN)
+  @Roles(
+    AuthRoleEnum.CUSTOMER,
+    AuthRoleEnum.SELLER,
+    AuthRoleEnum.COURIER,
+    AuthRoleEnum.SUPER_ADMIN,
+  )
   async confirmChange(
     @Param('id') id: string,
-    @Body() body: { action: 'CONFIRM' | 'WAIVE' | 'DISPUTE'; claimed_amount?: number },
+    @Body()
+    body: { action: 'CONFIRM' | 'WAIVE' | 'DISPUTE'; claimed_amount?: number },
     @UserDecorator() user: User,
   ) {
     return this.orderService.confirmChange(

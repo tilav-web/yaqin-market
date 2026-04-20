@@ -7,10 +7,11 @@ import { NotificationController } from './notification.controller';
 import { Notification } from './notification.entity';
 import { User } from '../user/user.entity';
 import { Auth } from '../auth/auth.entity';
+import { Order } from '../order/entities/order.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User, Notification, Auth]),
+    TypeOrmModule.forFeature([User, Notification, Auth, Order]),
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({

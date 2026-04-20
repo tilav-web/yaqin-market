@@ -55,6 +55,13 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   last_location_update: Date | null;
 
+  // Courier rating aggregatsiya
+  @Column({ type: 'float', default: 0 })
+  courier_rating: number;
+
+  @Column({ type: 'int', default: 0 })
+  courier_reviews_count: number;
+
   @CreateDateColumn()
   createdAt: Date;
 

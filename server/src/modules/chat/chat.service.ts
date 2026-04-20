@@ -8,7 +8,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Conversation, ConversationType } from './entities/conversation.entity';
 import { Message } from './entities/message.entity';
-import { StartConversationDto, SendMessageDto } from './dto/start-conversation.dto';
+import {
+  StartConversationDto,
+  SendMessageDto,
+} from './dto/start-conversation.dto';
 import { Order } from '../order/entities/order.entity';
 import { BroadcastOffer } from '../order/entities/broadcast-offer.entity';
 import { NotificationService } from '../notification/notification.service';
@@ -28,7 +31,10 @@ export class ChatService {
   ) {}
 
   /** Suhbat boshlash yoki mavjudini qaytarish */
-  async startOrGetConversation(buyerId: string, dto: StartConversationDto): Promise<Conversation> {
+  async startOrGetConversation(
+    buyerId: string,
+    dto: StartConversationDto,
+  ): Promise<Conversation> {
     let sellerId = dto.seller_id;
 
     // ORDER uchun — seller ni orderdan topamiz
@@ -135,7 +141,11 @@ export class ChatService {
     return { items: items.reverse(), total, page, limit };
   }
 
-  async sendMessage(convId: string, senderId: string, dto: SendMessageDto): Promise<Message> {
+  async sendMessage(
+    convId: string,
+    senderId: string,
+    dto: SendMessageDto,
+  ): Promise<Message> {
     const conv = await this.getConversation(convId, senderId);
 
     const msg = this.msgRepo.create({
@@ -157,7 +167,8 @@ export class ChatService {
     await this.convRepo.save(conv);
 
     // Qabul qiluvchiga push notification
-    const recipientId = senderId === conv.buyer_id ? conv.seller_id : conv.buyer_id;
+    const recipientId =
+      senderId === conv.buyer_id ? conv.seller_id : conv.buyer_id;
     if (recipientId) {
       const preview = dto.content.trim().slice(0, 80);
       void this.notificationService.sendToUser(recipientId, {
@@ -179,7 +190,10 @@ export class ChatService {
   async getUnreadCount(userId: string): Promise<{ total: number }> {
     const result = await this.convRepo
       .createQueryBuilder('conv')
-      .select('SUM(CASE WHEN conv.buyer_id = :uid THEN conv.unread_buyer ELSE conv.unread_seller END)', 'total')
+      .select(
+        'SUM(CASE WHEN conv.buyer_id = :uid THEN conv.unread_buyer ELSE conv.unread_seller END)',
+        'total',
+      )
       .where('conv.buyer_id = :uid OR conv.seller_id = :uid', { uid: userId })
       .getRawOne<{ total: string | null }>();
 
