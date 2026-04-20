@@ -11,6 +11,7 @@ import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useAuthStore } from '../../src/store/auth.store';
 import { authApi } from '../../src/api/auth';
 import { usersApi } from '../../src/api/users';
+import { notificationsApi } from '../../src/api/notifications';
 import { useTranslation } from '../../src/i18n';
 import type { Lang } from '../../src/i18n';
 
@@ -22,6 +23,7 @@ interface MenuItem {
   bg: string;
   label: string;
   sub?: string;
+  badge?: number;
   onPress: () => void;
 }
 
@@ -116,6 +118,13 @@ export default function ProfileScreen() {
     queryFn: authApi.getMe,
     enabled: isAuthenticated,
   });
+  const { data: unreadNotif } = useQuery({
+    queryKey: ['notifications-unread'],
+    queryFn: notificationsApi.getUnreadCount,
+    enabled: isAuthenticated,
+    refetchInterval: 60000,
+  });
+  const unreadCount = unreadNotif?.unread ?? 0;
 
   if (!isAuthenticated) {
     const guestMenu: MenuItem[] = [
@@ -169,6 +178,13 @@ export default function ProfileScreen() {
                     <Text style={s.rowLabel}>{item.label}</Text>
                     {item.sub && <Text style={s.rowSub}>{item.sub}</Text>}
                   </View>
+                  {item.badge != null && item.badge > 0 && (
+                    <View style={s.itemBadge}>
+                      <Text style={s.itemBadgeTxt}>
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </Text>
+                    </View>
+                  )}
                   <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
                 </TouchableOpacity>
               ))}
@@ -310,8 +326,12 @@ export default function ProfileScreen() {
         },
         {
           icon: 'notifications-outline', color: '#9C27B0', bg: '#F3E5F5',
-          label: tr('notifications'), sub: tr('notifications_sub'),
-          onPress: () => {},
+          label: tr('notifications'),
+          sub: unreadCount > 0
+            ? (lang === 'ru' ? `${unreadCount} непрочитанных` : `${unreadCount} ta o'qilmagan`)
+            : tr('notifications_sub'),
+          badge: unreadCount > 0 ? unreadCount : undefined,
+          onPress: () => router.push('/(customer)/notifications'),
         },
         {
           icon: 'location-outline', color: '#2196F3', bg: '#E3F2FD',
@@ -401,6 +421,13 @@ export default function ProfileScreen() {
                     <Text style={s.rowLabel}>{item.label}</Text>
                     {item.sub && <Text style={s.rowSub}>{item.sub}</Text>}
                   </View>
+                  {item.badge != null && item.badge > 0 && (
+                    <View style={s.itemBadge}>
+                      <Text style={s.itemBadgeTxt}>
+                        {item.badge > 99 ? '99+' : item.badge}
+                      </Text>
+                    </View>
+                  )}
                   <Ionicons name="chevron-forward" size={16} color={Colors.textHint} />
                 </TouchableOpacity>
               ))}
@@ -558,6 +585,14 @@ const s = StyleSheet.create({
   rowText: { flex: 1 },
   rowLabel: { fontSize: 15, fontWeight: '500', color: Colors.textPrimary },
   rowSub: { fontSize: 12, color: Colors.textHint, marginTop: 1 },
+  itemBadge: {
+    minWidth: 22, height: 22, borderRadius: 11,
+    paddingHorizontal: 7,
+    backgroundColor: Colors.error,
+    alignItems: 'center', justifyContent: 'center',
+    marginRight: 6,
+  },
+  itemBadgeTxt: { fontSize: 11, fontWeight: '800', color: Colors.white },
   loginBtn: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     backgroundColor: Colors.primary,

@@ -217,10 +217,21 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
               <View style={s.actionRow}>
                 <View style={s.qtyRow}>
                   <TouchableOpacity
-                    style={s.qtyBtn}
-                    onPress={() => { haptics.light(); setQuantity(q => Math.max(1, q - 1)); }}
+                    style={[s.qtyBtn, quantity === 1 && s.qtyBtnTrash]}
+                    onPress={() => {
+                      haptics.light();
+                      if (quantity === 1) {
+                        onClose();
+                      } else {
+                        setQuantity(q => q - 1);
+                      }
+                    }}
                   >
-                    <Ionicons name="remove" size={18} color={Colors.primary} />
+                    <Ionicons
+                      name={quantity === 1 ? 'trash-outline' : 'remove'}
+                      size={18}
+                      color={quantity === 1 ? Colors.error : Colors.primary}
+                    />
                   </TouchableOpacity>
                   <Text style={s.qtyText}>{quantity}</Text>
                   <TouchableOpacity
@@ -405,6 +416,10 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   qtyBtnPlus: { backgroundColor: Colors.primary },
+  qtyBtnTrash: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1, borderColor: '#FECACA',
+  },
   qtyText: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, minWidth: 28, textAlign: 'center' },
   addBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
