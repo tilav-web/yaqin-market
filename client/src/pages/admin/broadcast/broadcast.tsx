@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useDeferredValue, useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  SearchIcon,
   SendIcon,
   UsersIcon,
   ShoppingBagIcon,
@@ -8,6 +9,9 @@ import {
   TruckIcon,
   EyeIcon,
   AlertTriangleIcon,
+  UserPlusIcon,
+  XIcon,
+  CheckIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/api/api";
@@ -25,6 +29,23 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { extractErrorMessage } from "@/lib/market";
+import type { AuthRole } from "@/types/auth-role.type";
+
+type AdminUserRow = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  auth?: {
+    id: string;
+    phone?: string | null;
+    role: AuthRole;
+  } | null;
+};
+
+type UserCatalogResponse = {
+  items: AdminUserRow[];
+  meta?: { total: number; hasMore: boolean };
+};
 
 type BroadcastTarget = "ALL" | "CUSTOMERS" | "SELLERS" | "COURIERS" | "SPECIFIC";
 
@@ -73,7 +94,8 @@ export default function AdminBroadcastPage() {
   const [onlyWithToken, setOnlyWithToken] = useState(true);
   const [minDeliveredOrders, setMinDeliveredOrders] = useState("");
   const [activeLastDays, setActiveLastDays] = useState("");
-  const [userIds, setUserIds] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<AdminUserRow[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const [previewCount, setPreviewCount] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
@@ -88,12 +110,7 @@ export default function AdminBroadcastPage() {
         : undefined,
     active_last_days: activeLastDays ? Number(activeLastDays) : undefined,
     user_ids:
-      target === "SPECIFIC"
-        ? userIds
-            .split(/[\s,]+/)
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : undefined,
+      target === "SPECIFIC" ? selectedUsers.map((u) => u.id) : undefined,
     dry_run,
   });
 
@@ -120,6 +137,7 @@ export default function AdminBroadcastPage() {
       setTitle("");
       setBody("");
       setPreviewCount(null);
+      setSelectedUsers([]);
     },
     onError: (err) => toast.error(extractErrorMessage(err)),
   });
@@ -127,7 +145,7 @@ export default function AdminBroadcastPage() {
   const canSubmit =
     title.trim().length > 2 &&
     body.trim().length > 2 &&
-    (target !== "SPECIFIC" || userIds.trim().length > 0);
+    (target !== "SPECIFIC" || selectedUsers.length > 0);
 
   return (
     <>
@@ -181,16 +199,65 @@ export default function AdminBroadcastPage() {
 
             {target === "SPECIFIC" && (
               <div>
-                <label className="text-sm font-semibold text-slate-700">
-                  User ID lar (bo'sh joy / vergul bilan ajrating)
-                </label>
-                <textarea
-                  value={userIds}
-                  onChange={(e) => setUserIds(e.target.value)}
-                  rows={4}
-                  className="mt-2 w-full rounded-lg border border-slate-200 bg-white p-3 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
-                  placeholder="uuid1, uuid2, uuid3..."
-                />
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-semibold text-slate-700">
+                    Tanlangan foydalanuvchilar
+                    {selectedUsers.length > 0 && (
+                      <span className="ml-2 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
+                        {selectedUsers.length}
+                      </span>
+                    )}
+                  </label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setPickerOpen(true)}
+                  >
+                    <UserPlusIcon className="size-4" />
+                    Tanlash
+                  </Button>
+                </div>
+
+                {selectedUsers.length === 0 ? (
+                  <button
+                    type="button"
+                    onClick={() => setPickerOpen(true)}
+                    className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-slate-300 bg-slate-50/50 py-6 text-sm text-slate-500 hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <UserPlusIcon className="size-4" />
+                    Foydalanuvchilarni qidirib tanlang
+                  </button>
+                ) : (
+                  <div className="mt-2 flex max-h-44 flex-wrap gap-2 overflow-y-auto rounded-lg border border-slate-200 bg-slate-50/50 p-3">
+                    {selectedUsers.map((u) => (
+                      <span
+                        key={u.id}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-2.5 py-1 text-xs"
+                      >
+                        <span className="font-semibold text-slate-900">
+                          {u.first_name} {u.last_name}
+                        </span>
+                        {u.auth?.phone && (
+                          <span className="text-slate-500">
+                            +998{u.auth.phone}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setSelectedUsers((prev) =>
+                              prev.filter((x) => x.id !== u.id),
+                            )
+                          }
+                          className="ml-1 rounded-full p-0.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <XIcon className="size-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -392,6 +459,187 @@ export default function AdminBroadcastPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <UserPickerDialog
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        selected={selectedUsers}
+        onChange={setSelectedUsers}
+      />
     </>
+  );
+}
+
+// ─── User Picker Dialog ───────────────────────────────────────────────────
+
+function UserPickerDialog({
+  open,
+  onClose,
+  selected,
+  onChange,
+}: {
+  open: boolean;
+  onClose: () => void;
+  selected: AdminUserRow[];
+  onChange: (users: AdminUserRow[]) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [role, setRole] = useState<AuthRole | "">("");
+  const deferredQuery = useDeferredValue(query);
+  const [draft, setDraft] = useState<AdminUserRow[]>(selected);
+
+  useEffect(() => {
+    if (open) setDraft(selected);
+  }, [open, selected]);
+
+  const { data, isLoading } = useQuery<UserCatalogResponse>({
+    queryKey: ["admin-users-picker", deferredQuery.trim(), role],
+    queryFn: async () => {
+      const params: Record<string, string> = { page: "1", limit: "24" };
+      const q = deferredQuery.trim();
+      if (q) params.q = q;
+      if (role) params.role = role;
+      const r = await api.get("/users", { params });
+      return r.data;
+    },
+    enabled: open,
+  });
+
+  const items = data?.items ?? [];
+  const selectedIds = new Set(draft.map((u) => u.id));
+
+  const toggle = (u: AdminUserRow) => {
+    if (selectedIds.has(u.id)) {
+      setDraft((prev) => prev.filter((x) => x.id !== u.id));
+    } else {
+      setDraft((prev) => [...prev, u]);
+    }
+  };
+
+  const apply = () => {
+    onChange(draft);
+    onClose();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Foydalanuvchilarni tanlang</DialogTitle>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <SearchIcon className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Ism yoki raqam bo'yicha qidirish..."
+                className="pl-9"
+              />
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {(["", "CUSTOMER", "SELLER", "COURIER"] as const).map((r) => (
+                <button
+                  key={r}
+                  type="button"
+                  onClick={() => setRole(r)}
+                  className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                    role === r
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-primary/40"
+                  }`}
+                >
+                  {r === ""
+                    ? "Barcha"
+                    : r === "CUSTOMER"
+                      ? "Xaridor"
+                      : r === "SELLER"
+                        ? "Sotuvchi"
+                        : "Kuryer"}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-2">
+            <div className="flex items-center justify-between px-2 py-1 text-xs text-slate-500">
+              <span>
+                {isLoading
+                  ? "Qidirilmoqda..."
+                  : `${items.length} ta topildi`}
+              </span>
+              <span className="font-semibold text-primary">
+                Tanlangan: {draft.length}
+              </span>
+            </div>
+
+            <div className="max-h-[360px] overflow-y-auto">
+              {items.map((u) => {
+                const picked = selectedIds.has(u.id);
+                return (
+                  <button
+                    key={u.id}
+                    type="button"
+                    onClick={() => toggle(u)}
+                    className={`flex w-full items-center gap-3 rounded-lg p-2.5 text-left transition ${
+                      picked
+                        ? "bg-primary/10"
+                        : "hover:bg-white"
+                    }`}
+                  >
+                    <div
+                      className={`flex size-9 shrink-0 items-center justify-center rounded-lg border text-sm font-semibold ${
+                        picked
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-slate-200 bg-white text-slate-600"
+                      }`}
+                    >
+                      {picked ? (
+                        <CheckIcon className="size-4" />
+                      ) : (
+                        (u.first_name?.[0] ?? "?").toUpperCase()
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-slate-900">
+                        {u.first_name} {u.last_name}
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        {u.auth?.phone && <span>+998{u.auth.phone}</span>}
+                        {u.auth?.role && (
+                          <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold uppercase">
+                            {u.auth.role}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {!isLoading && items.length === 0 && (
+                <div className="py-8 text-center text-sm text-slate-500">
+                  Foydalanuvchilar topilmadi
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setDraft([])}>
+            Tozalash
+          </Button>
+          <Button variant="outline" onClick={onClose}>
+            Bekor
+          </Button>
+          <Button onClick={apply}>
+            Saqlash ({draft.length})
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
