@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import {
   Order,
+  OrderChangeStatus,
   OrderStatus,
   OrderType,
   PaymentMethod,
@@ -725,6 +726,290 @@ export class OrderService {
     );
 
     return saved;
+  }
+
+  // ─── Cash Change (qaytim) flow ─────────────────────────────────────────
+
+  /**
+   * Kuryer yetkazgandan keyin naqd qabul qilingan summa va qaytim holati.
+   * `paid_amount` bo'sh bo'lsa — o'zgarish yo'q, oddiy DELIVERED qoladi.
+   * `customer_requested_change=true` bo'lsa user'ga push yuboriladi.
+   */
+  async submitDeliveryCash(
+    orderId: string,
+    courierId: string,
+    paidAmount: number | null | undefined,
+    customerRequestedChange: boolean,
+  ) {
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId, courier_id: courierId },
+      relations: ['store', 'store.owner'],
+    });
+    if (!order) throw new NotFoundException('Buyurtma topilmadi');
+    if (order.status !== OrderStatus.DELIVERED) {
+      throw new BadRequestException(
+        'Qaytim faqat DELIVERED statusidagi buyurtma uchun kiritiladi',
+      );
+    }
+    if (order.change_status !== OrderChangeStatus.NONE) {
+      throw new BadRequestException('Qaytim allaqachon ro\'yxatga olingan');
+    }
+
+    // Bo'sh — o'zgarish yo'q (default order narxi)
+    if (paidAmount == null || Number.isNaN(Number(paidAmount))) {
+      return order;
+    }
+
+    const paid = Number(paidAmount);
+    const total = Number(order.total_price);
+
+    if (paid < total) {
+      throw new BadRequestException(
+        `Kiritilgan summa buyurtma narxidan kam bo'lishi mumkin emas (${total} so'm)`,
+      );
+    }
+
+    const change = paid - total;
+    order.paid_amount = paid;
+    order.change_amount = change;
+    order.change_submitted_at = new Date();
+
+    // Qaytim 0 yoki user so'ramasa — yopiq hisoblanadi
+    if (change === 0 || !customerRequestedChange) {
+      order.change_status = OrderChangeStatus.NONE;
+      return this.orderRepo.save(order);
+    }
+
+    // Seller balansidan frozen
+    const sellerUserId = order.store?.owner?.id;
+    if (!sellerUserId) {
+      throw new BadRequestException("Do'kon egasi topilmadi");
+    }
+    await this.walletService.freezeChangeForOrder(sellerUserId, change, orderId);
+
+    order.change_status = OrderChangeStatus.PENDING;
+    const saved = await this.orderRepo.save(order);
+
+    // User'ga push — tasdiq so'rash
+    void this.notificationService.sendToUser(order.customer_id, {
+      title: '💰 Qaytim kutmoqda',
+      body: `Siz ${paid.toLocaleString()} so'm to'ladingiz. ${change.toLocaleString()} so'm qaytim sizni kutmoqda.`,
+      data: {
+        order_id: orderId,
+        type: 'CHANGE_PENDING',
+        change_amount: String(change),
+      },
+    });
+
+    this.broadcastGateway.emitToCustomerUser(order.customer_id, 'order:change-pending', {
+      order_id: orderId,
+      change_amount: change,
+      paid_amount: paid,
+    });
+
+    return saved;
+  }
+
+  /** User tasdiqi: CONFIRM / WAIVE / DISPUTE */
+  async confirmChange(
+    orderId: string,
+    customerId: string,
+    action: 'CONFIRM' | 'WAIVE' | 'DISPUTE',
+    claimedAmount?: number,
+  ) {
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId, customer_id: customerId },
+      relations: ['store', 'store.owner'],
+    });
+    if (!order) throw new NotFoundException('Buyurtma topilmadi');
+    if (order.change_status !== OrderChangeStatus.PENDING) {
+      throw new BadRequestException(
+        'Bu buyurtma uchun qaytim tasdig\'i kutilmayapti',
+      );
+    }
+
+    const sellerUserId = order.store?.owner?.id;
+    if (!sellerUserId) throw new BadRequestException("Do'kon egasi topilmadi");
+    const change = Number(order.change_amount);
+
+    if (action === 'CONFIRM') {
+      await this.walletService.releaseChangeToUser(
+        sellerUserId,
+        customerId,
+        change,
+        orderId,
+      );
+      order.change_status = OrderChangeStatus.CONFIRMED;
+      order.change_resolved_at = new Date();
+
+      void this.notificationService.sendToUser(sellerUserId, {
+        title: '✅ Qaytim tasdiqlandi',
+        body: `${change.toLocaleString()} so'm mijozga o'tkazildi`,
+        data: { order_id: orderId, type: 'CHANGE_CONFIRMED' },
+      });
+    } else if (action === 'WAIVE') {
+      await this.walletService.waiveChange(sellerUserId, change, orderId);
+      order.change_status = OrderChangeStatus.WAIVED;
+      order.change_resolved_at = new Date();
+
+      void this.notificationService.sendToUser(sellerUserId, {
+        title: '🎁 Qaytim waive qilindi',
+        body: `${change.toLocaleString()} so'm — mijoz "kerak emas" dedi`,
+        data: { order_id: orderId, type: 'CHANGE_WAIVED' },
+      });
+    } else {
+      // DISPUTE — user qancha to'laganini kiritadi
+      if (claimedAmount == null || Number.isNaN(Number(claimedAmount))) {
+        throw new BadRequestException(
+          "Nizo uchun haqiqiy to'lagan summani kiriting",
+        );
+      }
+      const claimed = Number(claimedAmount);
+      if (claimed < Number(order.total_price)) {
+        throw new BadRequestException(
+          'Haqiqiy summa buyurtma narxidan kam bo\'lishi mumkin emas',
+        );
+      }
+      order.user_claimed_amount = claimed;
+      order.change_status = OrderChangeStatus.DISPUTED;
+
+      void this.notificationService.sendToUser(sellerUserId, {
+        title: '⚠️ Qaytim nizosi',
+        body: `Mijoz ${claimed.toLocaleString()} so'm to'laganini da'vo qilmoqda. Admin ko'rib chiqadi.`,
+        data: { order_id: orderId, type: 'CHANGE_DISPUTED' },
+      });
+      // Admin notification — oddiy broadcast (agar admin userlar ro'yxati bo'lsa)
+    }
+
+    return this.orderRepo.save(order);
+  }
+
+  /** Admin qarorini qo'llaydi: user_won / seller_won / adjusted */
+  async resolveChangeDispute(
+    orderId: string,
+    resolution: 'USER_WON' | 'SELLER_WON' | 'ADJUSTED',
+    adjustedAmount?: number,
+    adminNote?: string,
+  ) {
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId },
+      relations: ['store', 'store.owner'],
+    });
+    if (!order) throw new NotFoundException('Buyurtma topilmadi');
+    if (order.change_status !== OrderChangeStatus.DISPUTED) {
+      throw new BadRequestException('Buyurtma nizo holatida emas');
+    }
+
+    const sellerUserId = order.store?.owner?.id;
+    if (!sellerUserId) throw new BadRequestException("Do'kon egasi topilmadi");
+    const originalChange = Number(order.change_amount);
+    const claimed = Number(order.user_claimed_amount ?? 0);
+
+    if (resolution === 'USER_WON') {
+      const trueChange = claimed - Number(order.total_price);
+      await this.walletService.releaseChangeUserWon(
+        sellerUserId,
+        order.customer_id,
+        originalChange,
+        trueChange,
+        orderId,
+      );
+      order.change_amount = trueChange;
+      order.change_status = OrderChangeStatus.RESOLVED_USER_WON;
+    } else if (resolution === 'SELLER_WON') {
+      await this.walletService.releaseChangeSellerWon(
+        sellerUserId,
+        order.customer_id,
+        originalChange,
+        orderId,
+      );
+      order.change_status = OrderChangeStatus.RESOLVED_SELLER_WON;
+    } else {
+      if (adjustedAmount == null)
+        throw new BadRequestException('Adjusted amount kerak');
+      const adj = Number(adjustedAmount);
+      await this.walletService.releaseChangeAdjusted(
+        sellerUserId,
+        order.customer_id,
+        adj,
+        originalChange,
+        orderId,
+      );
+      order.change_amount = adj;
+      order.change_status = OrderChangeStatus.RESOLVED_ADJUSTED;
+    }
+
+    order.change_resolved_at = new Date();
+    if (adminNote) order.change_admin_note = adminNote;
+
+    const saved = await this.orderRepo.save(order);
+
+    // Ikkala tomonga xabar
+    const pushMap: Record<string, string> = {
+      USER_WON: 'Nizo hal qilindi: siz haq topildingiz',
+      SELLER_WON: 'Nizo hal qilindi: sotuvchi haq topildi',
+      ADJUSTED: 'Nizo hal qilindi: qisman qaror',
+    };
+    void this.notificationService.sendToUser(order.customer_id, {
+      title: '⚖️ Nizo yakuni',
+      body: pushMap[resolution],
+      data: { order_id: orderId, type: 'CHANGE_RESOLVED' },
+    });
+    void this.notificationService.sendToUser(sellerUserId, {
+      title: '⚖️ Nizo yakuni',
+      body: pushMap[resolution],
+      data: { order_id: orderId, type: 'CHANGE_RESOLVED' },
+    });
+
+    return saved;
+  }
+
+  /** Admin panel uchun — barcha DISPUTED statusidagi buyurtmalar */
+  async getChangeDisputes() {
+    return this.orderRepo.find({
+      where: { change_status: OrderChangeStatus.DISPUTED },
+      relations: ['store', 'customer', 'courier'],
+      order: { change_submitted_at: 'DESC' },
+    });
+  }
+
+  /** Cron uchun — 24 soat o'tgan PENDING ni auto-confirm */
+  async autoConfirmPendingChanges() {
+    const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    const orders = await this.orderRepo.find({
+      where: { change_status: OrderChangeStatus.PENDING },
+      relations: ['store', 'store.owner'],
+    });
+
+    const expired = orders.filter(
+      (o) => o.change_submitted_at && o.change_submitted_at < cutoff,
+    );
+
+    for (const order of expired) {
+      const sellerUserId = order.store?.owner?.id;
+      if (!sellerUserId) continue;
+      try {
+        await this.walletService.releaseChangeToUser(
+          sellerUserId,
+          order.customer_id,
+          Number(order.change_amount),
+          order.id,
+        );
+        order.change_status = OrderChangeStatus.AUTO_CONFIRMED;
+        order.change_resolved_at = new Date();
+        await this.orderRepo.save(order);
+
+        void this.notificationService.sendToUser(order.customer_id, {
+          title: '✅ Qaytim avtomatik tasdiqlandi',
+          body: `${Number(order.change_amount).toLocaleString()} so'm hisobingizga o'tkazildi`,
+          data: { order_id: order.id, type: 'CHANGE_AUTO_CONFIRMED' },
+        });
+      } catch (err) {
+        // skip, log
+      }
+    }
+
+    return { processed: expired.length };
   }
 
   async getCourierLocation(orderId: string) {

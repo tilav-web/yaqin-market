@@ -11,6 +11,7 @@ import { useCartStore } from '../../src/store/cart.store';
 import { useLocationStore } from '../../src/store/location.store';
 import { ordersApi } from '../../src/api/orders';
 import { useRequireAuth } from '../../src/hooks/useRequireAuth';
+import { haptics } from '../../src/utils/haptics';
 
 export default function BroadcastCartScreen() {
   const router = useRouter();
@@ -21,11 +22,12 @@ export default function BroadcastCartScreen() {
   const [deliveryAddress, setDeliveryAddress] = useState(address ?? '');
 
   const handleSubmit = async () => {
-    if (broadcastItems.length === 0) { Alert.alert('Xato', "Savatcha bo'sh"); return; }
+    if (broadcastItems.length === 0) { haptics.warning(); Alert.alert('Xato', "Savatcha bo'sh"); return; }
     if (!requireAuth()) return;
-    if (!lat || !lng) { Alert.alert('Xato', 'Joylashuvingiz aniqlanmagan'); return; }
-    if (!deliveryAddress.trim()) { Alert.alert('Xato', 'Yetkazib berish manzilini kiriting'); return; }
+    if (!lat || !lng) { haptics.warning(); Alert.alert('Xato', 'Joylashuvingiz aniqlanmagan'); return; }
+    if (!deliveryAddress.trim()) { haptics.warning(); Alert.alert('Xato', 'Yetkazib berish manzilini kiriting'); return; }
 
+    haptics.medium();
     setLoading(true);
     try {
       const request = await ordersApi.createBroadcastRequest({
@@ -37,9 +39,11 @@ export default function BroadcastCartScreen() {
         radius_km: 10,
         expires_in_minutes: 120,
       });
+      haptics.success();
       clearBroadcastCart();
       router.replace({ pathname: '/(customer)/broadcast-request/[id]', params: { id: request.id } });
     } catch (err: any) {
+      haptics.error();
       const msg = err?.response?.data?.message ?? 'Xato yuz berdi';
       Alert.alert('Xato', Array.isArray(msg) ? msg[0] : msg);
     } finally {

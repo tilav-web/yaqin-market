@@ -10,6 +10,7 @@ import { productsApi, type CheapestStoreItem } from '../../api/products';
 import { useCartStore } from '../../store/cart.store';
 import { useLocationStore } from '../../store/location.store';
 import { useTranslation } from '../../i18n';
+import { haptics } from '../../utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 function imageUrl(path?: string | null) {
@@ -26,7 +27,7 @@ type Props = {
 
 export default function CheapestStoresSheet({ productId, productName, onClose }: Props) {
   const { lang, t } = useTranslation();
-  const { addStoreItem } = useCartStore();
+  const { addStoreItem, storeCarts, updateStoreQuantity, removeStoreItem } = useCartStore();
   const { lat, lng } = useLocationStore();
 
   const slideY = useRef(new Animated.Value(600)).current;
@@ -62,7 +63,15 @@ export default function CheapestStoresSheet({ productId, productName, onClose }:
 
   if (!visible) return null;
 
-  const handleAddToStoreCart = (item: CheapestStoreItem) => {
+  // Shu mahsulotning berilgan do'kondagi savat miqdorini topish
+  const getQty = (storeId: string, storeProductId: string): number => {
+    const cart = storeCarts[storeId];
+    if (!cart) return 0;
+    return cart.items.find((i) => i.store_product_id === storeProductId)?.quantity ?? 0;
+  };
+
+  const increment = (item: CheapestStoreItem) => {
+    haptics.light();
     const img = item.variant.images?.[0]?.url;
     addStoreItem(
       {
@@ -77,7 +86,16 @@ export default function CheapestStoresSheet({ productId, productName, onClose }:
       },
       item.store.logo ?? undefined,
     );
-    onClose();
+  };
+
+  const decrement = (item: CheapestStoreItem) => {
+    haptics.light();
+    const qty = getQty(item.store.id, item.store_product_id);
+    if (qty <= 1) {
+      removeStoreItem(item.store.id, item.store_product_id);
+    } else {
+      updateStoreQuantity(item.store.id, item.store_product_id, qty - 1);
+    }
   };
 
   const items = data ?? [];
@@ -173,13 +191,12 @@ export default function CheapestStoresSheet({ productId, productName, onClose }:
                   ? t(item.variant.unit.name)
                   : null;
               const variantLabel = t(item.variant.name);
+              const qty = getQty(item.store.id, item.store_product_id);
 
               return (
-                <TouchableOpacity
+                <View
                   key={item.store_product_id}
                   style={[s.card, isCheapest && s.cardCheapest]}
-                  onPress={() => handleAddToStoreCart(item)}
-                  activeOpacity={0.85}
                 >
                   {/* Logo */}
                   {item.store.logo ? (
@@ -243,17 +260,46 @@ export default function CheapestStoresSheet({ productId, productName, onClose }:
                     </View>
                   </View>
 
-                  {/* Price + add */}
+                  {/* Price + qty controls */}
                   <View style={s.priceBox}>
                     <Text style={[s.price, isCheapest && { color: Colors.success }]}>
                       {Number(item.price).toLocaleString()}
                     </Text>
                     <Text style={s.priceSom}>so'm</Text>
-                    <View style={s.addBtn}>
-                      <Ionicons name="cart-outline" size={14} color={Colors.white} />
-                    </View>
+
+                    {qty === 0 ? (
+                      <TouchableOpacity
+                        style={s.addBtn}
+                        onPress={() => increment(item)}
+                        activeOpacity={0.85}
+                      >
+                        <Ionicons name="add" size={16} color={Colors.white} />
+                      </TouchableOpacity>
+                    ) : (
+                      <View style={s.qtyRow}>
+                        <TouchableOpacity
+                          style={s.qtyBtn}
+                          onPress={() => decrement(item)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons
+                            name={qty === 1 ? 'trash-outline' : 'remove'}
+                            size={13}
+                            color={qty === 1 ? Colors.error : Colors.primary}
+                          />
+                        </TouchableOpacity>
+                        <Text style={s.qtyTxt}>{qty}</Text>
+                        <TouchableOpacity
+                          style={[s.qtyBtn, s.qtyBtnAdd]}
+                          onPress={() => increment(item)}
+                          activeOpacity={0.7}
+                        >
+                          <Ionicons name="add" size={13} color={Colors.white} />
+                        </TouchableOpacity>
+                      </View>
+                    )}
                   </View>
-                </TouchableOpacity>
+                </View>
               );
             })}
           </ScrollView>
@@ -358,6 +404,20 @@ const s = StyleSheet.create({
     width: 30, height: 30, borderRadius: 10,
     backgroundColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
+  },
+  qtyRow: {
+    marginTop: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+  },
+  qtyBtn: {
+    width: 26, height: 26, borderRadius: 8,
+    backgroundColor: Colors.primarySurface,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  qtyBtnAdd: { backgroundColor: Colors.primary },
+  qtyTxt: {
+    fontSize: 13, fontWeight: '700', color: Colors.textPrimary,
+    minWidth: 18, textAlign: 'center',
   },
 
   empty: {

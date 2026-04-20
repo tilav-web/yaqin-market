@@ -9,6 +9,7 @@ import { Colors, Spacing, Radius, Shadow } from '../../theme';
 import { productsApi } from '../../api/products';
 import { useCartStore } from '../../store/cart.store';
 import { useTranslation } from '../../i18n';
+import { haptics } from '../../utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 function imageUrl(path?: string) {
@@ -90,6 +91,7 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
 
   const addToBroadcast = () => {
     if (!activeProduct) return;
+    haptics.success();
     addBroadcastItem({
       product_id: activeProduct.id,
       product_name: activeProduct.name,
@@ -102,6 +104,7 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
 
   const addToStore = () => {
     if (!activeProduct || !storeProduct) return;
+    haptics.success();
     addStoreItem(
       {
         store_product_id: storeProduct.id,
@@ -121,6 +124,7 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
 
   const handleAdd = () => {
     if (!activeProduct) return;
+    haptics.medium();
     // Do'kon aniq bo'lsa — tanlov sheet ochiladi
     if (storeProduct) {
       setChoiceOpen(true);
@@ -192,7 +196,7 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
                         <TouchableOpacity
                           key={variant.id}
                           style={[s.variantChip, isActive && s.variantChipActive]}
-                          onPress={() => setSelectedChild(variant.id === product?.id ? null : variant)}
+                          onPress={() => { haptics.select(); setSelectedChild(variant.id === product?.id ? null : variant); }}
                         >
                           <Text style={[s.variantText, isActive && s.variantTextActive]}>
                             {t(variant.name)}
@@ -214,14 +218,14 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
                 <View style={s.qtyRow}>
                   <TouchableOpacity
                     style={s.qtyBtn}
-                    onPress={() => setQuantity(q => Math.max(1, q - 1))}
+                    onPress={() => { haptics.light(); setQuantity(q => Math.max(1, q - 1)); }}
                   >
                     <Ionicons name="remove" size={18} color={Colors.primary} />
                   </TouchableOpacity>
                   <Text style={s.qtyText}>{quantity}</Text>
                   <TouchableOpacity
                     style={[s.qtyBtn, s.qtyBtnPlus]}
-                    onPress={() => setQuantity(q => q + 1)}
+                    onPress={() => { haptics.light(); setQuantity(q => q + 1); }}
                   >
                     <Ionicons name="add" size={18} color={Colors.white} />
                   </TouchableOpacity>

@@ -1,11 +1,11 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, FlatList,
   Image, Animated, Platform, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useRouter, useNavigation } from 'expo-router';
+import { useInfiniteQuery, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { useLocation } from '../../src/hooks/useLocation';
@@ -15,6 +15,7 @@ import { productsApi, categoriesApi } from '../../src/api/products';
 import { useTranslation } from '../../src/i18n';
 import ProductDetailSheet from '../../src/components/product/ProductDetailSheet';
 import CheapestStoresSheet from '../../src/components/product/CheapestStoresSheet';
+import { haptics } from '../../src/utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 12;
@@ -73,7 +74,7 @@ function ProductCard({
       <View style={productStyles.footer}>
         <TouchableOpacity
           style={productStyles.cheapBtn}
-          onPress={(e) => { e.stopPropagation(); onCheapest(); }}
+          onPress={(e) => { e.stopPropagation(); haptics.medium(); onCheapest(); }}
           activeOpacity={0.85}
         >
           <Ionicons name="flash" size={14} color={Colors.success} />
@@ -81,7 +82,7 @@ function ProductCard({
         </TouchableOpacity>
         <TouchableOpacity
           style={productStyles.addBtn}
-          onPress={(e) => { e.stopPropagation(); onPress(); }}
+          onPress={(e) => { e.stopPropagation(); haptics.light(); onPress(); }}
           activeOpacity={0.85}
         >
           <Ionicons name="add" size={18} color={Colors.white} />
@@ -156,6 +157,9 @@ function CategoryChip({ item, active, onPress, t }: { item: any; active: boolean
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function HomeScreen() {
   const router = useRouter();
+  const navigation = useNavigation();
+  const queryClient = useQueryClient();
+  const listRef = useRef<FlatList<any>>(null);
   const { address, permissionGranted } = useLocation();
   const { lat, lng } = useLocationStore();
   const { lang, t, tr } = useTranslation();
@@ -226,8 +230,20 @@ export default function HomeScreen() {
   }
 
   const toggleCategory = (catId: string) => {
+    haptics.select();
     setSelectedCat(prev => prev === catId ? null : catId);
   };
+
+  // Tab qayta bosilganda — yuqoriga scroll + refetch
+  useEffect(() => {
+    const unsub = navigation.addListener('tabPress' as any, () => {
+      listRef.current?.scrollToOffset({ offset: 0, animated: true });
+      refetch();
+      queryClient.invalidateQueries({ queryKey: ['prime-stores'] });
+      queryClient.invalidateQueries({ queryKey: ['categories'] });
+    });
+    return unsub;
+  }, [navigation, refetch, queryClient]);
 
   const renderItem = useCallback(({ item }: { item: Row }) => {
     if (item.type === 'store') {
@@ -319,24 +335,29 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      {/* Header */}
+      {/* Header — gorizontal: logo chapda, joylashuv o'ngda */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.locationRow}>
-            <Ionicons name="location" size={14} color="rgba(255,255,255,0.9)" />
-            <Text style={styles.locationText} numberOfLines={1}>
-              {address ?? (permissionGranted ? tr('location_detecting') : tr('location_allow'))}
-            </Text>
-          </View>
-          <TouchableOpacity style={styles.locationBtn} onPress={() => router.push('/(customer)/my-locations')}>
-            <Ionicons name="chevron-down" size={14} color="rgba(255,255,255,0.8)" />
-          </TouchableOpacity>
-        </View>
-        <Text style={styles.brand}>Yaqin Market</Text>
+        <Image
+          source={require('../../assets/logo-web.png')}
+          style={styles.brandLogo}
+          resizeMode="contain"
+        />
+        <TouchableOpacity
+          style={styles.locationPill}
+          onPress={() => router.push('/(customer)/my-locations')}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="location" size={13} color={Colors.white} />
+          <Text style={styles.locationText} numberOfLines={1}>
+            {address ?? (permissionGranted ? tr('location_detecting') : tr('location_allow'))}
+          </Text>
+          <Ionicons name="chevron-down" size={12} color="rgba(255,255,255,0.85)" />
+        </TouchableOpacity>
       </View>
 
       {/* Content — FlatList (rows: 2 products per row yoki 1 prime store) */}
       <FlatList
+        ref={listRef}
         data={rows}
         keyExtractor={(item, idx) =>
           item.type === 'store' ? `s-${item.store.id}` : `p-${idx}`
@@ -401,32 +422,41 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
-    paddingBottom: Spacing.md,
-    paddingTop: Platform.OS === 'android' ? Spacing.sm : 0,
+    paddingVertical: Spacing.sm,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
   },
-  headerTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 },
-  locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1 },
-  locationText: { fontSize: 12, color: 'rgba(255,255,255,0.85)', flex: 1 },
-  locationBtn: { padding: 6 },
-  brand: { fontSize: 26, fontWeight: '800', color: Colors.white, letterSpacing: -0.5 },
+  brandLogo: {
+    height: 45,
+    width: 120,
+  },
+  locationPill: {
+    flex: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    borderRadius: Radius.full,
+    paddingHorizontal: 10, paddingVertical: 7,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)',
+  },
+  locationText: { flex: 1, fontSize: 11, color: Colors.white, fontWeight: '500' },
   searchWrap: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.sm,
-    paddingBottom: Spacing.lg,
-    borderBottomLeftRadius: 28,
-    borderBottomRightRadius: 28,
+    paddingBottom: Spacing.md,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
   searchBar: {
     backgroundColor: Colors.white,
-    borderRadius: Radius.lg, height: 48,
+    borderRadius: Radius.lg, height: 40,
     flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: Spacing.md, gap: Spacing.sm,
-    ...Shadow.md,
+    paddingHorizontal: Spacing.sm, gap: Spacing.sm,
+    ...Shadow.sm,
   },
-  searchPlaceholder: { flex: 1, fontSize: 14, color: Colors.textHint },
+  searchPlaceholder: { flex: 1, fontSize: 13, color: Colors.textHint },
   mapBtn: {
-    width: 32, height: 32, borderRadius: Radius.sm,
+    width: 28, height: 28, borderRadius: Radius.sm,
     backgroundColor: Colors.primarySurface,
     alignItems: 'center', justifyContent: 'center',
   },

@@ -15,6 +15,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Colors, Spacing, Typography, Radius, Shadow } from '../../src/theme';
 import { Button } from '../../src/components/ui';
 import { authApi } from '../../src/api/auth';
+import { haptics } from '../../src/utils/haptics';
 import { useAuthStore } from '../../src/store/auth.store';
 import { useTranslation } from '../../src/i18n';
 
@@ -101,9 +102,11 @@ export default function OtpScreen() {
       await SecureStore.setItemAsync('user_id', userId ?? '');
       setRole(role, userId);
 
+      haptics.success();
       // All roles go to customer home; panels accessible via profile
       router.replace('/(customer)/home');
     } catch (err: any) {
+      haptics.error();
       const fallback = lang === 'ru' ? 'Неверный код. Попробуйте ещё раз' : 'Noto\'g\'ri kod. Qayta urinib ko\'ring';
       const msg =
         err?.response?.data?.message ?? fallback;

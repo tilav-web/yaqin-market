@@ -50,6 +50,14 @@ export default function SellerDashboard() {
     queryFn: () => apiClient.get('/wallet/my').then((r) => r.data),
     refetchInterval: 30000,
   });
+  const { data: waivedChanges } = useQuery({
+    queryKey: ['wallet-waived-changes'],
+    queryFn: () =>
+      apiClient.get('/wallet/waived-changes').then(
+        (r) => r.data as { total: number; count: number },
+      ),
+    refetchInterval: 60000,
+  });
 
   useSocket('seller', (event) => {
     if (event === 'order:new-direct') qc.invalidateQueries({ queryKey: ['store-orders'] });
@@ -148,6 +156,29 @@ export default function SellerDashboard() {
                       : '⚠ Balans past — buyurtma qabul qilish uchun to\'ldiring'}
                   </Text>
                 )}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Qaytimlardan yig'ilgan */}
+        {waivedChanges && waivedChanges.total > 0 && (
+          <View style={s.section}>
+            <View style={s.waivedCard}>
+              <View style={s.waivedIconBox}>
+                <Ionicons name="gift" size={20} color="#D97706" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.waivedLabel}>
+                  {lang === 'ru' ? 'От сдачи (клиенты не взяли)' : "Qaytimlardan yig'ilgan"}
+                </Text>
+                <Text style={s.waivedValue}>
+                  {Number(waivedChanges.total).toLocaleString()}{' '}
+                  <Text style={s.waivedCurrency}>so'm</Text>
+                </Text>
+                <Text style={s.waivedSub}>
+                  {waivedChanges.count} {lang === 'ru' ? 'случаев' : 'marta'}
+                </Text>
               </View>
             </View>
           </View>
@@ -300,6 +331,23 @@ const s = StyleSheet.create({
   section: { marginTop: Spacing.md, paddingHorizontal: Spacing.md },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.sm },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+
+  waivedCard: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: '#FFFBEB',
+    borderRadius: Radius.lg, padding: Spacing.md,
+    borderWidth: 1, borderColor: '#FCD34D',
+    ...Shadow.sm,
+  },
+  waivedIconBox: {
+    width: 40, height: 40, borderRadius: 12,
+    backgroundColor: '#FEF3C7',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  waivedLabel: { fontSize: 11, fontWeight: '700', color: '#92400E', textTransform: 'uppercase', letterSpacing: 0.5 },
+  waivedValue: { fontSize: 18, fontWeight: '800', color: '#78350F', marginTop: 2 },
+  waivedCurrency: { fontSize: 12, fontWeight: '600', color: '#B45309' },
+  waivedSub: { fontSize: 11, color: '#92400E', marginTop: 2 },
 
   balanceCard: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,

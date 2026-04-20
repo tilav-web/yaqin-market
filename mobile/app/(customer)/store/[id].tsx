@@ -17,6 +17,7 @@ import { ordersApi } from '../../../src/api/orders';
 import { useTranslation } from '../../../src/i18n';
 import { useRequireAuth } from '../../../src/hooks/useRequireAuth';
 import ProductDetailSheet from '../../../src/components/product/ProductDetailSheet';
+import { haptics } from '../../../src/utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 12;
@@ -104,10 +105,12 @@ export default function StoreDetailScreen() {
   const addToCart = (sp: any) => {
     // Variantlari bo'lsa — sheet ochamiz
     if (sp.product?.children?.length > 0) {
+      haptics.medium();
       setDetailProductId(Number(sp.product.id));
       return;
     }
     if (!store || !id) return;
+    haptics.light();
     const img = sp.product?.images?.[0]?.url;
     addStoreItem(
       {
@@ -126,6 +129,7 @@ export default function StoreDetailScreen() {
 
   const removeFromCart = (spId: string) => {
     if (!id) return;
+    haptics.light();
     const current = cartByStoreProductId[spId] ?? 0;
     if (current <= 1) removeStoreItem(id, spId);
     else updateStoreQuantity(id, spId, current - 1);
@@ -134,6 +138,7 @@ export default function StoreDetailScreen() {
   const handleOrder = async () => {
     if (!requireAuth()) return;
     if (!lat || !lng) {
+      haptics.warning();
       Alert.alert(
         lang === 'ru' ? 'Нужна геолокация' : 'Joylashuv kerak',
         lang === 'ru' ? 'Включите геолокацию' : 'Joylashuvni yoqing',
@@ -141,6 +146,7 @@ export default function StoreDetailScreen() {
       return;
     }
 
+    haptics.medium();
     setOrdering(true);
     try {
       const items = (myCart?.items ?? []).map((i) => ({
@@ -157,9 +163,11 @@ export default function StoreDetailScreen() {
         delivery_address: address ?? 'Manzil',
         payment_method: 'CASH',
       });
+      haptics.success();
       if (id) clearStoreCart(id);
       router.push({ pathname: '/(customer)/order/[id]', params: { id: order.id } });
     } catch (e: any) {
+      haptics.error();
       Alert.alert(
         lang === 'ru' ? 'Ошибка' : 'Xato',
         e?.response?.data?.message ?? (lang === 'ru' ? 'Ошибка' : 'Xato yuz berdi'),
@@ -273,7 +281,7 @@ export default function StoreDetailScreen() {
             return (
               <TouchableOpacity
                 style={[s.catChip, active && s.catChipActive]}
-                onPress={() => setSelectedCat(active ? null : item.id)}
+                onPress={() => { haptics.select(); setSelectedCat(active ? null : item.id); }}
               >
                 <Text style={[s.catChipTxt, active && s.catChipTxtActive]}>{t(item.name)}</Text>
               </TouchableOpacity>

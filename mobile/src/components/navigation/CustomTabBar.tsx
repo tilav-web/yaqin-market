@@ -3,6 +3,7 @@ import { View, Text, Pressable, StyleSheet, Platform, Animated } from 'react-nat
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Radius, Shadow } from '../../theme';
+import { haptics } from '../../utils/haptics';
 
 type IoniconsName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -29,6 +30,7 @@ export function CustomTabBar({ state, navigation, tabs, accentColor = Colors.pri
         const focused = state.index === index;
 
         const onPress = () => {
+          haptics.light();
           const event = navigation.emit({
             type: 'tabPress',
             target: route.key,

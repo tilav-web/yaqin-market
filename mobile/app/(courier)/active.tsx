@@ -13,6 +13,8 @@ import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
 import { useSocket } from '../../src/hooks/useSocket';
 import { useTranslation } from '../../src/i18n';
+import CashSubmissionSheet from '../../src/components/courier/CashSubmissionSheet';
+import { haptics } from '../../src/utils/haptics';
 
 const COURIER_COLOR = '#FF5722';
 
@@ -21,6 +23,7 @@ export default function ActiveDeliveryScreen() {
   const qc = useQueryClient();
   const { lang } = useTranslation();
   const locationRef = useRef<Location.LocationSubscription | null>(null);
+  const [cashSheetOrder, setCashSheetOrder] = React.useState<{ id: string; total: number } | null>(null);
 
   const { data: activeOrders, isLoading } = useQuery({
     queryKey: ['courier-active'],
@@ -55,11 +58,22 @@ export default function ActiveDeliveryScreen() {
         text: lang === 'ru' ? 'Да, доставлено' : 'Ha, yetkazildi',
         onPress: async () => {
           try {
+            haptics.medium();
             await ordersApi.deliverOrder(activeOrder.id);
+            haptics.success();
             qc.invalidateQueries({ queryKey: ['courier-active'] });
             qc.invalidateQueries({ queryKey: ['courier-history'] });
-            Alert.alert(lang === 'ru' ? 'Отлично!' : 'Barakalla!', lang === 'ru' ? 'Заказ успешно доставлен!' : 'Buyurtma muvaffaqiyatli yetkazildi!');
+            // Naqd hisob-kitob sheet
+            if (activeOrder.payment_method === 'CASH') {
+              setCashSheetOrder({
+                id: activeOrder.id,
+                total: Number(activeOrder.total_price ?? 0),
+              });
+            } else {
+              Alert.alert(lang === 'ru' ? 'Отлично!' : 'Barakalla!', lang === 'ru' ? 'Заказ успешно доставлен!' : 'Buyurtma muvaffaqiyatli yetkazildi!');
+            }
           } catch (e: any) {
+            haptics.error();
             Alert.alert(lang === 'ru' ? 'Ошибка' : 'Xato', e?.response?.data?.message ?? (lang === 'ru' ? 'Ошибка' : 'Xato'));
           }
         },
@@ -200,6 +214,17 @@ export default function ActiveDeliveryScreen() {
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <CashSubmissionSheet
+        visible={cashSheetOrder !== null}
+        orderId={cashSheetOrder?.id ?? null}
+        orderTotal={cashSheetOrder?.total ?? 0}
+        onClose={() => setCashSheetOrder(null)}
+        onSubmitted={() => {
+          qc.invalidateQueries({ queryKey: ['courier-active'] });
+          qc.invalidateQueries({ queryKey: ['courier-history'] });
+        }}
+      />
     </SafeAreaView>
   );
 }

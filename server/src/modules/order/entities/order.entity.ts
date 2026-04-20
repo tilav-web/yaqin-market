@@ -32,6 +32,18 @@ export enum OrderType {
   BROADCAST = 'BROADCAST',
 }
 
+export enum OrderChangeStatus {
+  NONE = 'NONE',                          // Kuryer qaytim kiritmagan
+  PENDING = 'PENDING',                    // User javob kutilmoqda
+  CONFIRMED = 'CONFIRMED',                // User tasdiqladi
+  WAIVED = 'WAIVED',                      // User "kerak emas" bosdi
+  AUTO_CONFIRMED = 'AUTO_CONFIRMED',      // 24 soat javob bermadi
+  DISPUTED = 'DISPUTED',                  // User "noto'g'ri" bosdi, admin ko'rib chiqmoqda
+  RESOLVED_USER_WON = 'RESOLVED_USER_WON',
+  RESOLVED_SELLER_WON = 'RESOLVED_SELLER_WON',
+  RESOLVED_ADJUSTED = 'RESOLVED_ADJUSTED',
+}
+
 @Entity('orders')
 export class Order {
   @PrimaryGeneratedColumn('uuid')
@@ -132,6 +144,35 @@ export class Order {
 
   @Column({ nullable: true })
   cancelled_reason: string;
+
+  // ─── Naqd qaytim (cash change) ─────────────────────────────────────────
+  /** Kuryer kiritgan: user haqiqatan qancha to'lagan */
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  paid_amount: number | null;
+
+  /** Kuryer kiritgan / admin qaroridan keyingi final: qaytim miqdori */
+  @Column({ type: 'decimal', precision: 12, scale: 2, default: 0 })
+  change_amount: number;
+
+  /** User dispute bosgan holda kiritgan haqiqiy to'lov miqdori */
+  @Column({ type: 'decimal', precision: 12, scale: 2, nullable: true })
+  user_claimed_amount: number | null;
+
+  @Column({
+    type: 'enum',
+    enum: OrderChangeStatus,
+    default: OrderChangeStatus.NONE,
+  })
+  change_status: OrderChangeStatus;
+
+  @Column({ type: 'timestamp', nullable: true })
+  change_submitted_at: Date | null;
+
+  @Column({ type: 'timestamp', nullable: true })
+  change_resolved_at: Date | null;
+
+  @Column({ type: 'text', nullable: true })
+  change_admin_note: string | null;
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items: OrderItem[];

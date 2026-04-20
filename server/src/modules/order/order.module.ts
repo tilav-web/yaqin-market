@@ -19,6 +19,7 @@ import { User } from '../user/user.entity';
 import { BroadcastGateway } from './broadcast.gateway';
 import { NotificationModule } from '../notification/notification.module';
 import { WalletModule } from '../wallet/wallet.module';
+import { OrderChangeCronService } from './order-change-cron.service';
 
 @Module({
   imports: [
@@ -45,7 +46,7 @@ import { WalletModule } from '../wallet/wallet.module';
     WalletModule,
   ],
   controllers: [OrderController],
-  providers: [OrderService, RolesGuard, BroadcastGateway],
+  providers: [OrderService, RolesGuard, BroadcastGateway, OrderChangeCronService],
   exports: [OrderService],
 })
 export class OrderModule {}

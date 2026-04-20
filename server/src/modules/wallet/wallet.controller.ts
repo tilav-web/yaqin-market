@@ -23,6 +23,12 @@ export class WalletController {
     return this.walletService.topup(user.id, Number(amount), description);
   }
 
+  /** Seller uchun — qaytimlardan yig'ilgan jami summa */
+  @Get('waived-changes')
+  async getWaivedChanges(@UserDecorator() user: User) {
+    return this.walletService.getWaivedChangeTotal(user.id);
+  }
+
   @Get('transactions')
   async getTransactions(
     @UserDecorator() user: User,

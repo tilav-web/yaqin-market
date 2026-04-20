@@ -14,6 +14,7 @@ import { useLocationStore } from '../../src/store/location.store';
 import { useTranslation } from '../../src/i18n';
 import ProductDetailSheet from '../../src/components/product/ProductDetailSheet';
 import CheapestStoresSheet from '../../src/components/product/CheapestStoresSheet';
+import { haptics } from '../../src/utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 16;
@@ -95,13 +96,14 @@ function FilterSheet({
           {/* Deliverable toggle — free delivery bilan birga yoqilsa bir-birini o'chiradi */}
           <TouchableOpacity
             style={fs.toggleRow}
-            onPress={() =>
+            onPress={() => {
+              haptics.select();
               setDraft(d => ({
                 ...d,
                 deliverableOnly: !d.deliverableOnly,
                 freeDeliveryOnly: !d.deliverableOnly ? false : d.freeDeliveryOnly,
-              }))
-            }
+              }));
+            }}
             activeOpacity={0.8}
           >
             <View style={[fs.toggleIcon, { backgroundColor: '#FBE9E7' }]}>
@@ -119,13 +121,14 @@ function FilterSheet({
           {/* Free delivery toggle */}
           <TouchableOpacity
             style={fs.toggleRow}
-            onPress={() =>
+            onPress={() => {
+              haptics.select();
               setDraft(d => ({
                 ...d,
                 freeDeliveryOnly: !d.freeDeliveryOnly,
                 deliverableOnly: !d.freeDeliveryOnly ? false : d.deliverableOnly,
-              }))
-            }
+              }));
+            }}
             activeOpacity={0.8}
           >
             <View style={[fs.toggleIcon, { backgroundColor: '#E8F5E9' }]}>
@@ -302,6 +305,7 @@ export default function SearchScreen() {
             style={s.cardBtnCheapest}
             onPress={(e) => {
               e.stopPropagation();
+              haptics.medium();
               setCheapestProduct({ id: item.id, name: item.name });
             }}
             activeOpacity={0.85}
@@ -315,6 +319,7 @@ export default function SearchScreen() {
             style={s.cardBtnAdd}
             onPress={(e) => {
               e.stopPropagation();
+              haptics.light();
               setSelectedProductId(item.id);
             }}
             activeOpacity={0.85}
@@ -377,7 +382,7 @@ export default function SearchScreen() {
               return (
                 <TouchableOpacity
                   style={[s.chip, active && s.chipActive]}
-                  onPress={() => setSelectedCat(active ? '' : String(item.id))}
+                  onPress={() => { haptics.select(); setSelectedCat(active ? '' : String(item.id)); }}
                 >
                   <Text style={[s.chipTxt, active && s.chipTxtActive]}>{t(item.name)}</Text>
                 </TouchableOpacity>

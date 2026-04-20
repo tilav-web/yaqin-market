@@ -271,6 +271,71 @@ export class OrderController {
     return this.orderService.assignCourier(id, user.id);
   }
 
+  // ─── Naqd qaytim (cash change) ────────────────────────────────────────
+
+  /** Kuryer yetkazish summasini va qaytim holatini kiritadi */
+  @Post(':id/delivery-cash')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.COURIER, AuthRoleEnum.SUPER_ADMIN)
+  async submitDeliveryCash(
+    @Param('id') id: string,
+    @Body() body: { paid_amount?: number | null; customer_requested_change?: boolean },
+    @UserDecorator() user: User,
+  ) {
+    return this.orderService.submitDeliveryCash(
+      id,
+      user.id,
+      body?.paid_amount ?? null,
+      !!body?.customer_requested_change,
+    );
+  }
+
+  /** User qaytim tasdig'i: CONFIRM / WAIVE / DISPUTE */
+  @Post(':id/confirm-change')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.CUSTOMER, AuthRoleEnum.SELLER, AuthRoleEnum.COURIER, AuthRoleEnum.SUPER_ADMIN)
+  async confirmChange(
+    @Param('id') id: string,
+    @Body() body: { action: 'CONFIRM' | 'WAIVE' | 'DISPUTE'; claimed_amount?: number },
+    @UserDecorator() user: User,
+  ) {
+    return this.orderService.confirmChange(
+      id,
+      user.id,
+      body.action,
+      body.claimed_amount,
+    );
+  }
+
+  /** Admin — barcha DISPUTED buyurtmalar ro'yxati */
+  @Get('admin/change-disputes')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
+  async getChangeDisputes() {
+    return this.orderService.getChangeDisputes();
+  }
+
+  /** Admin — nizoni hal qilish */
+  @Post(':id/resolve-change')
+  @UseGuards(AuthGuard, RolesGuard)
+  @Roles(AuthRoleEnum.SUPER_ADMIN)
+  async resolveChangeDispute(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      resolution: 'USER_WON' | 'SELLER_WON' | 'ADJUSTED';
+      adjusted_amount?: number;
+      admin_note?: string;
+    },
+  ) {
+    return this.orderService.resolveChangeDispute(
+      id,
+      body.resolution,
+      body.adjusted_amount,
+      body.admin_note,
+    );
+  }
+
   @Get(':id')
   async getById(@Param('id') id: string) {
     return this.orderService.findById(id);

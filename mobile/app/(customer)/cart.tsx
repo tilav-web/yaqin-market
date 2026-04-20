@@ -14,6 +14,7 @@ import { ordersApi } from '../../src/api/orders';
 import { storesApi } from '../../src/api/stores';
 import { useTranslation } from '../../src/i18n';
 import { useRequireAuth } from '../../src/hooks/useRequireAuth';
+import { haptics } from '../../src/utils/haptics';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 function imageUrl(path?: string | null) {
@@ -61,9 +62,11 @@ export default function CartScreen() {
   const orderFromStore = async (cart: StoreCart) => {
     if (!requireAuth()) return;
     if (!lat || !lng) {
+      haptics.warning();
       Alert.alert(tr('cart_location_required'), tr('cart_location_msg'));
       return;
     }
+    haptics.medium();
     setOrderingStoreId(cart.store_id);
     try {
       const order = await ordersApi.create({
@@ -78,9 +81,11 @@ export default function CartScreen() {
         delivery_address: address ?? (lang === 'ru' ? 'Адрес не указан' : 'Manzil kiritilmadi'),
         payment_method: 'CASH',
       });
+      haptics.success();
       clearStoreCart(cart.store_id);
       router.push({ pathname: '/(customer)/order/[id]', params: { id: order.id } });
     } catch (e: any) {
+      haptics.error();
       Alert.alert(
         tr('error'),
         e?.response?.data?.message ?? (lang === 'ru' ? 'Произошла ошибка' : 'Xato yuz berdi'),
@@ -91,6 +96,7 @@ export default function CartScreen() {
   };
 
   const confirmClearStore = (cart: StoreCart) => {
+    haptics.warning();
     Alert.alert(
       lang === 'ru' ? 'Очистить' : 'Tozalash',
       lang === 'ru'
@@ -101,7 +107,7 @@ export default function CartScreen() {
         {
           text: lang === 'ru' ? 'Очистить' : 'Tozalash',
           style: 'destructive',
-          onPress: () => clearStoreCart(cart.store_id),
+          onPress: () => { haptics.heavy(); clearStoreCart(cart.store_id); },
         },
       ],
     );
@@ -160,8 +166,8 @@ export default function CartScreen() {
                 loading={orderingStoreId === cart.store_id}
                 onOrder={() => orderFromStore(cart)}
                 onClear={() => confirmClearStore(cart)}
-                onRemoveItem={(spId) => removeStoreItem(cart.store_id, spId)}
-                onUpdateQty={(spId, qty) => updateStoreQuantity(cart.store_id, spId, qty)}
+                onRemoveItem={(spId) => { haptics.light(); removeStoreItem(cart.store_id, spId); }}
+                onUpdateQty={(spId, qty) => { haptics.light(); updateStoreQuantity(cart.store_id, spId, qty); }}
                 address={address}
                 lang={lang}
                 tr={tr}
@@ -198,9 +204,11 @@ export default function CartScreen() {
                 <View style={s.qtyRow}>
                   <TouchableOpacity
                     style={s.qtyBtn}
-                    onPress={() => item.quantity <= 1
-                      ? removeBroadcastItem(item.product_id)
-                      : updateBroadcastQuantity(item.product_id, item.quantity - 1)}
+                    onPress={() => {
+                      haptics.light();
+                      if (item.quantity <= 1) removeBroadcastItem(item.product_id);
+                      else updateBroadcastQuantity(item.product_id, item.quantity - 1);
+                    }}
                   >
                     <Ionicons
                       name={item.quantity <= 1 ? 'trash-outline' : 'remove'}
@@ -211,7 +219,7 @@ export default function CartScreen() {
                   <Text style={s.qty}>{item.quantity}</Text>
                   <TouchableOpacity
                     style={[s.qtyBtn, s.qtyBtnAdd]}
-                    onPress={() => updateBroadcastQuantity(item.product_id, item.quantity + 1)}
+                    onPress={() => { haptics.light(); updateBroadcastQuantity(item.product_id, item.quantity + 1); }}
                   >
                     <Ionicons name="add" size={15} color={Colors.white} />
                   </TouchableOpacity>

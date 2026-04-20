@@ -3,6 +3,7 @@ import {
   FileCheckIcon,
   LayoutGridIcon,
   RulerIcon,
+  ScaleIcon,
   SendIcon,
   Settings2Icon,
   ShoppingBagIcon,
@@ -23,6 +24,7 @@ export const adminSections: SidebarSection[] = [
       { label: "Foydalanuvchilar", to: "/admin/users", icon: Users2Icon },
       { label: "Birliklar", to: "/admin/units", icon: RulerIcon },
       { label: "Arizalar", to: "/admin/applications", icon: FileCheckIcon },
+      { label: "Qaytim nizolari", to: "/admin/disputes", icon: ScaleIcon },
     ],
   },
   {

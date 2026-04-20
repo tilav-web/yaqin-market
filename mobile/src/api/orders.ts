@@ -85,4 +85,34 @@ export const ordersApi = {
 
   deliverOrder: (id: string) =>
     apiClient.post(`/orders/${id}/deliver`).then((r) => r.data),
+
+  // ── Cash change (qaytim) ─────────────────────────────────────────
+  /** Kuryer: yetkazilgandan keyin qabul qilingan summa + qaytim holati */
+  submitDeliveryCash: (
+    id: string,
+    data: { paid_amount?: number | null; customer_requested_change?: boolean },
+  ) =>
+    apiClient.post(`/orders/${id}/delivery-cash`, data).then((r) => r.data),
+
+  /** Customer: CONFIRM / WAIVE / DISPUTE */
+  confirmChange: (
+    id: string,
+    data: { action: 'CONFIRM' | 'WAIVE' | 'DISPUTE'; claimed_amount?: number },
+  ) =>
+    apiClient.post(`/orders/${id}/confirm-change`, data).then((r) => r.data),
+
+  /** Admin: disputlar ro'yxati */
+  getChangeDisputes: () =>
+    apiClient.get('/orders/admin/change-disputes').then((r) => r.data),
+
+  /** Admin: nizoni hal qilish */
+  resolveChangeDispute: (
+    id: string,
+    data: {
+      resolution: 'USER_WON' | 'SELLER_WON' | 'ADJUSTED';
+      adjusted_amount?: number;
+      admin_note?: string;
+    },
+  ) =>
+    apiClient.post(`/orders/${id}/resolve-change`, data).then((r) => r.data),
 };

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
   TouchableOpacity, ActivityIndicator, Platform,
+  Alert, Modal, Pressable, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -12,6 +13,7 @@ import { Colors, Spacing, Radius, Shadow } from '../../../src/theme';
 import { StatusBadge } from '../../../src/components/ui/Badge';
 import { ordersApi } from '../../../src/api/orders';
 import { useSocket } from '../../../src/hooks/useSocket';
+import { haptics } from '../../../src/utils/haptics';
 
 const STATUS_LABEL: Record<string, string> = {
   PENDING: 'Kutilmoqda',
@@ -27,6 +29,9 @@ export default function OrderDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [courierLocation, setCourierLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [disputeOpen, setDisputeOpen] = useState(false);
+  const [claimedAmount, setClaimedAmount] = useState('');
+  const [changeLoading, setChangeLoading] = useState<'CONFIRM' | 'WAIVE' | 'DISPUTE' | null>(null);
 
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
@@ -59,6 +64,44 @@ export default function OrderDetailScreen() {
   const deliveryLat = Number(order.delivery_lat);
   const deliveryLng = Number(order.delivery_lng);
   const showMap = order.status === 'DELIVERING' && !!courierLocation;
+
+  const changeStatus = order.change_status;
+  const changeAmount = Number(order.change_amount ?? 0);
+  const paidAmount = Number(order.paid_amount ?? 0);
+  const showChangeBanner = changeStatus === 'PENDING' && changeAmount > 0;
+
+  const handleChangeAction = async (
+    action: 'CONFIRM' | 'WAIVE' | 'DISPUTE',
+    claimed?: number,
+  ) => {
+    setChangeLoading(action);
+    haptics.medium();
+    try {
+      await ordersApi.confirmChange(id, {
+        action,
+        claimed_amount: claimed,
+      });
+      haptics.success();
+      queryClient.invalidateQueries({ queryKey: ['order', id] });
+      setDisputeOpen(false);
+      setClaimedAmount('');
+    } catch (e: any) {
+      haptics.error();
+      Alert.alert('Xato', e?.response?.data?.message ?? 'Xato');
+    } finally {
+      setChangeLoading(null);
+    }
+  };
+
+  const submitDispute = () => {
+    const claimed = Number(claimedAmount.replace(/\s/g, ''));
+    if (!claimedAmount || !Number.isFinite(claimed) || claimed < Number(order.total_price)) {
+      haptics.warning();
+      Alert.alert('Xato', `Summa buyurtma narxidan (${Number(order.total_price).toLocaleString()} so'm) kam bo'lmasligi kerak`);
+      return;
+    }
+    handleChangeAction('DISPUTE', claimed);
+  };
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -147,6 +190,105 @@ export default function OrderDetailScreen() {
           ))}
         </View>
 
+        {/* Change banner — PENDING */}
+        {showChangeBanner && (
+          <View style={[s.card, s.changeCard]}>
+            <View style={s.changeHeader}>
+              <View style={[s.infoIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="cash-outline" size={20} color="#D97706" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.changeTitle}>Qaytim kutmoqda</Text>
+                <Text style={s.changeSub}>
+                  Siz {paidAmount.toLocaleString()} so'm to'ladingiz. {changeAmount.toLocaleString()} so'm qaytim sizni kutmoqda.
+                </Text>
+              </View>
+            </View>
+
+            <View style={s.changeBtnRow}>
+              <TouchableOpacity
+                style={[s.changeBtn, s.changeBtnConfirm, changeLoading === 'CONFIRM' && { opacity: 0.5 }]}
+                onPress={() => handleChangeAction('CONFIRM')}
+                disabled={changeLoading !== null}
+                activeOpacity={0.85}
+              >
+                {changeLoading === 'CONFIRM' ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark-circle" size={14} color={Colors.white} />
+                    <Text style={s.changeBtnTxt}>Tasdiqlayman</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[s.changeBtn, s.changeBtnWaive, changeLoading === 'WAIVE' && { opacity: 0.5 }]}
+                onPress={() => {
+                  Alert.alert(
+                    'Kerak emas',
+                    `${changeAmount.toLocaleString()} so'm sotuvchida qoladi. Tasdiqlaysizmi?`,
+                    [
+                      { text: 'Bekor', style: 'cancel' },
+                      { text: 'Ha, kerak emas', onPress: () => handleChangeAction('WAIVE') },
+                    ],
+                  );
+                }}
+                disabled={changeLoading !== null}
+                activeOpacity={0.85}
+              >
+                <Ionicons name="gift-outline" size={14} color={Colors.textSecondary} />
+                <Text style={s.changeBtnTxtDark}>Kerak emas</Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={s.disputeBtn}
+              onPress={() => setDisputeOpen(true)}
+              disabled={changeLoading !== null}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="alert-circle-outline" size={13} color={Colors.error} />
+              <Text style={s.disputeBtnTxt}>Noto'g'ri miqdor kiritilgan</Text>
+            </TouchableOpacity>
+
+            <Text style={s.autoNote}>
+              24 soat ichida javob bermasangiz avtomatik tasdiqlanadi
+            </Text>
+          </View>
+        )}
+
+        {/* Change — hal qilingan holat */}
+        {['CONFIRMED', 'AUTO_CONFIRMED', 'WAIVED', 'RESOLVED_USER_WON', 'RESOLVED_SELLER_WON', 'RESOLVED_ADJUSTED'].includes(changeStatus) && (
+          <View style={[s.card, s.changeResolvedCard]}>
+            <Ionicons name="checkmark-circle" size={18} color={Colors.success} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.resolvedTitle}>
+                {changeStatus === 'WAIVED' ? 'Qaytim sotuvchida qoldirildi' :
+                 changeStatus === 'RESOLVED_SELLER_WON' ? 'Nizo: sotuvchi haq topildi' :
+                 changeStatus === 'RESOLVED_USER_WON' ? 'Nizo: siz haq topildingiz' :
+                 changeStatus === 'RESOLVED_ADJUSTED' ? 'Nizo: qisman qaror' :
+                 'Qaytim hisobingizga o\'tkazildi'}
+              </Text>
+              {changeAmount > 0 && changeStatus !== 'WAIVED' && (
+                <Text style={s.resolvedSub}>{changeAmount.toLocaleString()} so'm</Text>
+              )}
+            </View>
+          </View>
+        )}
+
+        {changeStatus === 'DISPUTED' && (
+          <View style={[s.card, s.disputedCard]}>
+            <Ionicons name="time-outline" size={18} color="#D97706" />
+            <View style={{ flex: 1 }}>
+              <Text style={s.disputedTitle}>Nizo admin tekshiruvida</Text>
+              <Text style={s.disputedSub}>
+                Kuryer: {paidAmount.toLocaleString()} so'm · Sizning: {Number(order.user_claimed_amount ?? 0).toLocaleString()} so'm
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Summary */}
         <View style={s.card}>
           <View style={s.summaryRow}>
@@ -179,6 +321,62 @@ export default function OrderDetailScreen() {
         </View>
 
       </ScrollView>
+
+      {/* Dispute modal */}
+      <Modal
+        transparent
+        visible={disputeOpen}
+        animationType="fade"
+        onRequestClose={() => setDisputeOpen(false)}
+      >
+        <Pressable style={s.modalBackdrop} onPress={() => setDisputeOpen(false)}>
+          <Pressable style={s.modalSheet} onPress={(e) => e.stopPropagation()}>
+            <Text style={s.modalTitle}>Haqiqiy miqdorni kiriting</Text>
+            <Text style={s.modalSub}>
+              Siz buyurtma uchun haqiqatan qancha to'laganingizni kiriting. Admin ko'rib chiqadi.
+            </Text>
+
+            <View style={s.modalInputWrap}>
+              <TextInput
+                style={s.modalInput}
+                value={claimedAmount}
+                onChangeText={(v) => setClaimedAmount(v.replace(/[^0-9]/g, ''))}
+                placeholder="0"
+                placeholderTextColor={Colors.textHint}
+                keyboardType="number-pad"
+                autoFocus
+              />
+              <Text style={s.modalCurrency}>so'm</Text>
+            </View>
+
+            <Text style={s.modalHint}>
+              Buyurtma narxi: {Number(order.total_price).toLocaleString()} so'm
+            </Text>
+
+            <View style={s.modalBtnRow}>
+              <TouchableOpacity
+                style={[s.modalBtn, s.modalBtnCancel]}
+                onPress={() => { setDisputeOpen(false); setClaimedAmount(''); }}
+                activeOpacity={0.85}
+              >
+                <Text style={s.modalBtnCancelTxt}>Bekor</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.modalBtn, s.modalBtnDispute, changeLoading === 'DISPUTE' && { opacity: 0.5 }]}
+                onPress={submitDispute}
+                disabled={changeLoading !== null}
+                activeOpacity={0.85}
+              >
+                {changeLoading === 'DISPUTE' ? (
+                  <ActivityIndicator size="small" color={Colors.white} />
+                ) : (
+                  <Text style={s.modalBtnDisputeTxt}>Yuborish</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -230,4 +428,79 @@ const s = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center', gap: 6, padding: 9,
   },
   mapOverlayTxt: { color: Colors.white, fontSize: 13, fontWeight: '600' },
+
+  // ── Change banner ──
+  changeCard: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1.5,
+    borderColor: '#FCD34D',
+  },
+  changeHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.sm, marginBottom: Spacing.sm },
+  changeTitle: { fontSize: 15, fontWeight: '800', color: '#92400E' },
+  changeSub: { fontSize: 12, color: '#78350F', marginTop: 3, lineHeight: 17 },
+  changeBtnRow: { flexDirection: 'row', gap: Spacing.xs, marginTop: Spacing.xs },
+  changeBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    height: 42, borderRadius: Radius.md, gap: 6,
+  },
+  changeBtnConfirm: { backgroundColor: Colors.success },
+  changeBtnWaive: { backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.divider },
+  changeBtnTxt: { fontSize: 13, fontWeight: '700', color: Colors.white },
+  changeBtnTxtDark: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+
+  disputeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    gap: 4, marginTop: Spacing.sm, paddingVertical: 7,
+  },
+  disputeBtnTxt: { fontSize: 12, fontWeight: '600', color: Colors.error },
+  autoNote: { fontSize: 10, color: '#78350F', textAlign: 'center', marginTop: 4 },
+
+  changeResolvedCard: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1, borderColor: '#BBF7D0',
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+  },
+  resolvedTitle: { fontSize: 13, fontWeight: '700', color: Colors.success },
+  resolvedSub: { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
+
+  disputedCard: {
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1, borderColor: '#FCD34D',
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+  },
+  disputedTitle: { fontSize: 13, fontWeight: '700', color: '#92400E' },
+  disputedSub: { fontSize: 11, color: '#78350F', marginTop: 2 },
+
+  // Dispute modal
+  modalBackdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center', alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  modalSheet: {
+    width: '100%', backgroundColor: Colors.white,
+    borderRadius: Radius.lg, padding: Spacing.md,
+    gap: Spacing.sm,
+  },
+  modalTitle: { fontSize: 17, fontWeight: '800', color: Colors.textPrimary },
+  modalSub: { fontSize: 12, color: Colors.textSecondary, lineHeight: 17 },
+  modalInputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5, borderColor: Colors.error,
+    paddingHorizontal: Spacing.md, height: 54,
+  },
+  modalInput: { flex: 1, fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  modalCurrency: { fontSize: 13, color: Colors.textHint, fontWeight: '600' },
+  modalHint: { fontSize: 11, color: Colors.textHint },
+  modalBtnRow: { flexDirection: 'row', gap: Spacing.sm, marginTop: Spacing.xs },
+  modalBtn: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    height: 46, borderRadius: Radius.md,
+  },
+  modalBtnCancel: { backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.divider },
+  modalBtnCancelTxt: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  modalBtnDispute: { backgroundColor: Colors.error },
+  modalBtnDisputeTxt: { fontSize: 14, fontWeight: '700', color: Colors.white },
 });
