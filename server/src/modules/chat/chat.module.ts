@@ -9,6 +9,7 @@ import { BroadcastOffer } from '../order/entities/broadcast-offer.entity';
 import { ChatService } from './chat.service';
 import { ChatController } from './chat.controller';
 import { ChatGateway } from './chat.gateway';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { ChatGateway } from './chat.gateway';
         secret: config.get<string>('JWT_SECRET'),
       }),
     }),
+    NotificationModule,
   ],
   controllers: [ChatController],
   providers: [ChatService, ChatGateway],

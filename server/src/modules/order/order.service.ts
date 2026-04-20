@@ -41,6 +41,8 @@ import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import { BroadcastGateway } from './broadcast.gateway';
 import { BroadcastVisibleRequest } from './types/broadcast-visible-request.type';
 import { NotificationService } from '../notification/notification.service';
+import { WalletService } from '../wallet/wallet.service';
+import { calculateCommission } from '../wallet/wallet.constants';
 
 const PRIME_BROADCAST_VISIBILITY_DELAY_MS = 0;
 const DEFAULT_BROADCAST_VISIBILITY_DELAY_MS = 10000;
@@ -105,6 +107,7 @@ export class OrderService {
     private readonly broadcastOfferRepo: Repository<BroadcastOffer>,
     @InjectRepository(BroadcastOfferItem)
     private readonly broadcastOfferItemRepo: Repository<BroadcastOfferItem>,
+    private readonly walletService: WalletService,
   ) {}
 
   async create(createOrderDto: CreateOrderDto, customerId: string) {
@@ -473,6 +476,17 @@ export class OrderService {
       );
     }
 
+    // Seller'dan komissiya undiramiz — balans yetmasa qabul qilinmaydi
+    const ownerId = order.store?.owner_id;
+    const commission = calculateCommission(Number(order.items_price));
+    if (ownerId && commission > 0) {
+      await this.walletService.chargeCommission(
+        ownerId,
+        commission,
+        `Buyurtma №${order.order_number} uchun komissiya (${commission} so'm)`,
+      );
+    }
+
     order.status = OrderStatus.ACCEPTED;
     order.accepted_at = new Date();
 
@@ -535,6 +549,18 @@ export class OrderService {
     );
     order.items_price = newItemsPrice;
     order.total_price = newItemsPrice + Number(order.delivery_price);
+
+    // Komissiya qisman qabul qilingan summa bo'yicha
+    const ownerId = order.store?.owner_id;
+    const commission = calculateCommission(newItemsPrice);
+    if (ownerId && commission > 0) {
+      await this.walletService.chargeCommission(
+        ownerId,
+        commission,
+        `Buyurtma №${order.order_number} (qisman) uchun komissiya (${commission} so'm)`,
+      );
+    }
+
     order.status = OrderStatus.ACCEPTED;
     order.accepted_at = new Date();
     await this.orderRepo.save(order);
@@ -685,6 +711,18 @@ export class OrderService {
       body: "Buyurtmangiz muvaffaqiyatli yetkazildi!",
       data: { order_id: orderId, type: 'ORDER_DELIVERED' },
     });
+
+    // Yetkazilgandan 30 daqiqa keyin sharh qoldirishga taklif
+    setTimeout(
+      () => {
+        void this.notificationService.sendToUser(order.customer_id, {
+          title: '⭐ Sharh qoldiring',
+          body: `${order.store?.name ?? 'Do\'kon'}ga baho bering — boshqa mijozlarga yordam bering`,
+          data: { order_id: orderId, type: 'REVIEW_REQUEST' },
+        });
+      },
+      30 * 60 * 1000, // 30 min
+    );
 
     return saved;
   }
@@ -1434,10 +1472,18 @@ export class OrderService {
             this.broadcastGateway.emitToSellerUser(
               store.owner_id,
               'broadcast:request_created',
-              {
-                requestId,
-              },
+              { requestId },
             );
+
+            // Push notification — seller'ga yangi broadcast request
+            void this.notificationService.sendToUser(store.owner_id, {
+              title: '📢 Yangi umumiy so\'rov',
+              body: `${latestRequest.items?.length ?? 0} ta mahsulot — atrofingizda mijoz taklif kutmoqda`,
+              data: {
+                request_id: requestId,
+                type: 'BROADCAST_REQUEST',
+              },
+            });
           }
         })();
       }, delayMs);

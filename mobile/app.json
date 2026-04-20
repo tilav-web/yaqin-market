@@ -26,6 +26,7 @@
         "backgroundColor": "#E53935"
       },
       "package": "uz.yaqin.market",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",

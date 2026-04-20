@@ -18,8 +18,8 @@ Notifications.setNotificationHandler({
 
 export function usePushNotifications() {
   const { isAuthenticated } = useAuthStore();
-  const notificationListener = useRef<Notifications.EventSubscription>();
-  const responseListener = useRef<Notifications.EventSubscription>();
+  const notificationListener = useRef<Notifications.EventSubscription | undefined>(undefined);
+  const responseListener = useRef<Notifications.EventSubscription | undefined>(undefined);
   const router = useRouter();
 
   useEffect(() => {
@@ -77,9 +77,12 @@ async function registerForPushNotifications() {
   }
 
   try {
-    const token = await Notifications.getExpoPushTokenAsync();
-    // Save FCM/Expo token to backend
-    await usersApi.saveFcmToken(token.data);
+    // Native FCM token (Android uchun FCM, iOS uchun APNs)
+    // Backend firebase-admin aynan shu token'ni kutadi
+    const token = await Notifications.getDevicePushTokenAsync();
+    if (token?.data) {
+      await usersApi.saveFcmToken(token.data);
+    }
   } catch (err) {
     console.warn('Push token error:', err);
   }

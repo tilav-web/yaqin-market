@@ -16,6 +16,7 @@ import { useAuthStore } from '../../../src/store/auth.store';
 import { ordersApi } from '../../../src/api/orders';
 import { useTranslation } from '../../../src/i18n';
 import { useRequireAuth } from '../../../src/hooks/useRequireAuth';
+import ProductDetailSheet from '../../../src/components/product/ProductDetailSheet';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 12;
@@ -39,6 +40,7 @@ export default function StoreDetailScreen() {
   const [search, setSearch] = useState('');
   const [cart, setCart] = useState<Record<string, number>>({});
   const [ordering, setOrdering] = useState(false);
+  const [detailProductId, setDetailProductId] = useState<number | null>(null);
 
   // Store info
   const { data: store } = useQuery({
@@ -95,6 +97,11 @@ export default function StoreDetailScreen() {
   const cartCount = Object.values(cart).reduce((s, q) => s + q, 0);
 
   const addToCart = (sp: any) => {
+    // Agar mahsulotning variantlari (children) bo'lsa — sheet ochib foydalanuvchi tanlasin
+    if (sp.product?.children?.length > 0) {
+      setDetailProductId(Number(sp.product.id));
+      return;
+    }
     setCart(prev => ({ ...prev, [sp.id]: (prev[sp.id] || 0) + 1 }));
   };
 
@@ -271,6 +278,7 @@ export default function StoreDetailScreen() {
         keyExtractor={(item: any) => item.id}
         numColumns={2}
         renderItem={renderProduct}
+        style={{ flex: 1, backgroundColor: Colors.background }}
         columnWrapperStyle={{ paddingHorizontal: Spacing.md - 4, gap: 0 }}
         ListHeaderComponent={ListHeader}
         ListEmptyComponent={
@@ -315,6 +323,11 @@ export default function StoreDetailScreen() {
           </TouchableOpacity>
         </View>
       )}
+
+      <ProductDetailSheet
+        productId={detailProductId}
+        onClose={() => setDetailProductId(null)}
+      />
     </SafeAreaView>
   );
 }

@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
 import { ordersApi } from '../../src/api/orders';
 import { storesApi } from '../../src/api/stores';
+import { apiClient } from '../../src/api/client';
 import { useSocket } from '../../src/hooks/useSocket';
 import { useTranslation } from '../../src/i18n';
 
@@ -43,6 +44,11 @@ export default function SellerDashboard() {
   const { data: allOrders } = useQuery({
     queryKey: ['store-orders-all'],
     queryFn: () => ordersApi.getStoreOrders(),
+  });
+  const { data: wallet } = useQuery({
+    queryKey: ['wallet-my'],
+    queryFn: () => apiClient.get('/wallet/my').then((r) => r.data),
+    refetchInterval: 30000,
   });
 
   useSocket('seller', (event) => {
@@ -115,6 +121,38 @@ export default function SellerDashboard() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={isLoading} onRefresh={refetch} tintColor={Colors.primary} colors={[Colors.primary]} />}
       >
+        {/* Balance card */}
+        {wallet && (
+          <View style={s.section}>
+            <View
+              style={[
+                s.balanceCard,
+                Number(wallet.available_balance ?? wallet.balance ?? 0) < 20000 && s.balanceCardWarn,
+              ]}
+            >
+              <View style={s.balanceIconBox}>
+                <Ionicons name="wallet" size={22} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={s.balanceLabel}>
+                  {lang === 'ru' ? 'Баланс (комиссии)' : 'Komissiya balansi'}
+                </Text>
+                <Text style={s.balanceValue}>
+                  {Number(wallet.available_balance ?? wallet.balance ?? 0).toLocaleString()}{' '}
+                  <Text style={s.balanceCurrency}>so'm</Text>
+                </Text>
+                {Number(wallet.available_balance ?? wallet.balance ?? 0) < 20000 && (
+                  <Text style={s.balanceWarn}>
+                    {lang === 'ru'
+                      ? '⚠ Баланс низкий — пополните для приёма заказов'
+                      : '⚠ Balans past — buyurtma qabul qilish uchun to\'ldiring'}
+                  </Text>
+                )}
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Quick actions */}
         <View style={s.section}>
           <Text style={s.sectionTitle}>{lang === 'ru' ? 'Быстрые действия' : 'Tezkor amallar'}</Text>
@@ -262,6 +300,25 @@ const s = StyleSheet.create({
   section: { marginTop: Spacing.md, paddingHorizontal: Spacing.md },
   sectionRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs, marginBottom: Spacing.sm },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+
+  balanceCard: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+    ...Shadow.sm,
+    borderLeftWidth: 4, borderLeftColor: Colors.primary,
+  },
+  balanceCardWarn: { borderLeftColor: Colors.error, backgroundColor: Colors.errorSurface },
+  balanceIconBox: {
+    width: 44, height: 44, borderRadius: 14,
+    backgroundColor: Colors.primarySurface,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  balanceLabel: { fontSize: 12, fontWeight: '600', color: Colors.textHint, textTransform: 'uppercase', letterSpacing: 0.6 },
+  balanceValue: { fontSize: 20, fontWeight: '800', color: Colors.textPrimary, marginTop: 2 },
+  balanceCurrency: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary },
+  balanceWarn: { fontSize: 11, color: Colors.error, fontWeight: '600', marginTop: 4 },
   seeAll: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
   countBadge: { backgroundColor: Colors.primary, borderRadius: Radius.full, minWidth: 20, height: 20, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   countBadgeTxt: { color: Colors.white, fontSize: 11, fontWeight: '700' },

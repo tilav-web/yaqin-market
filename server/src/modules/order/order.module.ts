@@ -18,6 +18,7 @@ import { Auth } from '../auth/auth.entity';
 import { User } from '../user/user.entity';
 import { BroadcastGateway } from './broadcast.gateway';
 import { NotificationModule } from '../notification/notification.module';
+import { WalletModule } from '../wallet/wallet.module';
 
 @Module({
   imports: [
@@ -41,6 +42,7 @@ import { NotificationModule } from '../notification/notification.module';
       BroadcastOfferItem,
     ]),
     NotificationModule,
+    WalletModule,
   ],
   controllers: [OrderController],
   providers: [OrderService, RolesGuard, BroadcastGateway],

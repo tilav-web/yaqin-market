@@ -36,6 +36,7 @@ describe('OrderService payment guards', () => {
       {} as Repository<BroadcastRequestItem>,
       {} as Repository<BroadcastOffer>,
       {} as Repository<BroadcastOfferItem>,
+      {} as any,
     );
 
     return { service, orderRepo };

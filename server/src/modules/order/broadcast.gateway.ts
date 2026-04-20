@@ -14,8 +14,10 @@ import { Server, Socket } from 'socket.io';
 import { Repository } from 'typeorm';
 import { Auth } from '../auth/auth.entity';
 import { User } from '../user/user.entity';
+import { Order, OrderStatus } from './entities/order.entity';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import { JwtTypeEnum } from 'src/enums/jwt-type.enum';
+import { NotificationService } from '../notification/notification.service';
 
 type BroadcastSocketPayload = {
   token?: string;
@@ -41,13 +43,68 @@ export class BroadcastGateway
   @WebSocketServer()
   server: Server;
 
+  /** Har buyurtma uchun "kuryer yaqin" push yuborilganini kuzatish (memory cache) */
+  private readonly courierNearNotified = new Set<string>();
+
   constructor(
     private readonly jwtService: JwtService,
     @InjectRepository(Auth)
     private readonly authRepo: Repository<Auth>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Order)
+    private readonly orderRepo: Repository<Order>,
+    private readonly notificationService: NotificationService,
   ) {}
+
+  /** Haversine — metrda masofa */
+  private calcDistance(
+    lat1: number, lng1: number, lat2: number, lng2: number,
+  ): number {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLng = ((lng2 - lng1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLng / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  private async notifyIfCourierNear(
+    orderId: string,
+    courierLat: number,
+    courierLng: number,
+  ) {
+    if (this.courierNearNotified.has(orderId)) return;
+
+    const order = await this.orderRepo.findOne({
+      where: { id: orderId },
+      select: ['id', 'customer_id', 'delivery_lat', 'delivery_lng', 'status'],
+    });
+    if (!order || order.status !== OrderStatus.DELIVERING) return;
+    if (order.delivery_lat == null || order.delivery_lng == null) return;
+
+    const distance = this.calcDistance(
+      courierLat,
+      courierLng,
+      Number(order.delivery_lat),
+      Number(order.delivery_lng),
+    );
+
+    if (distance > 500) return; // hali uzoq
+
+    this.courierNearNotified.add(orderId);
+    // 1 soatdan keyin set'dan o'chirish (RAM tozaligi uchun)
+    setTimeout(() => this.courierNearNotified.delete(orderId), 60 * 60 * 1000);
+
+    void this.notificationService.sendToUser(order.customer_id, {
+      title: '🛵 Kuryer yaqinlashmoqda',
+      body: `Kuryer sizga ${Math.round(distance)} metr qoldi — tayyor turing`,
+      data: { order_id: orderId, type: 'COURIER_NEAR' },
+    });
+  }
 
   handleConnection(client: Socket) {
     void client;
@@ -170,6 +227,9 @@ export class BroadcastGateway
         lng: payload.lng,
         updated_at: new Date().toISOString(),
       });
+
+    // Kuryer yaqinlashmoqda — 500m ichiga kirsa customer'ga push (bir martagina)
+    void this.notifyIfCourierNear(payload.order_id, payload.lat, payload.lng);
 
     return { success: true };
   }

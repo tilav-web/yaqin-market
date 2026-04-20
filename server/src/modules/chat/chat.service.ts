@@ -11,6 +11,7 @@ import { Message } from './entities/message.entity';
 import { StartConversationDto, SendMessageDto } from './dto/start-conversation.dto';
 import { Order } from '../order/entities/order.entity';
 import { BroadcastOffer } from '../order/entities/broadcast-offer.entity';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class ChatService {
@@ -23,6 +24,7 @@ export class ChatService {
     private readonly orderRepo: Repository<Order>,
     @InjectRepository(BroadcastOffer)
     private readonly offerRepo: Repository<BroadcastOffer>,
+    private readonly notificationService: NotificationService,
   ) {}
 
   /** Suhbat boshlash yoki mavjudini qaytarish */
@@ -153,6 +155,20 @@ export class ChatService {
     else conv.unread_buyer += 1;
 
     await this.convRepo.save(conv);
+
+    // Qabul qiluvchiga push notification
+    const recipientId = senderId === conv.buyer_id ? conv.seller_id : conv.buyer_id;
+    if (recipientId) {
+      const preview = dto.content.trim().slice(0, 80);
+      void this.notificationService.sendToUser(recipientId, {
+        title: '💬 Yangi xabar',
+        body: preview,
+        data: {
+          type: 'CHAT_MESSAGE',
+          conversation_id: convId,
+        },
+      });
+    }
 
     return this.msgRepo.findOne({
       where: { id: saved.id },

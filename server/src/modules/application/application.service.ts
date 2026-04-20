@@ -20,6 +20,7 @@ import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import { StoreService } from '../store/store.service';
 import { SellerLegal } from './seller-legal.entity';
 import { SellerLegalDto } from './dto/seller-legal.dto';
+import { WalletService } from '../wallet/wallet.service';
 
 @Injectable()
 export class ApplicationService {
@@ -35,6 +36,7 @@ export class ApplicationService {
     @InjectRepository(Store)
     private readonly storeRepo: Repository<Store>,
     private readonly storeService: StoreService,
+    private readonly walletService: WalletService,
   ) {}
 
   async getMyApplications(userId: string) {
@@ -231,6 +233,11 @@ export class ApplicationService {
           });
         }
       }
+
+      // Yangi seller'ga boshlang'ich kredit (promo-bonus) — idempotent
+      await this.walletService
+        .grantInitialCredit(application.user_id)
+        .catch(() => {});
     }
 
     return this.applicationRepo.save(application);

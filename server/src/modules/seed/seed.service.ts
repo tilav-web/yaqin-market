@@ -9,6 +9,9 @@ import { Auth } from '../auth/auth.entity';
 import { AuthRoleEnum } from 'src/enums/auth-role.enum';
 import { User } from '../user/user.entity';
 import { Wallet } from '../wallet/entities/wallet.entity';
+import { WalletTransaction } from '../wallet/entities/wallet-transaction.entity';
+import { WalletTransactionTypeEnum } from '../wallet/enums/wallet-transaction-type.enum';
+import { SELLER_INITIAL_CREDIT } from '../wallet/wallet.constants';
 import { Location } from '../location/location.entity';
 import { Category } from '../category/category.entity';
 import { Unit } from '../unit/unit.entity';
@@ -979,7 +982,14 @@ export class SeedService {
     const products = await this.seedProducts(productRepo, productTaxRepo, categories, units);
 
     // 4. Demo akkauntlar (sellerlar, customerlar, courierlar)
-    const accounts = await this.seedAccounts(authRepo, userRepo, walletRepo, locationRepo);
+    const walletTxRepo = this.dataSource.getRepository(WalletTransaction);
+    const accounts = await this.seedAccounts(
+      authRepo,
+      userRepo,
+      walletRepo,
+      walletTxRepo,
+      locationRepo,
+    );
 
     // 5. Do'konlar + yetkazib berish sozlamalari + ish soatlari
     const stores = await this.seedStores(storeRepo, deliverySettingsRepo, workingHourRepo, accounts);
@@ -1186,6 +1196,7 @@ export class SeedService {
     authRepo: Repository<Auth>,
     userRepo: Repository<User>,
     walletRepo: Repository<Wallet>,
+    walletTxRepo: Repository<WalletTransaction>,
     locationRepo: Repository<Location>,
   ) {
     const usersByPhone = new Map<string, User>();
@@ -1232,18 +1243,43 @@ export class SeedService {
         where: { user: { id: user.id } },
       });
 
+      const initialBalance =
+        seed.role === AuthRoleEnum.SELLER
+          ? SELLER_INITIAL_CREDIT
+          : (seed.wallet_balance ?? 0);
+
       if (!wallet) {
         wallet = walletRepo.create({
-          balance: seed.wallet_balance ?? 0,
+          balance: initialBalance,
           frozen_balance: 0,
           user,
         });
       } else {
-        wallet.balance = seed.wallet_balance ?? wallet.balance ?? 0;
+        wallet.balance = initialBalance;
         wallet.user = user;
       }
 
-      await walletRepo.save(wallet);
+      const savedWallet = await walletRepo.save(wallet);
+
+      // Seller'lar uchun bonus tranzaksiyasini yozib qo'yamiz
+      if (seed.role === AuthRoleEnum.SELLER) {
+        const existing = await walletTxRepo.findOne({
+          where: {
+            wallet: { id: savedWallet.id },
+            type: String(WalletTransactionTypeEnum.CREDIT_BONUS),
+          },
+        });
+        if (!existing) {
+          await walletTxRepo.save(
+            walletTxRepo.create({
+              amount: SELLER_INITIAL_CREDIT,
+              type: String(WalletTransactionTypeEnum.CREDIT_BONUS),
+              description: 'Boshlang\'ich promo-kredit (seed)',
+              wallet: savedWallet,
+            }),
+          );
+        }
+      }
     }
 
     const customer = usersByPhone.get('900000002');

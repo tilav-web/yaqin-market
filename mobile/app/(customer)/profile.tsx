@@ -532,6 +532,7 @@ const s = StyleSheet.create({
     backgroundColor: Colors.white,
     marginHorizontal: Spacing.md,
     marginTop: -20,
+    marginBottom: Spacing.md,
     borderRadius: Radius.lg,
     ...Shadow.md,
     overflow: 'hidden',

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, Image,
-  Modal, Animated, Pressable, ScrollView, Platform, FlatList,
+  Modal, Animated, Pressable, ScrollView, Platform, FlatList, Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
@@ -92,7 +92,9 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
     if (storeProduct) {
       addDirectItem({
         store_product_id: storeProduct.id,
+        product_id: Number(activeProduct.id),
         store_id: storeProduct.store_id,
+        store_name: storeProduct.store?.name ?? '',
         product_name: t(activeProduct.name),
         product_image: img,
         price: Number(price),
@@ -243,7 +245,7 @@ const s = StyleSheet.create({
     backgroundColor: Colors.divider,
     alignSelf: 'center', marginTop: 12, marginBottom: 8,
   },
-  mainImage: { width: '100%', height: 240 },
+  mainImage: { width: Dimensions.get('window').width, height: 240 },
   content: { padding: Spacing.md, gap: Spacing.sm },
   name: { fontSize: 20, fontWeight: '700', color: Colors.textPrimary, lineHeight: 26 },
   priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
