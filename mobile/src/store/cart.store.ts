@@ -11,6 +11,13 @@ export interface CartItem {
   store_name: string;
 }
 
+export interface StoreCart {
+  store_id: string;
+  store_name: string;
+  store_logo?: string;
+  items: CartItem[];
+}
+
 export interface BroadcastCartItem {
   product_id: number;
   product_name: string;
@@ -20,91 +27,136 @@ export interface BroadcastCartItem {
 }
 
 interface CartState {
-  // Direct cart — one store at a time
-  directItems: CartItem[];
-  directStoreId: string | null;
-  directStoreName: string | null;
+  /** storeId → StoreCart — har bir do'kon uchun alohida savatcha */
+  storeCarts: Record<string, StoreCart>;
 
-  // Broadcast cart — no store constraint
+  /** Do'konsiz umumiy savatcha — broadcast so'rov uchun */
   broadcastItems: BroadcastCartItem[];
 
-  // Direct cart actions
-  addDirectItem: (item: CartItem) => void;
-  removeDirectItem: (storeProductId: string) => void;
-  updateDirectQuantity: (storeProductId: string, quantity: number) => void;
-  clearDirectCart: () => void;
+  // ─── Store cart actions ─────────────────────────────────────────
+  addStoreItem: (item: CartItem, storeLogo?: string) => void;
+  removeStoreItem: (storeId: string, storeProductId: string) => void;
+  updateStoreQuantity: (
+    storeId: string,
+    storeProductId: string,
+    quantity: number,
+  ) => void;
+  clearStoreCart: (storeId: string) => void;
+  clearAllStoreCarts: () => void;
 
-  // Broadcast cart actions
+  // ─── Broadcast cart actions ─────────────────────────────────────
   addBroadcastItem: (item: BroadcastCartItem) => void;
   removeBroadcastItem: (productId: number) => void;
   updateBroadcastQuantity: (productId: number, quantity: number) => void;
   clearBroadcastCart: () => void;
+
+  // ─── Selectors/helpers ──────────────────────────────────────────
+  getStoreCart: (storeId: string) => StoreCart | undefined;
+  getTotalItemsCount: () => number;
 }
 
-export const useCartStore = create<CartState>((set) => ({
-  directItems: [],
-  directStoreId: null,
-  directStoreName: null,
+export const useCartStore = create<CartState>((set, get) => ({
+  storeCarts: {},
   broadcastItems: [],
 
-  addDirectItem: (item) =>
+  addStoreItem: (item, storeLogo) =>
     set((state) => {
-      // If different store, clear old cart first
-      if (state.directStoreId && state.directStoreId !== item.store_id) {
-        return {
-          directItems: [item],
-          directStoreId: item.store_id,
-          directStoreName: item.store_name,
-        };
-      }
-
-      const existing = state.directItems.find(
-        (i) => i.store_product_id === item.store_product_id,
-      );
-
+      const existing = state.storeCarts[item.store_id];
       if (existing) {
+        const dup = existing.items.find(
+          (i) => i.store_product_id === item.store_product_id,
+        );
+        const nextItems = dup
+          ? existing.items.map((i) =>
+              i.store_product_id === item.store_product_id
+                ? { ...i, quantity: i.quantity + item.quantity }
+                : i,
+            )
+          : [...existing.items, item];
         return {
-          directItems: state.directItems.map((i) =>
-            i.store_product_id === item.store_product_id
-              ? { ...i, quantity: i.quantity + item.quantity }
-              : i,
-          ),
+          storeCarts: {
+            ...state.storeCarts,
+            [item.store_id]: {
+              ...existing,
+              store_name: existing.store_name || item.store_name,
+              store_logo: existing.store_logo ?? storeLogo,
+              items: nextItems,
+            },
+          },
         };
       }
-
       return {
-        directItems: [...state.directItems, item],
-        directStoreId: item.store_id,
-        directStoreName: item.store_name,
+        storeCarts: {
+          ...state.storeCarts,
+          [item.store_id]: {
+            store_id: item.store_id,
+            store_name: item.store_name,
+            store_logo: storeLogo,
+            items: [item],
+          },
+        },
       };
     }),
 
-  removeDirectItem: (storeProductId) =>
+  removeStoreItem: (storeId, storeProductId) =>
     set((state) => {
-      const newItems = state.directItems.filter(
+      const existing = state.storeCarts[storeId];
+      if (!existing) return state;
+      const nextItems = existing.items.filter(
         (i) => i.store_product_id !== storeProductId,
       );
+      if (nextItems.length === 0) {
+        const { [storeId]: _, ...rest } = state.storeCarts;
+        return { storeCarts: rest };
+      }
       return {
-        directItems: newItems,
-        directStoreId: newItems.length > 0 ? state.directStoreId : null,
-        directStoreName: newItems.length > 0 ? state.directStoreName : null,
+        storeCarts: {
+          ...state.storeCarts,
+          [storeId]: { ...existing, items: nextItems },
+        },
       };
     }),
 
-  updateDirectQuantity: (storeProductId, quantity) =>
-    set((state) => ({
-      directItems:
-        quantity <= 0
-          ? state.directItems.filter(
-              (i) => i.store_product_id !== storeProductId,
-            )
-          : state.directItems.map((i) =>
+  updateStoreQuantity: (storeId, storeProductId, quantity) =>
+    set((state) => {
+      const existing = state.storeCarts[storeId];
+      if (!existing) return state;
+      if (quantity <= 0) {
+        const nextItems = existing.items.filter(
+          (i) => i.store_product_id !== storeProductId,
+        );
+        if (nextItems.length === 0) {
+          const { [storeId]: _, ...rest } = state.storeCarts;
+          return { storeCarts: rest };
+        }
+        return {
+          storeCarts: {
+            ...state.storeCarts,
+            [storeId]: { ...existing, items: nextItems },
+          },
+        };
+      }
+      return {
+        storeCarts: {
+          ...state.storeCarts,
+          [storeId]: {
+            ...existing,
+            items: existing.items.map((i) =>
               i.store_product_id === storeProductId ? { ...i, quantity } : i,
             ),
-    })),
+          },
+        },
+      };
+    }),
 
-  clearDirectCart: () =>
-    set({ directItems: [], directStoreId: null, directStoreName: null }),
+  clearStoreCart: (storeId) =>
+    set((state) => {
+      if (!state.storeCarts[storeId]) return state;
+      const { [storeId]: _, ...rest } = state.storeCarts;
+      return { storeCarts: rest };
+    }),
+
+  clearAllStoreCarts: () => set({ storeCarts: {} }),
 
   addBroadcastItem: (item) =>
     set((state) => {
@@ -141,4 +193,15 @@ export const useCartStore = create<CartState>((set) => ({
     })),
 
   clearBroadcastCart: () => set({ broadcastItems: [] }),
+
+  getStoreCart: (storeId) => get().storeCarts[storeId],
+  getTotalItemsCount: () => {
+    const { storeCarts, broadcastItems } = get();
+    const storeCount = Object.values(storeCarts).reduce(
+      (sum, c) => sum + c.items.reduce((s, i) => s + i.quantity, 0),
+      0,
+    );
+    const bCount = broadcastItems.reduce((s, i) => s + i.quantity, 0);
+    return storeCount + bCount;
+  },
 }));

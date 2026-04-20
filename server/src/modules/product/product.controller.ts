@@ -83,6 +83,22 @@ export class ProductController {
     return this.productService.findById(id);
   }
 
+  /** Eng arzon do'konlar — product uchun mavjud do'konlarni narx bo'yicha saralaydi */
+  @Get(':id/cheapest-stores')
+  async findCheapestStores(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('lat') lat?: string,
+    @Query('lng') lng?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.productService.findCheapestStores(
+      id,
+      lat ? Number(lat) : undefined,
+      lng ? Number(lng) : undefined,
+      limit ? Number(limit) : 10,
+    );
+  }
+
   @Post()
   @UseGuards(AuthGuard, RolesGuard)
   @Roles(AuthRoleEnum.SUPER_ADMIN)

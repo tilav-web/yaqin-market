@@ -26,7 +26,7 @@ interface StatusConfig {
   icon: IoniconsName;
 }
 
-function getStatusMap(tr: (key: string) => string): Record<string, StatusConfig> {
+function getStatusMap(tr: (key: any) => string): Record<string, StatusConfig> {
   return {
     PENDING:    { label: tr('status_pending'),    color: Colors.statusPending,    bg: '#FFF3E0', icon: 'time-outline' },
     ACCEPTED:   { label: tr('status_accepted'),   color: Colors.statusAccepted,   bg: '#E3F2FD', icon: 'checkmark-circle-outline' },
@@ -37,7 +37,7 @@ function getStatusMap(tr: (key: string) => string): Record<string, StatusConfig>
   };
 }
 
-function getFilterTabs(tr: (key: string) => string) {
+function getFilterTabs(tr: (key: any) => string) {
   return [
     { label: tr('filter_all'),       value: undefined },
     { label: tr('filter_active'),    value: 'ACCEPTED' },

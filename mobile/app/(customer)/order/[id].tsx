@@ -31,7 +31,8 @@ export default function OrderDetailScreen() {
   const { data: order, isLoading } = useQuery({
     queryKey: ['order', id],
     queryFn: () => ordersApi.getById(id),
-    refetchInterval: order?.status === 'DELIVERING' ? 15000 : false,
+    refetchInterval: (query) =>
+      query.state.data?.status === 'DELIVERING' ? 15000 : false,
   });
 
   const { subscribeToOrder } = useSocket('customer', (event, data) => {

@@ -5,9 +5,13 @@ import { useCartStore } from '../../src/store/cart.store';
 import { useTranslation } from '../../src/i18n';
 
 export default function CustomerLayout() {
-  const cartCount =
-    useCartStore(s => s.directItems.length) +
-    useCartStore(s => s.broadcastItems.length);
+  const cartCount = useCartStore((s) => {
+    const storeCount = Object.values(s.storeCarts).reduce(
+      (sum, c) => sum + c.items.length,
+      0,
+    );
+    return storeCount + s.broadcastItems.length;
+  });
   const { tr } = useTranslation();
 
   return (

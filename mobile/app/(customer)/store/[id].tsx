@@ -34,13 +34,23 @@ export default function StoreDetailScreen() {
   const { isAuthenticated } = useAuthStore();
   const requireAuth = useRequireAuth();
   const { lat, lng, address } = useLocationStore();
-  const { addDirectItem, directItems, directStoreId, clearDirectCart } = useCartStore();
+  const { storeCarts, addStoreItem, removeStoreItem, updateStoreQuantity, clearStoreCart } =
+    useCartStore();
 
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [cart, setCart] = useState<Record<string, number>>({});
   const [ordering, setOrdering] = useState(false);
   const [detailProductId, setDetailProductId] = useState<number | null>(null);
+
+  // Bu do'kon uchun savat global store'dan olinadi
+  const myCart = id ? storeCarts[id] : undefined;
+  const cartByStoreProductId = useMemo(() => {
+    const map: Record<string, number> = {};
+    myCart?.items.forEach((i) => {
+      map[i.store_product_id] = i.quantity;
+    });
+    return map;
+  }, [myCart]);
 
   // Store info
   const { data: store } = useQuery({
@@ -85,33 +95,40 @@ export default function StoreDetailScreen() {
     [productPages],
   );
 
-  const cartTotal = useMemo(() => {
-    let total = 0;
-    for (const [spId, qty] of Object.entries(cart)) {
-      const sp = products.find((p: any) => p.id === spId);
-      if (sp) total += Number(sp.price) * qty;
-    }
-    return total;
-  }, [cart, products]);
-
-  const cartCount = Object.values(cart).reduce((s, q) => s + q, 0);
+  const cartTotal = useMemo(
+    () => (myCart?.items ?? []).reduce((s, i) => s + Number(i.price) * i.quantity, 0),
+    [myCart],
+  );
+  const cartCount = (myCart?.items ?? []).reduce((s, i) => s + i.quantity, 0);
 
   const addToCart = (sp: any) => {
-    // Agar mahsulotning variantlari (children) bo'lsa — sheet ochib foydalanuvchi tanlasin
+    // Variantlari bo'lsa — sheet ochamiz
     if (sp.product?.children?.length > 0) {
       setDetailProductId(Number(sp.product.id));
       return;
     }
-    setCart(prev => ({ ...prev, [sp.id]: (prev[sp.id] || 0) + 1 }));
+    if (!store || !id) return;
+    const img = sp.product?.images?.[0]?.url;
+    addStoreItem(
+      {
+        store_product_id: sp.id,
+        product_id: Number(sp.product?.id),
+        store_id: id,
+        store_name: store.name,
+        product_name: t(sp.product?.name),
+        product_image: img,
+        price: Number(sp.price),
+        quantity: 1,
+      },
+      store.logo ?? undefined,
+    );
   };
 
   const removeFromCart = (spId: string) => {
-    setCart(prev => {
-      const n = { ...prev };
-      if (n[spId] > 1) n[spId]--;
-      else delete n[spId];
-      return n;
-    });
+    if (!id) return;
+    const current = cartByStoreProductId[spId] ?? 0;
+    if (current <= 1) removeStoreItem(id, spId);
+    else updateStoreQuantity(id, spId, current - 1);
   };
 
   const handleOrder = async () => {
@@ -126,10 +143,11 @@ export default function StoreDetailScreen() {
 
     setOrdering(true);
     try {
-      const items = Object.entries(cart).map(([store_product_id, quantity]) => ({
-        store_product_id,
-        quantity,
+      const items = (myCart?.items ?? []).map((i) => ({
+        store_product_id: i.store_product_id,
+        quantity: i.quantity,
       }));
+      if (items.length === 0) return;
       const order = await ordersApi.create({
         order_type: 'DIRECT',
         store_id: id,
@@ -139,7 +157,7 @@ export default function StoreDetailScreen() {
         delivery_address: address ?? 'Manzil',
         payment_method: 'CASH',
       });
-      setCart({});
+      if (id) clearStoreCart(id);
       router.push({ pathname: '/(customer)/order/[id]', params: { id: order.id } });
     } catch (e: any) {
       Alert.alert(
@@ -153,7 +171,7 @@ export default function StoreDetailScreen() {
 
   const renderProduct = useCallback(({ item }: { item: any }) => {
     const img = item.product?.images?.[0]?.url;
-    const qty = cart[item.id] || 0;
+    const qty = cartByStoreProductId[item.id] || 0;
     const outOfStock = item.stock === 0;
 
     return (
@@ -199,7 +217,7 @@ export default function StoreDetailScreen() {
         </View>
       </View>
     );
-  }, [cart, t, lang]);
+  }, [cartByStoreProductId, t, lang, store, id]);
 
   const ListHeader = (
     <>

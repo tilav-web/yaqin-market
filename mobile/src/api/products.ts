@@ -6,9 +6,6 @@ export const productsApi = {
     category_id?: string;
     page?: number;
     limit?: number;
-    price_min?: number;
-    price_max?: number;
-    sort?: 'new' | 'price_asc' | 'price_desc' | 'popular';
     lat?: number;
     lng?: number;
     radius_km?: number;
@@ -22,6 +19,44 @@ export const productsApi = {
 
   getById: (id: number) =>
     apiClient.get(`/products/${id}`).then((r) => r.data),
+
+  getCheapestStores: (
+    productId: number,
+    params?: { lat?: number; lng?: number; limit?: number },
+  ) =>
+    apiClient
+      .get(`/products/${productId}/cheapest-stores`, { params })
+      .then((r) => r.data as CheapestStoreItem[]),
+};
+
+export type CheapestStoreItem = {
+  store_product_id: string;
+  price: number;
+  variant: {
+    id: number;
+    name: { uz: string; ru?: string } | string;
+    slug: string;
+    images: { url: string; is_main?: boolean }[];
+    parent_id: number | null;
+    unit: { short_name: any; name: any } | null;
+  };
+  store: {
+    id: string;
+    name: string;
+    address: string | null;
+    lat: number | null;
+    lng: number | null;
+    logo: string | null;
+    is_prime: boolean;
+  };
+  delivery: {
+    enabled: boolean;
+    max_radius_m: number | null;
+    free_radius_m: number | null;
+  };
+  distance_meters: number | null;
+  is_deliverable: boolean | null;
+  is_free_delivery: boolean | null;
 };
 
 export const categoriesApi = {

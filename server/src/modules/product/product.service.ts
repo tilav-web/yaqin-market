@@ -427,6 +427,118 @@ export class ProductService {
     return product;
   }
 
+  /**
+   * Product (va uning variantlari) mavjud bo'lgan do'konlarni narx bo'yicha
+   * arzondan qimmatga saralab qaytaradi. userLat/userLng berilsa masofa va
+   * yetkazib berish holati ham qo'shiladi.
+   */
+  async findCheapestStores(
+    productId: number,
+    userLat?: number,
+    userLng?: number,
+    limit = 10,
+  ) {
+    const safeLimit = Math.min(20, Math.max(1, Math.floor(Number(limit) || 10)));
+    const hasLocation =
+      userLat != null &&
+      userLng != null &&
+      Number.isFinite(userLat) &&
+      Number.isFinite(userLng);
+
+    const params: unknown[] = [productId];
+    let distanceSelect = 'NULL::float AS distance_meters';
+    if (hasLocation) {
+      distanceSelect = `(6371000 * acos(
+        LEAST(1, cos(radians($2)) * cos(radians(st.lat)) *
+        cos(radians(st.lng) - radians($3)) +
+        sin(radians($2)) * sin(radians(st.lat)))
+      )) AS distance_meters`;
+      params.push(userLat, userLng);
+    }
+
+    const sql = `
+      SELECT
+        sp.id AS store_product_id,
+        sp.price AS price,
+        p.id AS variant_id,
+        p.name AS variant_name,
+        p.slug AS variant_slug,
+        p.images AS variant_images,
+        p.parent_id AS parent_id,
+        u.short_name AS unit_short_name,
+        u.name AS unit_name,
+        st.id AS store_id,
+        st.name AS store_name,
+        st.address AS store_address,
+        st.lat AS store_lat,
+        st.lng AS store_lng,
+        st.logo AS store_logo,
+        st.is_prime AS store_is_prime,
+        dset.max_delivery_radius AS max_radius,
+        dset.free_delivery_radius AS free_radius,
+        dset.is_delivery_enabled AS delivery_enabled,
+        ${distanceSelect}
+      FROM store_products sp
+      INNER JOIN stores st ON st.id = sp.store_id
+      INNER JOIN products p ON p.id = sp.product_id
+      LEFT JOIN units u ON u.id = p.unit_id
+      LEFT JOIN store_delivery_settings dset ON dset.store_id = st.id
+      WHERE sp.status = 'AVAILABLE'
+        AND st.is_active = true
+        AND (sp.product_id = $1 OR sp.product_id IN (
+          SELECT c.id FROM products c WHERE c.parent_id = $1
+        ))
+      ORDER BY sp.price ASC
+      LIMIT ${safeLimit}
+    `;
+
+    const rows = await this.productRepo.manager.query(sql, params);
+
+    return rows.map((r: any) => {
+      const price = Number(r.price);
+      const distance =
+        r.distance_meters != null ? Number(r.distance_meters) : null;
+      const maxRadius = r.max_radius != null ? Number(r.max_radius) : 5000;
+      const freeRadius = r.free_radius != null ? Number(r.free_radius) : 0;
+      const deliveryEnabled = r.delivery_enabled === true;
+
+      return {
+        store_product_id: r.store_product_id,
+        price,
+        variant: {
+          id: Number(r.variant_id),
+          name: r.variant_name,
+          slug: r.variant_slug,
+          images: r.variant_images ?? [],
+          parent_id: r.parent_id != null ? Number(r.parent_id) : null,
+          unit:
+            r.unit_short_name || r.unit_name
+              ? { short_name: r.unit_short_name, name: r.unit_name }
+              : null,
+        },
+        store: {
+          id: r.store_id,
+          name: r.store_name,
+          address: r.store_address,
+          lat: r.store_lat != null ? Number(r.store_lat) : null,
+          lng: r.store_lng != null ? Number(r.store_lng) : null,
+          logo: r.store_logo,
+          is_prime: r.store_is_prime === true,
+        },
+        delivery: {
+          enabled: deliveryEnabled,
+          max_radius_m: r.max_radius != null ? Number(r.max_radius) : null,
+          free_radius_m: r.free_radius != null ? Number(r.free_radius) : null,
+        },
+        distance_meters: distance,
+        is_deliverable:
+          distance != null && deliveryEnabled ? distance <= maxRadius : null,
+        is_free_delivery:
+          distance != null && deliveryEnabled ? distance <= freeRadius : null,
+      };
+    });
+  }
+
   async create(dto: CreateProductDto) {
     const product = this.productRepo.create({
       slug: dto.slug?.trim() || this.slugify(dto.name.uz),

@@ -5,7 +5,6 @@ import {
   Modal, Animated, Pressable, Keyboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, Radius, Shadow } from '../../src/theme';
@@ -14,6 +13,7 @@ import { useSearchHistory } from '../../src/store/search-history.store';
 import { useLocationStore } from '../../src/store/location.store';
 import { useTranslation } from '../../src/i18n';
 import ProductDetailSheet from '../../src/components/product/ProductDetailSheet';
+import CheapestStoresSheet from '../../src/components/product/CheapestStoresSheet';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 16;
@@ -24,31 +24,13 @@ function imageUrl(path?: string) {
   return `${API_URL}/${path}`;
 }
 
-type SortKey = 'price_asc' | 'price_desc' | null;
-
-const SORT_OPTIONS: {
-  key: NonNullable<SortKey>;
-  label_uz: string;
-  label_ru: string;
-  icon: React.ComponentProps<typeof Ionicons>['name'];
-}[] = [
-  { key: 'price_asc',  label_uz: 'Arzon',  label_ru: 'Дешевле',  icon: 'trending-down-outline' },
-  { key: 'price_desc', label_uz: 'Qimmat', label_ru: 'Дороже',   icon: 'trending-up-outline' },
-];
-
 // ─── Filter Sheet ──────────────────────────────────────────────────────────────
 interface FilterState {
-  priceMin: string;
-  priceMax: string;
-  sort: SortKey;
   deliverableOnly: boolean;
   freeDeliveryOnly: boolean;
 }
 
 const DEFAULT_FILTERS: FilterState = {
-  priceMin: '',
-  priceMax: '',
-  sort: null,
   deliverableOnly: false,
   freeDeliveryOnly: false,
 };
@@ -99,61 +81,15 @@ function FilterSheet({
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={{ maxHeight: 520 }} showsVerticalScrollIndicator={false}>
-          {/* Sort by price */}
-          <Text style={fs.sectionLabel}>{lang === 'ru' ? 'Сортировка по цене' : 'Narx bo\'yicha saralash'}</Text>
-          <View style={fs.sortGrid}>
-            {SORT_OPTIONS.map((opt) => {
-              const active = draft.sort === opt.key;
-              return (
-                <TouchableOpacity
-                  key={opt.key}
-                  style={[fs.sortBtn, active && fs.sortBtnActive]}
-                  onPress={() =>
-                    setDraft(d => ({ ...d, sort: active ? null : opt.key }))
-                  }
-                  activeOpacity={0.85}
-                >
-                  <View style={[fs.sortIconBox, active && fs.sortIconBoxActive]}>
-                    <Ionicons
-                      name={opt.icon}
-                      size={20}
-                      color={active ? Colors.white : Colors.primary}
-                    />
-                  </View>
-                  <Text style={[fs.sortTxt, active && fs.sortTxtActive]}>
-                    {lang === 'ru' ? opt.label_ru : opt.label_uz}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
-
-          {/* Price */}
-          <Text style={fs.sectionLabel}>{lang === 'ru' ? 'Цена (сум)' : "Narx (so'm)"}</Text>
-          <View style={fs.priceRow}>
-            <View style={fs.priceBox}>
-              <Text style={fs.priceLabel}>{lang === 'ru' ? 'от' : 'dan'}</Text>
-              <TextInput
-                style={fs.priceInput}
-                value={draft.priceMin}
-                onChangeText={(v) => setDraft(d => ({ ...d, priceMin: v.replace(/[^0-9]/g, '') }))}
-                placeholder="0"
-                placeholderTextColor={Colors.textHint}
-                keyboardType="number-pad"
-              />
-            </View>
-            <View style={fs.priceBox}>
-              <Text style={fs.priceLabel}>{lang === 'ru' ? 'до' : 'gacha'}</Text>
-              <TextInput
-                style={fs.priceInput}
-                value={draft.priceMax}
-                onChangeText={(v) => setDraft(d => ({ ...d, priceMax: v.replace(/[^0-9]/g, '') }))}
-                placeholder="∞"
-                placeholderTextColor={Colors.textHint}
-                keyboardType="number-pad"
-              />
-            </View>
+        <ScrollView style={{ maxHeight: 420 }} showsVerticalScrollIndicator={false}>
+          {/* Info banner */}
+          <View style={fs.infoBanner}>
+            <Ionicons name="information-circle" size={16} color={Colors.primary} />
+            <Text style={fs.infoTxt}>
+              {lang === 'ru'
+                ? 'Чтобы найти самую дешёвую цену, нажмите на товар 💰'
+                : "Eng arzon narxni topish uchun mahsulot ustidagi 💰 tugmasini bosing"}
+            </Text>
           </View>
 
           {/* Deliverable toggle — free delivery bilan birga yoqilsa bir-birini o'chiradi */}
@@ -180,7 +116,7 @@ function FilterSheet({
             </View>
           </TouchableOpacity>
 
-          {/* Free delivery toggle — yoqilsa deliverable'ni avtomatik o'chiradi (tekin ⊂ yetkazadigan) */}
+          {/* Free delivery toggle */}
           <TouchableOpacity
             style={fs.toggleRow}
             onPress={() =>
@@ -219,7 +155,6 @@ function FilterSheet({
 
 // ─── Search Screen ─────────────────────────────────────────────────────────────
 export default function SearchScreen() {
-  const router = useRouter();
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -227,6 +162,7 @@ export default function SearchScreen() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [cheapestProduct, setCheapestProduct] = useState<{ id: number; name: any } | null>(null);
 
   const { lang, t, tr } = useTranslation();
   const { history, addSearch, removeSearch, clearAll } = useSearchHistory();
@@ -238,23 +174,17 @@ export default function SearchScreen() {
     return () => clearTimeout(id);
   }, [query]);
 
-  // Save to history when user types meaningful query
   useEffect(() => {
     if (debounced.length >= 2) addSearch(debounced);
   }, [debounced]);
 
-  // Categories
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: categoriesApi.getAll,
   });
 
-  // Active filters count
   const activeFilterCount = useMemo(() => {
     let c = 0;
-    if (filters.priceMin) c++;
-    if (filters.priceMax) c++;
-    if (filters.sort) c++;
     if (filters.deliverableOnly) c++;
     if (filters.freeDeliveryOnly) c++;
     return c;
@@ -263,20 +193,17 @@ export default function SearchScreen() {
   const hasAnyFilter =
     debounced.length > 0 || selectedCat.length > 0 || activeFilterCount > 0;
 
-  // Search results (paginated)
   const {
     data: pages,
     isLoading,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
-    refetch,
   } = useInfiniteQuery({
     queryKey: ['search', debounced, selectedCat, filters, lat, lng],
     enabled: hasAnyFilter,
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
-      // Delivery filterlar user lokatsiyasini talab qiladi
       const needsLocation = filters.deliverableOnly || filters.freeDeliveryOnly;
       const useLat = needsLocation && lat != null ? lat : undefined;
       const useLng = needsLocation && lng != null ? lng : undefined;
@@ -284,9 +211,6 @@ export default function SearchScreen() {
       const res = await productsApi.getCatalog({
         q: debounced || undefined,
         category_id: selectedCat || undefined,
-        sort: filters.sort ?? undefined,
-        price_min: filters.priceMin ? Number(filters.priceMin) : undefined,
-        price_max: filters.priceMax ? Number(filters.priceMax) : undefined,
         lat: useLat,
         lng: useLng,
         deliverable: filters.deliverableOnly || undefined,
@@ -311,10 +235,8 @@ export default function SearchScreen() {
     setFilters(DEFAULT_FILTERS);
   };
 
-  const removeFilter = (key: 'cat' | 'price' | 'sort' | 'deliverable' | 'freeDelivery') => {
+  const removeFilter = (key: 'cat' | 'deliverable' | 'freeDelivery') => {
     if (key === 'cat') setSelectedCat('');
-    else if (key === 'price') setFilters(f => ({ ...f, priceMin: '', priceMax: '' }));
-    else if (key === 'sort') setFilters(f => ({ ...f, sort: null }));
     else if (key === 'deliverable') setFilters(f => ({ ...f, deliverableOnly: false }));
     else if (key === 'freeDelivery') setFilters(f => ({ ...f, freeDeliveryOnly: false }));
   };
@@ -327,23 +249,6 @@ export default function SearchScreen() {
       key: 'cat',
       label: cat ? t(cat.name) : 'Kategoriya',
       onRemove: () => removeFilter('cat'),
-    });
-  }
-  if (filters.priceMin || filters.priceMax) {
-    const lo = filters.priceMin ? Number(filters.priceMin).toLocaleString() : '0';
-    const hi = filters.priceMax ? Number(filters.priceMax).toLocaleString() : '∞';
-    activeChips.push({
-      key: 'price',
-      label: `${lo} – ${hi}`,
-      onRemove: () => removeFilter('price'),
-    });
-  }
-  if (filters.sort) {
-    const so = SORT_OPTIONS.find(s => s.key === filters.sort);
-    activeChips.push({
-      key: 'sort',
-      label: so ? (lang === 'ru' ? so.label_ru : so.label_uz) : '',
-      onRemove: () => removeFilter('sort'),
     });
   }
   if (filters.deliverableOnly) {
@@ -363,7 +268,6 @@ export default function SearchScreen() {
 
   const renderProduct = ({ item }: { item: any }) => {
     const img = item.images?.[0]?.url;
-    const price = item.storeProducts?.[0]?.price;
     const unit = item.unit?.short_name ? t(item.unit.short_name) : null;
     return (
       <TouchableOpacity
@@ -380,15 +284,31 @@ export default function SearchScreen() {
         )}
         <View style={s.cardInfo}>
           <Text style={s.cardName} numberOfLines={2}>{t(item.name)}</Text>
-          {price != null && (
-            <Text style={s.cardPrice}>
-              {Number(price).toLocaleString()} so'm
-              {unit && <Text style={s.cardUnit}>/{unit}</Text>}
-            </Text>
-          )}
+          {unit && <Text style={s.cardUnit}>{unit}</Text>}
         </View>
-        <View style={s.cardAddBtn}>
-          <Ionicons name="add" size={16} color={Colors.white} />
+
+        {/* Ikki tugma: eng arzonini top + savatga qo'shish */}
+        <View style={s.cardActions}>
+          <TouchableOpacity
+            style={[s.cardBtn, s.cardBtnCheapest]}
+            onPress={(e) => {
+              e.stopPropagation();
+              setCheapestProduct({ id: item.id, name: item.name });
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="flash" size={14} color={Colors.success} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.cardBtn, s.cardBtnAdd]}
+            onPress={(e) => {
+              e.stopPropagation();
+              setSelectedProductId(item.id);
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={16} color={Colors.white} />
+          </TouchableOpacity>
         </View>
       </TouchableOpacity>
     );
@@ -565,6 +485,12 @@ export default function SearchScreen() {
         productId={selectedProductId}
         onClose={() => setSelectedProductId(null)}
       />
+
+      <CheapestStoresSheet
+        productId={cheapestProduct?.id ?? null}
+        productName={cheapestProduct?.name}
+        onClose={() => setCheapestProduct(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -641,17 +567,22 @@ const s = StyleSheet.create({
     overflow: 'hidden', ...Shadow.sm,
   },
   cardImg: { width: '100%', height: 130, backgroundColor: Colors.background },
-  cardInfo: { padding: Spacing.sm, gap: 4, paddingBottom: 12 },
+  cardInfo: { padding: Spacing.sm, gap: 2, paddingBottom: 44 },
   cardName: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 17 },
-  cardPrice: { fontSize: 14, fontWeight: '700', color: Colors.primary },
   cardUnit: { fontSize: 11, fontWeight: '500', color: Colors.textHint },
-  cardAddBtn: {
-    position: 'absolute', bottom: 10, right: 10,
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-    ...Shadow.sm,
+  cardActions: {
+    position: 'absolute', bottom: 8, right: 8,
+    flexDirection: 'row', gap: 6,
   },
+  cardBtn: {
+    width: 30, height: 30, borderRadius: 10,
+    alignItems: 'center', justifyContent: 'center', ...Shadow.sm,
+  },
+  cardBtnCheapest: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1, borderColor: '#BBF7D0',
+  },
+  cardBtnAdd: { backgroundColor: Colors.primary },
 
   // Empty / hint
   emptyIconBox: {
@@ -720,46 +651,14 @@ const fs = StyleSheet.create({
   title: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
   resetTxt: { fontSize: 14, fontWeight: '600', color: Colors.primary },
 
-  sectionLabel: {
-    fontSize: 12, fontWeight: '700', color: Colors.textHint,
-    textTransform: 'uppercase', letterSpacing: 0.8,
-    marginTop: Spacing.sm, marginBottom: 10, paddingLeft: 4,
-  },
-
-  sortGrid: { flexDirection: 'row', gap: Spacing.sm },
-  sortBtn: {
-    flex: 1,
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingVertical: 12, paddingHorizontal: 14,
-    backgroundColor: Colors.background,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5, borderColor: Colors.divider,
-  },
-  sortBtnActive: {
+  infoBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
     backgroundColor: Colors.primarySurface,
-    borderColor: Colors.primary,
+    borderRadius: Radius.lg,
+    padding: Spacing.sm,
+    marginBottom: Spacing.md,
   },
-  sortIconBox: {
-    width: 36, height: 36, borderRadius: 12,
-    backgroundColor: Colors.white,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 1, borderColor: Colors.divider,
-  },
-  sortIconBoxActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  sortTxt: { fontSize: 14, fontWeight: '700', color: Colors.textSecondary },
-  sortTxtActive: { color: Colors.primary },
-
-  priceRow: { flexDirection: 'row', gap: Spacing.sm },
-  priceBox: {
-    flex: 1, backgroundColor: Colors.background,
-    borderRadius: Radius.lg, paddingHorizontal: Spacing.md, paddingVertical: 10,
-    borderWidth: 1, borderColor: Colors.divider,
-  },
-  priceLabel: { fontSize: 11, color: Colors.textHint, fontWeight: '600' },
-  priceInput: { fontSize: 15, color: Colors.textPrimary, fontWeight: '600', paddingVertical: 2 },
+  infoTxt: { flex: 1, fontSize: 12, color: Colors.primary, lineHeight: 17, fontWeight: '500' },
 
   toggleRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
@@ -785,7 +684,6 @@ const fs = StyleSheet.create({
     backgroundColor: Colors.white, ...Shadow.sm,
   },
   switchDotActive: { alignSelf: 'flex-end' },
-
 
   applyBar: { marginTop: Spacing.sm },
   applyBtn: {

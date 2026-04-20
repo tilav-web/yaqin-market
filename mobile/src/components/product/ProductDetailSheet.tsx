@@ -24,11 +24,12 @@ type Props = {
 
 export default function ProductDetailSheet({ productId, onClose }: Props) {
   const { lang, t } = useTranslation();
-  const { addBroadcastItem, addDirectItem } = useCartStore();
+  const { addBroadcastItem, addStoreItem } = useCartStore();
   const slideY = useRef(new Animated.Value(600)).current;
   const bgOpacity = useRef(new Animated.Value(0)).current;
   const [selectedChild, setSelectedChild] = useState<any>(null);
   const [quantity, setQuantity] = useState(1);
+  const [choiceOpen, setChoiceOpen] = useState(false);
 
   const visible = productId !== null;
 
@@ -87,10 +88,22 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
   const price = storeProduct?.price;
   const unitName = t(product?.unit?.short_name) || t(product?.unit?.name);
 
-  const handleAdd = () => {
+  const addToBroadcast = () => {
     if (!activeProduct) return;
-    if (storeProduct) {
-      addDirectItem({
+    addBroadcastItem({
+      product_id: activeProduct.id,
+      product_name: activeProduct.name,
+      product_image: img,
+      quantity,
+    });
+    setChoiceOpen(false);
+    onClose();
+  };
+
+  const addToStore = () => {
+    if (!activeProduct || !storeProduct) return;
+    addStoreItem(
+      {
         store_product_id: storeProduct.id,
         product_id: Number(activeProduct.id),
         store_id: storeProduct.store_id,
@@ -99,16 +112,21 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
         product_image: img,
         price: Number(price),
         quantity,
-      });
-    } else {
-      addBroadcastItem({
-        product_id: activeProduct.id,
-        product_name: activeProduct.name,
-        product_image: img,
-        quantity,
-      });
-    }
+      },
+      storeProduct.store?.logo ?? undefined,
+    );
+    setChoiceOpen(false);
     onClose();
+  };
+
+  const handleAdd = () => {
+    if (!activeProduct) return;
+    // Do'kon aniq bo'lsa — tanlov sheet ochiladi
+    if (storeProduct) {
+      setChoiceOpen(true);
+    } else {
+      addToBroadcast();
+    }
   };
 
   return (
@@ -224,9 +242,113 @@ export default function ProductDetailSheet({ productId, onClose }: Props) {
           </ScrollView>
         )}
       </Animated.View>
+
+      {/* Cart choice modal — do'kon savati vs umumiy savat */}
+      <Modal
+        transparent
+        visible={choiceOpen}
+        animationType="fade"
+        onRequestClose={() => setChoiceOpen(false)}
+      >
+        <Pressable style={cs.backdrop} onPress={() => setChoiceOpen(false)}>
+          <Pressable style={cs.sheet} onPress={(e) => e.stopPropagation()}>
+            <View style={cs.handle} />
+            <Text style={cs.title}>
+              {lang === 'ru' ? 'Куда добавить?' : 'Qayerga qo\'shamiz?'}
+            </Text>
+            <Text style={cs.sub}>
+              {lang === 'ru'
+                ? 'Выберите корзину для этого товара'
+                : "Bu mahsulotni qaysi savatga qo'shamiz"}
+            </Text>
+
+            <TouchableOpacity style={cs.option} onPress={addToStore} activeOpacity={0.85}>
+              <View style={[cs.optIcon, { backgroundColor: Colors.primarySurface }]}>
+                <Ionicons name="storefront" size={20} color={Colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={cs.optTitle}>
+                  {storeProduct?.store?.name ?? (lang === 'ru' ? 'Магазин' : 'Do\'kon')}
+                </Text>
+                <Text style={cs.optSub}>
+                  {Number(price).toLocaleString()} so'm ·{' '}
+                  {lang === 'ru' ? 'Прямой заказ' : "To'g'ridan-to'g'ri"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textHint} />
+            </TouchableOpacity>
+
+            <TouchableOpacity style={cs.option} onPress={addToBroadcast} activeOpacity={0.85}>
+              <View style={[cs.optIcon, { backgroundColor: '#FBE9E7' }]}>
+                <Ionicons name="megaphone" size={20} color="#FF5722" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={cs.optTitle}>
+                  {lang === 'ru' ? 'Общая корзина' : "Umumiy savat"}
+                </Text>
+                <Text style={cs.optSub}>
+                  {lang === 'ru'
+                    ? 'Все магазины получат запрос'
+                    : "Barcha do'konlarga so'rov yuboriladi"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={Colors.textHint} />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={cs.cancelBtn}
+              onPress={() => setChoiceOpen(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={cs.cancelTxt}>{lang === 'ru' ? 'Отмена' : 'Bekor qilish'}</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Modal>
   );
 }
+
+const cs = StyleSheet.create({
+  backdrop: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    paddingTop: 12,
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 20,
+    gap: Spacing.sm,
+  },
+  handle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: Colors.divider,
+    alignSelf: 'center', marginBottom: 8,
+  },
+  title: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary, textAlign: 'center' },
+  sub: { fontSize: 12, color: Colors.textHint, textAlign: 'center', marginBottom: Spacing.sm },
+  option: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    backgroundColor: Colors.background,
+    borderRadius: Radius.lg,
+    padding: Spacing.md,
+  },
+  optIcon: {
+    width: 44, height: 44, borderRadius: 14,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  optTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+  optSub: { fontSize: 12, color: Colors.textHint, marginTop: 2 },
+  cancelBtn: {
+    marginTop: Spacing.xs,
+    height: 48,
+    borderRadius: Radius.lg,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  cancelTxt: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+});
 
 const s = StyleSheet.create({
   backdrop: {
