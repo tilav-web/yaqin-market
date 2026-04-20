@@ -91,32 +91,30 @@ export class ProductService {
 
     if (search) {
       const normalizedSearch = `%${search.toLowerCase()}%`;
-      const childSearchSubQuery = baseQuery
-        .subQuery()
-        .select('1')
-        .from(Product, 'child')
-        .leftJoin('child.category', 'childCategory')
-        .where('child.parent_id = product.id')
-        .andWhere(
-          new Brackets((childQuery) => {
-            childQuery
-              .where("LOWER(child.name->>'uz') LIKE :search")
-              .orWhere("LOWER(child.name->>'ru') LIKE :search")
-              .orWhere('LOWER(child.slug) LIKE :search')
-              .orWhere("LOWER(COALESCE(childCategory.name->>'uz', '')) LIKE :search");
-          }),
-        )
-        .getQuery();
 
+      // Product o'zining nomi/slug/kategoriyasi yoki child variantlarining
+      // nomi/slug bo'yicha qidiruv. Raw SQL EXISTS sub-query'dan foydalanamiz —
+      // TypeORM subQuery builder parametrlarni to'g'ri uzatmaydi.
       baseQuery
         .andWhere(
-          new Brackets((productQuery) => {
-            productQuery
-              .where("LOWER(product.name->>'uz') LIKE :search")
+          new Brackets((qb) => {
+            qb.where("LOWER(product.name->>'uz') LIKE :search")
               .orWhere("LOWER(product.name->>'ru') LIKE :search")
               .orWhere('LOWER(product.slug) LIKE :search')
-              .orWhere("LOWER(COALESCE(category.name->>'uz', '')) LIKE :search")
-              .orWhere(`EXISTS ${childSearchSubQuery}`);
+              .orWhere(
+                "LOWER(COALESCE(category.name->>'uz', '')) LIKE :search",
+              )
+              .orWhere(
+                `EXISTS (
+                  SELECT 1 FROM products c
+                  WHERE c.parent_id = product.id
+                    AND (
+                      LOWER(c.name->>'uz') LIKE :search
+                      OR LOWER(c.name->>'ru') LIKE :search
+                      OR LOWER(c.slug) LIKE :search
+                    )
+                )`,
+              );
           }),
         )
         .setParameter('search', normalizedSearch);

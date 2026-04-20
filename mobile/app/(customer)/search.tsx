@@ -157,7 +157,8 @@ function FilterSheet({
 export default function SearchScreen() {
   const inputRef = useRef<TextInput>(null);
   const [query, setQuery] = useState('');
-  const [debounced, setDebounced] = useState('');
+  // Submitted query — search faqat Enter/search tugmasi bosilganda yangilanadi
+  const [submitted, setSubmitted] = useState('');
   const [selectedCat, setSelectedCat] = useState('');
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
   const [filterOpen, setFilterOpen] = useState(false);
@@ -168,15 +169,17 @@ export default function SearchScreen() {
   const { history, addSearch, removeSearch, clearAll } = useSearchHistory();
   const { lat, lng } = useLocationStore();
 
-  // Debounce search input
+  // Query bo'shalsa — submitted ham tozalansin (filter darhol o'chadi)
   useEffect(() => {
-    const id = setTimeout(() => setDebounced(query.trim()), 350);
-    return () => clearTimeout(id);
-  }, [query]);
+    if (query.length === 0 && submitted.length > 0) setSubmitted('');
+  }, [query, submitted]);
 
-  useEffect(() => {
-    if (debounced.length >= 2) addSearch(debounced);
-  }, [debounced]);
+  const handleSubmit = () => {
+    const trimmed = query.trim();
+    setSubmitted(trimmed);
+    if (trimmed.length >= 2) addSearch(trimmed);
+    Keyboard.dismiss();
+  };
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -191,7 +194,7 @@ export default function SearchScreen() {
   }, [filters]);
 
   const hasAnyFilter =
-    debounced.length > 0 || selectedCat.length > 0 || activeFilterCount > 0;
+    submitted.length > 0 || selectedCat.length > 0 || activeFilterCount > 0;
 
   const {
     data: pages,
@@ -200,7 +203,7 @@ export default function SearchScreen() {
     hasNextPage,
     fetchNextPage,
   } = useInfiniteQuery({
-    queryKey: ['search', debounced, selectedCat, filters, lat, lng],
+    queryKey: ['search', submitted, selectedCat, filters, lat, lng],
     enabled: hasAnyFilter,
     initialPageParam: 1,
     queryFn: async ({ pageParam }) => {
@@ -209,7 +212,7 @@ export default function SearchScreen() {
       const useLng = needsLocation && lng != null ? lng : undefined;
 
       const res = await productsApi.getCatalog({
-        q: debounced || undefined,
+        q: submitted || undefined,
         category_id: selectedCat || undefined,
         lat: useLat,
         lng: useLng,
@@ -230,7 +233,7 @@ export default function SearchScreen() {
 
   const clearAllFilters = () => {
     setQuery('');
-    setDebounced('');
+    setSubmitted('');
     setSelectedCat('');
     setFilters(DEFAULT_FILTERS);
   };
@@ -275,22 +278,28 @@ export default function SearchScreen() {
         onPress={() => setSelectedProductId(item.id)}
         activeOpacity={0.88}
       >
-        {img ? (
-          <Image source={{ uri: imageUrl(img)! }} style={s.cardImg} resizeMode="cover" />
-        ) : (
-          <View style={[s.cardImg, { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primarySurface }]}>
-            <Ionicons name="cube-outline" size={32} color={Colors.primaryLight} />
-          </View>
-        )}
+        <View style={s.cardImgWrap}>
+          {img ? (
+            <Image source={{ uri: imageUrl(img)! }} style={s.cardImg} resizeMode="cover" />
+          ) : (
+            <View style={[s.cardImg, { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.primarySurface }]}>
+              <Ionicons name="cube-outline" size={32} color={Colors.primaryLight} />
+            </View>
+          )}
+          {unit && (
+            <View style={s.unitBadge}>
+              <Text style={s.unitBadgeTxt}>{unit}</Text>
+            </View>
+          )}
+        </View>
         <View style={s.cardInfo}>
           <Text style={s.cardName} numberOfLines={2}>{t(item.name)}</Text>
-          {unit && <Text style={s.cardUnit}>{unit}</Text>}
         </View>
 
-        {/* Ikki tugma: eng arzonini top + savatga qo'shish */}
-        <View style={s.cardActions}>
+        {/* Footer: eng arzonini top + savatga qo'shish */}
+        <View style={s.cardFooter}>
           <TouchableOpacity
-            style={[s.cardBtn, s.cardBtnCheapest]}
+            style={s.cardBtnCheapest}
             onPress={(e) => {
               e.stopPropagation();
               setCheapestProduct({ id: item.id, name: item.name });
@@ -298,16 +307,19 @@ export default function SearchScreen() {
             activeOpacity={0.85}
           >
             <Ionicons name="flash" size={14} color={Colors.success} />
+            <Text style={s.cardBtnCheapestTxt}>
+              {lang === 'ru' ? 'Дёшево' : 'Arzon'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.cardBtn, s.cardBtnAdd]}
+            style={s.cardBtnAdd}
             onPress={(e) => {
               e.stopPropagation();
               setSelectedProductId(item.id);
             }}
             activeOpacity={0.85}
           >
-            <Ionicons name="add" size={16} color={Colors.white} />
+            <Ionicons name="add" size={18} color={Colors.white} />
           </TouchableOpacity>
         </View>
       </TouchableOpacity>
@@ -330,10 +342,10 @@ export default function SearchScreen() {
               placeholderTextColor={Colors.textHint}
               autoFocus
               returnKeyType="search"
-              onSubmitEditing={() => Keyboard.dismiss()}
+              onSubmitEditing={handleSubmit}
             />
             {query.length > 0 && (
-              <TouchableOpacity onPress={() => setQuery('')}>
+              <TouchableOpacity onPress={() => { setQuery(''); setSubmitted(''); }}>
                 <Ionicons name="close-circle" size={18} color={Colors.textHint} />
               </TouchableOpacity>
             )}
@@ -566,23 +578,39 @@ const s = StyleSheet.create({
     flex: 1, backgroundColor: Colors.white, borderRadius: Radius.lg,
     overflow: 'hidden', ...Shadow.sm,
   },
+  cardImgWrap: { position: 'relative' },
   cardImg: { width: '100%', height: 130, backgroundColor: Colors.background },
-  cardInfo: { padding: Spacing.sm, gap: 2, paddingBottom: 44 },
-  cardName: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 17 },
-  cardUnit: { fontSize: 11, fontWeight: '500', color: Colors.textHint },
-  cardActions: {
-    position: 'absolute', bottom: 8, right: 8,
-    flexDirection: 'row', gap: 6,
+  unitBadge: {
+    position: 'absolute', top: 8, right: 8,
+    backgroundColor: 'rgba(255,255,255,0.92)',
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: Radius.full,
+    ...Shadow.sm,
   },
-  cardBtn: {
-    width: 30, height: 30, borderRadius: 10,
-    alignItems: 'center', justifyContent: 'center', ...Shadow.sm,
+  unitBadgeTxt: {
+    fontSize: 10, fontWeight: '700', color: Colors.textPrimary,
+    textTransform: 'lowercase', letterSpacing: 0.3,
+  },
+  cardInfo: {
+    paddingHorizontal: Spacing.sm, paddingTop: Spacing.sm, paddingBottom: 6,
+  },
+  cardName: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 17 },
+  cardFooter: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: Spacing.sm, paddingBottom: Spacing.sm, paddingTop: 4,
   },
   cardBtnCheapest: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    height: 32, borderRadius: 10,
     backgroundColor: '#F0FDF4',
     borderWidth: 1, borderColor: '#BBF7D0',
   },
-  cardBtnAdd: { backgroundColor: Colors.primary },
+  cardBtnCheapestTxt: { fontSize: 11, fontWeight: '700', color: Colors.success },
+  cardBtnAdd: {
+    width: 34, height: 32, borderRadius: 10,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
 
   // Empty / hint
   emptyIconBox: {

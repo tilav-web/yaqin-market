@@ -111,6 +111,20 @@ export default function CheapestStoresSheet({ productId, productName, onClose }:
           <View style={{ paddingVertical: 60, alignItems: 'center' }}>
             <ActivityIndicator color={Colors.primary} size="large" />
           </View>
+        ) : isError ? (
+          <View style={s.empty}>
+            <View style={[s.emptyIcon, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="cloud-offline-outline" size={36} color={Colors.error} />
+            </View>
+            <Text style={s.emptyTitle}>
+              {lang === 'ru' ? 'Ошибка загрузки' : "Yuklashda xatolik"}
+            </Text>
+            <Text style={s.emptySub}>
+              {lang === 'ru'
+                ? 'Проверьте интернет или попробуйте позже'
+                : "Internetni tekshiring yoki keyinroq urinib ko'ring"}
+            </Text>
+          </View>
         ) : items.length === 0 ? (
           <View style={s.empty}>
             <View style={s.emptyIcon}>

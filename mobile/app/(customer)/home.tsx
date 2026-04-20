@@ -14,6 +14,7 @@ import { storesApi } from '../../src/api/stores';
 import { productsApi, categoriesApi } from '../../src/api/products';
 import { useTranslation } from '../../src/i18n';
 import ProductDetailSheet from '../../src/components/product/ProductDetailSheet';
+import CheapestStoresSheet from '../../src/components/product/CheapestStoresSheet';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 const PAGE_SIZE = 12;
@@ -40,30 +41,52 @@ function SkeletonBox({ w, h, radius = 8, style }: { w: number | string; h: numbe
 }
 
 // ─── Product Card ─────────────────────────────────────────────────────────────
-function ProductCard({ product, onPress, t }: { product: any; onPress: () => void; t: (n: any) => string }) {
+function ProductCard({
+  product, onPress, onCheapest, t,
+}: {
+  product: any;
+  onPress: () => void;
+  onCheapest: () => void;
+  t: (n: any) => string;
+}) {
   const img = product.images?.[0]?.url;
   const unit = product.unit?.short_name ? t(product.unit.short_name) : null;
   return (
     <TouchableOpacity style={productStyles.card} onPress={onPress} activeOpacity={0.9}>
-      {img ? (
-        <Image source={{ uri: imageUrl(img)! }} style={productStyles.image} resizeMode="cover" />
-      ) : (
-        <View style={[productStyles.image, productStyles.imagePlaceholder]}>
-          <Ionicons name="cube-outline" size={36} color={Colors.primaryLight} />
-        </View>
-      )}
-      <View style={productStyles.info}>
-        <Text style={productStyles.name} numberOfLines={2}>{t(product.name)}</Text>
+      <View style={productStyles.imageWrap}>
+        {img ? (
+          <Image source={{ uri: imageUrl(img)! }} style={productStyles.image} resizeMode="cover" />
+        ) : (
+          <View style={[productStyles.image, productStyles.imagePlaceholder]}>
+            <Ionicons name="cube-outline" size={36} color={Colors.primaryLight} />
+          </View>
+        )}
         {unit && (
-          <View style={productStyles.unitPill}>
-            <Ionicons name="cube-outline" size={10} color={Colors.primary} />
-            <Text style={productStyles.unitPillTxt}>{unit}</Text>
+          <View style={productStyles.unitBadge}>
+            <Text style={productStyles.unitBadgeTxt}>{unit}</Text>
           </View>
         )}
       </View>
-      <TouchableOpacity style={productStyles.addBtn} onPress={onPress} activeOpacity={0.85}>
-        <Ionicons name="add" size={18} color={Colors.white} />
-      </TouchableOpacity>
+      <View style={productStyles.info}>
+        <Text style={productStyles.name} numberOfLines={2}>{t(product.name)}</Text>
+      </View>
+      <View style={productStyles.footer}>
+        <TouchableOpacity
+          style={productStyles.cheapBtn}
+          onPress={(e) => { e.stopPropagation(); onCheapest(); }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="flash" size={14} color={Colors.success} />
+          <Text style={productStyles.cheapBtnTxt}>{t({ uz: 'Arzon', ru: 'Дёшево' })}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={productStyles.addBtn}
+          onPress={(e) => { e.stopPropagation(); onPress(); }}
+          activeOpacity={0.85}
+        >
+          <Ionicons name="add" size={18} color={Colors.white} />
+        </TouchableOpacity>
+      </View>
     </TouchableOpacity>
   );
 }
@@ -138,6 +161,7 @@ export default function HomeScreen() {
   const { lang, t, tr } = useTranslation();
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
   const [selectedProductId, setSelectedProductId] = useState<number | null>(null);
+  const [cheapestProduct, setCheapestProduct] = useState<{ id: number; name: any } | null>(null);
 
   const { data: primeStores } = useQuery({
     queryKey: ['prime-stores', lat, lng],
@@ -224,6 +248,7 @@ export default function HomeScreen() {
               product={p}
               t={t}
               onPress={() => setSelectedProductId(p.id)}
+              onCheapest={() => setCheapestProduct({ id: p.id, name: p.name })}
             />
           </View>
         ))}
@@ -361,6 +386,11 @@ export default function HomeScreen() {
         productId={selectedProductId}
         onClose={() => setSelectedProductId(null)}
       />
+      <CheapestStoresSheet
+        productId={cheapestProduct?.id ?? null}
+        productName={cheapestProduct?.name}
+        onClose={() => setCheapestProduct(null)}
+      />
     </SafeAreaView>
   );
 }
@@ -417,24 +447,39 @@ const productStyles = StyleSheet.create({
     backgroundColor: Colors.white, borderRadius: Radius.lg,
     overflow: 'hidden', ...Shadow.sm, marginBottom: Spacing.sm,
   },
+  imageWrap: { position: 'relative' },
   image: { width: '100%', height: 130, backgroundColor: Colors.background },
   imagePlaceholder: { alignItems: 'center', justifyContent: 'center' },
-  info: { padding: Spacing.sm, paddingBottom: 4, gap: 3 },
-  name: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 18 },
-  unitPill: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: Colors.primarySurface,
+  unitBadge: {
+    position: 'absolute', top: 8, right: 8,
+    backgroundColor: 'rgba(255,255,255,0.92)',
     paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: Radius.full,
-    marginTop: 4,
+    ...Shadow.sm,
   },
-  unitPillTxt: { fontSize: 10, fontWeight: '700', color: Colors.primary, textTransform: 'uppercase' },
+  unitBadgeTxt: {
+    fontSize: 10, fontWeight: '700', color: Colors.textPrimary,
+    textTransform: 'lowercase', letterSpacing: 0.3,
+  },
+  info: { paddingHorizontal: Spacing.sm, paddingTop: Spacing.sm, paddingBottom: 6 },
+  name: { fontSize: 13, fontWeight: '500', color: Colors.textPrimary, lineHeight: 18 },
+  footer: {
+    flexDirection: 'row', alignItems: 'center', gap: 6,
+    paddingHorizontal: Spacing.sm,
+    paddingBottom: Spacing.sm,
+    paddingTop: 4,
+  },
+  cheapBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4,
+    height: 32, borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1, borderColor: '#BBF7D0',
+  },
+  cheapBtnTxt: { fontSize: 11, fontWeight: '700', color: Colors.success },
   addBtn: {
-    position: 'absolute', bottom: Spacing.sm, right: Spacing.sm,
-    width: 30, height: 30, borderRadius: 15,
+    width: 34, height: 32, borderRadius: 10,
     backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center', ...Shadow.sm,
+    alignItems: 'center', justifyContent: 'center',
   },
 });
 
