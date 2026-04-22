@@ -21,6 +21,7 @@ import { BotModule } from './modules/bot/bot.module';
 import { HealthModule } from './modules/health/health.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { StoreStaffModule } from './modules/store-staff/store-staff.module';
 import { AppInitModule } from './modules/app-init/app-init.module';
 
 @Module({
@@ -71,6 +72,7 @@ import { AppInitModule } from './modules/app-init/app-init.module';
     HealthModule,
     NotificationModule,
     ChatModule,
+    StoreStaffModule,
     AppInitModule,
   ],
 })

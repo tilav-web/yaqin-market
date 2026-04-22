@@ -13,6 +13,7 @@ import { authApi } from '../../src/api/auth';
 import { usersApi, locationsApi } from '../../src/api/users';
 import { notificationsApi } from '../../src/api/notifications';
 import { ordersApi } from '../../src/api/orders';
+import { staffApi } from '../../src/api/store-staff';
 import { apiClient } from '../../src/api/client';
 import { useTranslation } from '../../src/i18n';
 import type { Lang } from '../../src/i18n';
@@ -144,6 +145,12 @@ export default function ProfileScreen() {
     queryFn: () => apiClient.get('/wallet/my').then((r) => r.data),
     enabled: isAuthenticated,
     refetchInterval: 30000,
+  });
+  const { data: myInvitations = [] } = useQuery({
+    queryKey: ['my-invitations'],
+    queryFn: staffApi.myInvitations,
+    enabled: isAuthenticated,
+    refetchInterval: 60000,
   });
 
   const orderList = Array.isArray(myOrdersData) ? myOrdersData : [];
@@ -316,11 +323,6 @@ export default function ProfileScreen() {
             title={tr('become_seller')} sub={tr('become_seller_sub')}
             onPress={() => router.push('/(customer)/apply-seller')}
           />
-          <ApplyCard
-            icon="bicycle-outline" color="#FF5722" bg="#FBE9E7"
-            title={tr('become_courier')} sub={tr('become_courier_sub')}
-            onPress={() => router.push('/(customer)/apply-courier')}
-          />
         </View>
       </View>
     );
@@ -372,6 +374,22 @@ export default function ProfileScreen() {
           badge: unreadCount > 0 ? unreadCount : undefined,
           onPress: () => router.push('/(customer)/notifications'),
         },
+        ...(myInvitations.length > 0
+          ? ([
+              {
+                icon: 'mail-open-outline' as IoniconsName,
+                color: '#F59E0B',
+                bg: '#FEF3C7',
+                label: lang === 'ru' ? 'Приглашения' : 'Takliflar',
+                sub:
+                  lang === 'ru'
+                    ? `${myInvitations.length} новых приглашений`
+                    : `${myInvitations.length} ta yangi taklif`,
+                badge: myInvitations.length,
+                onPress: () => router.push('/(customer)/invitations'),
+              },
+            ] as MenuItem[])
+          : []),
         {
           icon: 'location-outline', color: '#2196F3', bg: '#E3F2FD',
           label: lang === 'ru' ? 'Мои адреса' : 'Manzillarim',

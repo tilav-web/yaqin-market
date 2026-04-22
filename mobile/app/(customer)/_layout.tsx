@@ -44,6 +44,8 @@ export default function CustomerLayout() {
       <Tabs.Screen name="about" options={{ href: null }} />
       <Tabs.Screen name="apply-seller" options={{ href: null }} />
       <Tabs.Screen name="apply-courier" options={{ href: null }} />
+      <Tabs.Screen name="invitations" options={{ href: null }} />
+      <Tabs.Screen name="order/rate/[id]" options={{ href: null }} />
       <Tabs.Screen name="broadcast-cart" options={{ href: null }} />
       <Tabs.Screen name="store/[id]" options={{ href: null }} />
       <Tabs.Screen name="order/[id]" options={{ href: null }} />

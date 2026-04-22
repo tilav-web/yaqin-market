@@ -66,6 +66,11 @@ export default function SellerProfileScreen() {
       onPress: () => router.push('/(seller)/delivery-settings'),
     },
     {
+      icon: 'people-outline', color: '#7C3AED', bg: '#EDE9FE',
+      label: 'Xodimlar', sub: 'Kuryer, operator va boshqalarni boshqarish',
+      onPress: () => router.push('/(seller)/staff'),
+    },
+    {
       icon: 'person-outline', color: '#2196F3', bg: '#E3F2FD',
       label: 'Shaxsiy ma\'lumotlar', sub: 'Ism, telefon va profil',
       onPress: () => {},
